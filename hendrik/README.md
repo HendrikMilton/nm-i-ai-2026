@@ -4,16 +4,21 @@
 ```
 hendrik/
 ├── shared/utils.py          # base64/image helpers
+├── shared/replay.py         # offline replay of logged requests
 ├── challenge1/              # port 4001
 ├── challenge2/              # port 4002
 ├── challenge3/              # port 4003
-│   ├── main.py              # FastAPI (don't touch)
+│   ├── main.py              # FastAPI + request logging (don't touch)
 │   ├── solve.py             # ALL logic here (autoresearch iterates on this)
 │   ├── program.md           # autoresearch instructions (fill after kickoff)
 │   ├── Dockerfile
 │   └── pyproject.toml
 ├── docker-compose.yml
-└── autoresearch.sh          # overnight iteration launcher
+├── autoresearch.sh          # overnight iteration launcher
+├── setup-gcp.sh             # spin up GCP GPU VM
+├── teardown-gcp.sh          # stop/delete GCP VM
+├── setup-runpod.sh          # spin up RunPod GPU (backup)
+└── teardown-runpod.sh       # stop/delete RunPod pod (backup)
 ```
 
 ## Quick Start (local)
@@ -21,27 +26,50 @@ hendrik/
 cd challenge1 && uv sync && uv run python main.py
 ```
 
-## RunPod Deployment
-1. Create a GPU pod (A40 48GB or A100 80GB recommended)
-2. SSH in: `runpodctl ssh <pod-id>`
-3. Clone repo, cd into hendrik/
-4. `docker compose up -d`
-5. Your endpoints: `http://<pod-ip>:4001/predict`, `:4002`, `:4003`
-
-Alternatively without Docker:
+## GCP Deployment (primary)
 ```bash
-# Terminal 1
-cd challenge1 && uv sync && uv run uvicorn main:app --host 0.0.0.0 --port 4001
-# Terminal 2
-cd challenge2 && uv sync && uv run uvicorn main:app --host 0.0.0.0 --port 4002
-# Terminal 3
-cd challenge3 && uv sync && uv run uvicorn main:app --host 0.0.0.0 --port 4003
+./setup-gcp.sh                                    # L4 (default, 24GB)
+./setup-gcp.sh nvidia-tesla-a100 europe-west1-b   # A100 40GB (training + inference)
+./setup-gcp.sh nvidia-l4 europe-west1-b           # L4 (fast inference, 24GB)
+
+# SSH in
+gcloud compute ssh nm-ai-2026 --zone=europe-west1-b --project=ai-nm26osl-1713
+
+# Tear down
+./teardown-gcp.sh --stop     # pause (no GPU cost, keeps disk)
+./teardown-gcp.sh --delete   # nuke everything
+```
+
+## GPU Selection Guide
+| GPU | VRAM | Best for | Notes |
+|-----|------|----------|-------|
+| **A100 40GB** | 40GB | Training + autoresearch overnight | Highest compute, good VRAM |
+| **L4** | 24GB | Fast inference, serving predictions | Newer arch, lower latency |
+| **T4** | 16GB | Budget inference only | Cheapest, limited VRAM |
+
+Use A100 for autoresearch/training, L4 for serving if you want to split workloads.
+
+## Model Storage
+- **HuggingFace Hub**: `model.push_to_hub("your-name/model")` — easiest for sharing between machines
+- **GCS bucket**: `gsutil cp model.pt gs://bucket/` — free with GCP credits
+- **Git**: small models/configs directly in repo
+
+## RunPod Deployment (backup)
+```bash
+./setup-runpod.sh                    # A40 secure cloud (default)
+./teardown-runpod.sh --all           # remove all pods
 ```
 
 ## Autoresearch (overnight AI iteration)
 1. Fill in `challengeN/program.md` with task details + evaluation command
 2. Run: `./autoresearch.sh 1` (one terminal per challenge)
 3. Sleep. Wake up to git log full of experiments.
+
+## Offline Replay
+Every `/predict` request is logged to `requests.jsonl`. Replay offline:
+```bash
+python shared/replay.py challenge1/requests.jsonl
+```
 
 ## Team Allocation
 | Person | Assignment |
@@ -51,9 +79,8 @@ cd challenge3 && uv sync && uv run uvicorn main:app --host 0.0.0.0 --port 4003
 | Junior 2 | Classification/NLP challenge |
 | Vibe coder | Infra, deployment, monitoring |
 
-
-## Claude Code on RunPod (autonomous mode)
-SSH into the pod and run:
+## Claude Code on GPU VM (autonomous mode)
+SSH into the VM and run:
 ```bash
 # 1. Switch to non-root user (required for --dangerously-skip-permissions)
 su - researcher
@@ -66,18 +93,17 @@ export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"
 claude login
 
 # 4. Start Claude in autonomous mode
-cd /workspace/repo/hendrik
+cd /opt/repo/hendrik
 claude --dangerously-skip-permissions
 ```
 
-## Test autoresearch on RunPod
+## Test autoresearch
 ```bash
-# As researcher user on the pod:
-cd /workspace
+# As researcher user on the VM:
+cd /opt
 git clone https://github.com/karpathy/autoresearch.git
 cd autoresearch
-pip install uv  # if not already available
-uv sync  # if slow, use: pip install -e . (reuses system PyTorch/CUDA)
+uv sync
 uv run prepare.py  # downloads data + trains tokenizer (~2 min)
 
 # Start autoresearch loop
