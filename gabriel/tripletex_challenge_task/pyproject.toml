@@ -8,4 +8,5 @@ dependencies = [
     "requests",
     "google-cloud-aiplatform",
     "vertexai",
+    "anthropic[vertex]",
 ]
