@@ -1,0 +1,11 @@
+.idea/
+__pycache__/
+*.pyc
+.venv/
+*.egg-info/
+dist/
+build/
+run.log
+results.tsv
+.uv/
+uv.lock

@@ -1,0 +1,54 @@
+services:
+  challenge1:
+    build:
+      context: .
+      dockerfile: challenge1/Dockerfile
+    ports:
+      - "4001:4001"
+    volumes:
+      - ./shared:/app/shared
+      - ./challenge1:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  challenge2:
+    build:
+      context: .
+      dockerfile: challenge2/Dockerfile
+    ports:
+      - "4002:4002"
+    volumes:
+      - ./shared:/app/shared
+      - ./challenge2:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+
+  challenge3:
+    build:
+      context: .
+      dockerfile: challenge3/Dockerfile
+    ports:
+      - "4003:4003"
+    volumes:
+      - ./shared:/app/shared
+      - ./challenge3:/app
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
