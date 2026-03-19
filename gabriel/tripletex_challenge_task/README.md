@@ -15,7 +15,7 @@ exec -l $SHELL
 
 ```bash
 gcloud auth login
-# Browser opens — sign in with the shared account (credentials in Slack DM)
+# Browser opens — sign in with the shared account (get creds at https://app.ainm.no/gcp)
 gcloud config set project ai-nm26osl-1713
 ```
 
@@ -112,6 +112,7 @@ The starting code does single-turn: ask Gemini once, execute the plan. To score 
 - Efficiency bonus: up to 2× on perfect scores (fewer calls + no errors = higher bonus)
 - Max score per task: 6.0 (perfect Tier 3 + best efficiency)
 - Rate limit: 5 submissions per task per day
+
 
 ## Useful links
 

@@ -54,6 +54,7 @@ Already configured on this VM via default service account.
 - Max 6.0 per task
 - Rate limit: 5 per task per day — don't waste submissions
 
+
 ## Key improvement areas
 
 - Multi-turn: send API results back to Gemini for follow-up reasoning
