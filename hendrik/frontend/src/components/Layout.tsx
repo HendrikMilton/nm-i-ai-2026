@@ -1,10 +1,13 @@
 import { type ReactNode, useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Menu, X, ChevronRight, ScrollText, Play, Sun, Moon } from 'lucide-react';
+import { Menu, X, ChevronRight, ScrollText, Play, Sun, Moon, Images, Package, FlaskConical } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useTheme } from '../hooks/useTheme';
 
 const navItems = [
+    { to: '/dataset', icon: Images, label: 'Dataset' },
+    { to: '/products', icon: Package, label: 'Products' },
+    { to: '/training', icon: FlaskConical, label: 'Training' },
     { to: '/logs', icon: ScrollText, label: 'Debug Logs' },
     { to: '/replay/1/0', icon: Play, label: 'Replay' },
 ];
