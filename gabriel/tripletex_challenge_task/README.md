@@ -29,7 +29,7 @@ gcloud compute ssh tripletex-agent --zone=europe-west4-a --project=ai-nm26osl-17
 
 ```bash
 sudo su - gabriel
-cd /opt/repo/gabriel/tripletex_challenge_task
+cd ~/agentic-avengers-nm-ai/gabriel/tripletex_challenge_task
 ```
 
 Everything is already installed (uv, deps, Claude Code).
@@ -72,7 +72,7 @@ Claude Code is already installed. Just run:
 
 ```bash
 sudo su - gabriel
-cd /opt/repo/gabriel/tripletex_challenge_task
+cd ~/agentic-avengers-nm-ai/gabriel/tripletex_challenge_task
 claude
 ```
 

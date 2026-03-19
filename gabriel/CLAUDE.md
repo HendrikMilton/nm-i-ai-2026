@@ -7,11 +7,11 @@ The task: build an AI agent that completes accounting tasks in Tripletex using a
 
 ## Working on the VM
 
-You're on a GCP VM. The code is at `/opt/repo/gabriel/tripletex_challenge_task/`.
+You're on a GCP VM. The code is at `~/agentic-avengers-nm-ai/gabriel/tripletex_challenge_task/`.
 
 ```bash
 # Start the server (if not running)
-cd /opt/repo/gabriel/tripletex_challenge_task
+cd ~/agentic-avengers-nm-ai/gabriel/tripletex_challenge_task
 uv run uvicorn main:app --host 0.0.0.0 --port 8000 --reload
 
 # The cloudflared tunnel should be running — check with:
