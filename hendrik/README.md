@@ -50,3 +50,37 @@ cd challenge3 && uv sync && uv run uvicorn main:app --host 0.0.0.0 --port 4003
 | Junior 1 | CV challenge |
 | Junior 2 | Classification/NLP challenge |
 | Vibe coder | Infra, deployment, monitoring |
+
+
+## Claude Code on RunPod (autonomous mode)
+SSH into the pod and run:
+```bash
+# 1. Switch to non-root user (required for --dangerously-skip-permissions)
+su - researcher
+
+# 2. Install Claude Code (first time only)
+curl -fsSL https://claude.ai/install.sh | bash
+export PATH="$HOME/.claude/bin:$HOME/.local/bin:$PATH"
+
+# 3. Login (opens a URL — paste it in your browser, then paste the code back)
+claude login
+
+# 4. Start Claude in autonomous mode
+cd /workspace/repo/hendrik
+claude --dangerously-skip-permissions
+```
+
+## Test autoresearch on RunPod
+```bash
+# As researcher user on the pod:
+cd /workspace
+git clone https://github.com/karpathy/autoresearch.git
+cd autoresearch
+pip install uv  # if not already available
+uv sync  # if slow, use: pip install -e . (reuses system PyTorch/CUDA)
+uv run prepare.py  # downloads data + trains tokenizer (~2 min)
+
+# Start autoresearch loop
+claude --dangerously-skip-permissions
+# Then tell Claude: "Read program.md and begin the autoresearch loop. Never stop iterating. Assume I am asleep."
+```

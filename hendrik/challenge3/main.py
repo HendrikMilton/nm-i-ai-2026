@@ -1,4 +1,4 @@
-import sys, os
+import sys, os, json, time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from fastapi import FastAPI, Request
@@ -8,6 +8,8 @@ from solve import predict
 
 app = FastAPI(title="Challenge 3")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
+
+LOG_FILE = os.path.join(os.path.dirname(__file__), "requests.jsonl")
 
 
 @app.get("/")
@@ -23,7 +25,14 @@ def info():
 @app.post("/predict")
 async def predict_endpoint(request: Request):
     body = await request.json()
+    t0 = time.time()
     result = predict(body)
+    elapsed = time.time() - t0
+
+    # Log request + response for offline replay
+    with open(LOG_FILE, "a") as f:
+        f.write(json.dumps({"ts": t0, "elapsed": elapsed, "request": body, "response": result}) + "\n")
+
     return JSONResponse(content=result)
 
 

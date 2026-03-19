@@ -9,3 +9,8 @@ run.log
 results.tsv
 .uv/
 uv.lock
+endpoints.txt
+requests.jsonl
+node_modules/
+frontend/src/compiled.css
+bun.lock
