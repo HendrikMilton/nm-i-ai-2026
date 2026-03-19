@@ -9,29 +9,64 @@ then call the Tripletex API to complete the accounting task.
 import base64
 import json
 import requests
-from google.cloud import aiplatform
+import vertexai
 from vertexai.generative_models import GenerativeModel, Part
+from anthropic import AnthropicVertex
 
 
 PROJECT_ID = "ai-nm26osl-1713"
-LOCATION = "europe-west4"
+
+# Change this to switch models:
+# Gemini (via Vertex AI):
+#   "gemini-2.5-pro"       — best reasoning, slower
+#   "gemini-2.5-flash"     — fast, good for simple tasks
+#   "gemini-2.0-flash"     — fastest, least capable
+# Claude (via Vertex AI Model Garden):
+#   "claude-opus-4-6"      — most capable
+#   "claude-sonnet-4-6"    — good balance of speed/quality
 MODEL = "gemini-2.5-pro"
 
+vertexai.init(project=PROJECT_ID, location="us-central1")
 
-def call_gemini(prompt: str, files: list[dict] | None = None) -> str:
-    """Send a prompt to Gemini and get a text response."""
+
+def call_llm(prompt: str, files: list[dict] | None = None) -> str:
+    """Send a prompt to the configured model and get a text response."""
+    if MODEL.startswith("claude"):
+        return _call_claude(prompt, files)
+    return _call_llm(prompt, files)
+
+
+def _call_llm(prompt: str, files: list[dict] | None = None) -> str:
     model = GenerativeModel(MODEL)
-
     parts = [Part.from_text(prompt)]
-
-    # Attach files (PDFs/images) if provided
     if files:
         for f in files:
             data = base64.b64decode(f["content_base64"])
             parts.append(Part.from_data(data=data, mime_type=f["mime_type"]))
-
     response = model.generate_content(parts)
     return response.text
+
+
+def _call_claude(prompt: str, files: list[dict] | None = None) -> str:
+    client = AnthropicVertex(region="global", project_id=PROJECT_ID)
+    content = []
+    if files:
+        for f in files:
+            content.append({
+                "type": "image" if f["mime_type"].startswith("image/") else "document",
+                "source": {
+                    "type": "base64",
+                    "media_type": f["mime_type"],
+                    "data": f["content_base64"],
+                },
+            })
+    content.append({"type": "text", "text": prompt})
+    response = client.messages.create(
+        model=MODEL,
+        max_tokens=4096,
+        messages=[{"role": "user", "content": content}],
+    )
+    return response.content[0].text
 
 
 def call_tripletex(method: str, endpoint: str, base_url: str, token: str,
@@ -117,7 +152,7 @@ Only return the JSON array, nothing else."""
     llm_prompt = f"{system_prompt}\n\nTask:\n{prompt}"
 
     # Step 1: Ask Gemini what to do
-    llm_response = call_gemini(llm_prompt, files if files else None)
+    llm_response = call_llm(llm_prompt, files if files else None)
 
     # Step 2: Parse and execute the plan
     try:
