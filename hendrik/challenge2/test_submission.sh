@@ -59,9 +59,10 @@ OUTPUT_DIR="$RUNS_DIR/$RUN_NAME/test_output"
 mkdir -p "$OUTPUT_DIR"
 
 cd "$SUBMISSION_DIR"
-time python run.py --input "$DATA_DIR/images/val" --output "$OUTPUT_DIR/predictions.json"
+time python3 run.py --input "$DATA_DIR/images/val" --output "$OUTPUT_DIR/predictions.json"
 
 # Count predictions
+cd "$SCRIPT_DIR"
 PRED_COUNT=$(python3 -c "import json; print(len(json.load(open('$OUTPUT_DIR/predictions.json'))))")
 echo ""
 echo "Predictions: $PRED_COUNT"
@@ -70,7 +71,7 @@ echo "Predictions: $PRED_COUNT"
 echo ""
 echo "Running evaluation..."
 cd "$SCRIPT_DIR"
-python evaluate.py --predictions "$OUTPUT_DIR/predictions.json" --ground-truth "$DATA_DIR/val_annotations.json"
+python3 evaluate.py --predictions "$OUTPUT_DIR/predictions.json" --ground-truth "$DATA_DIR/val_annotations.json"
 
 # Create zip for submission
 echo ""

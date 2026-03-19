@@ -55,7 +55,7 @@ def evaluate(predictions_path: str, ground_truth_path: str) -> dict:
 
         coco_dt_det = coco_gt_det.loadRes(det_predictions)
         eval_det = COCOeval(coco_gt_det, coco_dt_det, "bbox")
-        eval_det.params.iouThrs = [0.5]  # Only IoU=0.5
+        eval_det.params.iouThrs = np.array([0.5])  # Only IoU=0.5
         eval_det.evaluate()
         eval_det.accumulate()
         eval_det.summarize()
@@ -71,7 +71,7 @@ def evaluate(predictions_path: str, ground_truth_path: str) -> dict:
 
         coco_dt_cls = coco_gt_cls.loadRes(predictions)
         eval_cls = COCOeval(coco_gt_cls, coco_dt_cls, "bbox")
-        eval_cls.params.iouThrs = [0.5]
+        eval_cls.params.iouThrs = np.array([0.5])
         eval_cls.evaluate()
         eval_cls.accumulate()
         eval_cls.summarize()
