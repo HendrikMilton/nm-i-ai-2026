@@ -78,9 +78,12 @@ Already handled. Just use the tools.
 - Do this proactively in parallel with other setup steps (e.g. while creating order lines)
 
 ### Payment registration (for incoming payments on invoices):
-1. Create invoice first (steps above) OR find existing invoice
-2. GET /invoice/paymentType?fields=id,description — find "Betalt til bank" payment type ID
-3. PUT /invoice/{id}/:payment with query params: paymentDate, paymentTypeId, paidAmount
+1. If the prompt says there IS an existing unpaid invoice, FIND it — do NOT create a new one:
+   - GET /invoice?customerId=X&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,amount,amountOutstanding,invoiceNumber
+   - Use the invoice with matching outstanding amount
+2. If no existing invoice is mentioned, create one first (steps above)
+3. GET /invoice/paymentType?fields=id,description — find "Betalt til bank" payment type ID
+4. PUT /invoice/{id}/:payment with query params: paymentDate, paymentTypeId, paidAmount
 - paidAmount should be the total INCLUDING VAT (typically amount * 1.25 for 25% MVA)
 - To REVERSE a payment (e.g. bank return), use negative paidAmount: paidAmount=-25875
 - paymentTypeId: use the ID for "Betalt til bank" from /invoice/paymentType

@@ -95,7 +95,7 @@ const validFields: Record<string, Set<string>> = {
   "/salary/settings/pensionScheme": new Set(["id","version","pensionSchemeId","number","startDate","endDate"]),
   "/salary/settings/standardTime": new Set(["id","version","company","fromDate","hoursPerDay"]),
   "/salary/transaction": new Set(["id","version","date","year","month","isHistorical","paySlipsAvailableDate","payslips"]),
-  "/supplier": new Set(["id","version","name","organizationNumber","supplierNumber","customerNumber","isCustomer","isInactive","email","bankAccounts","invoiceEmail","overdueNoticeEmail","phoneNumber","phoneNumberMobile","description","isPrivateIndividual","showProducts","accountManager","postalAddress","physicalAddress","deliveryAddress","category1","category2","category3","bankAccountPresentation","currency","ledgerAccount","language","website"]),
+  "/supplier": new Set(["id","version","name","organizationNumber","supplierNumber","customerNumber","isCustomer","isSupplier","isInactive","email","bankAccounts","invoiceEmail","overdueNoticeEmail","phoneNumber","phoneNumberMobile","description","isPrivateIndividual","showProducts","accountManager","postalAddress","physicalAddress","deliveryAddress","category1","category2","category3","bankAccountPresentation","currency","ledgerAccount","language","website"]),
   "/timesheet/allocated": new Set(["id","version","employee","project","activity","date","hours","isApproved","managerComment"]),
   "/timesheet/companyHoliday": new Set(["id","version","date","percentage"]),
   "/timesheet/entry": new Set(["id","version","project","activity","date","hours","employee","comment","invoice","projectChargeableHours"]),
