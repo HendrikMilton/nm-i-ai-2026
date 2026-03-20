@@ -7,7 +7,7 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
 from utils import get_rounds
-from offline.run_local import backtest_round, load_custom_params
+from offline.run_local import backtest_full_pipeline, load_custom_params
 
 CONFIGS = [
     # iter, label, sim_weight, prior_weight, n_sims
@@ -51,7 +51,7 @@ def main():
             print(f"[{done}/{total}] R{round_num} {label} (sw={sim_w}, pw={prior_w})")
 
             t0 = time.time()
-            _, round_score = backtest_round(
+            _, round_score = backtest_full_pipeline(
                 round_id, round_num, n_sims, params,
                 sim_weight=sim_w, prior_weight=prior_w,
                 iteration_id=iteration_id, config=config,

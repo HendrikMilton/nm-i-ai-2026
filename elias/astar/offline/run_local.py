@@ -4,8 +4,6 @@ Astar Island — Local simulator pipeline.
 Modes:
   python offline/run_local.py                  # Run sim + submit on active round
   python offline/run_local.py --no-submit      # Run sim without submitting
-  python offline/run_local.py --backtest       # Score against real ground truth (completed rounds)
-  python offline/run_local.py --backtest-all   # Score against all completed rounds
   python offline/run_local.py --backtest-full  # Full pipeline backtest with simulated queries
   python offline/run_local.py --backtest-full 3 --budget 30  # Specific round, reduced budget
   python offline/run_local.py --sims 500       # More simulations for better estimates
@@ -13,7 +11,6 @@ Modes:
 
 import argparse
 import json
-import math
 import os
 import random
 import sys
@@ -32,15 +29,14 @@ from utils import (
     floor_and_normalize,
 )
 from offline.simulator import run_monte_carlo, DEFAULT_PARAMS
-from offline.score import score_prediction, score_all_seeds
+from offline.score import score_prediction
 from run import (
-    TERRAIN_PRIORS, N_CLASSES, N_SIMS, SIM_WEIGHT, PRIOR_WEIGHT, OBS_WEIGHT,
+    N_CLASSES, N_SIMS, SIM_WEIGHT, PRIOR_WEIGHT, OBS_WEIGHT,
     TERRAIN_TO_CLASS, VIEWPORT,
-    parse_initial_grid, extract_map_dimensions, get_contextual_prior,
+    parse_initial_grid, extract_map_dimensions,
     get_distance_aware_prior, compute_settlement_distances,
-    estimate_expansion_rate,
     extract_grid_and_settlements, generate_prediction,
-    find_dynamic_viewports, merge_counts,
+    build_tiling, merge_counts,
     run_observation_phases,
     log_action, log_submission, _ensure_round, N_SEEDS,
 )
@@ -122,135 +118,6 @@ def load_custom_params(path=None):
 
 
 # --- Backtest ---
-
-def _estimate_expansion_from_gt(round_id, rd, map_w, map_h):
-    """Estimate expansion rate from ground truth, simulating what live observations would give.
-
-    In the live pipeline, we observe single stochastic sims via the API.
-    Here we simulate that by sampling from ground truth distributions
-    (which are the average of hundreds of sims — close to what N observations would show).
-
-    We use the GT's settlement probability for cells near initial settlements
-    as a proxy for what we'd estimate from real observations.
-    """
-    expansion_rates = []
-
-    for seed in range(N_SEEDS):
-        analysis = get_analysis(round_id, seed)
-        gt = analysis["ground_truth"]
-        ig = analysis["initial_grid"]
-
-        dist_map = compute_settlement_distances(ig, map_h, map_w)
-
-        # Simulate ~8 observation queries (1 pass of viewports)
-        # by sampling from GT for cells in expansion range
-        settle_obs = 0
-        total_obs = 0
-        random.seed(seed * 42)
-
-        for r in range(map_h):
-            for c in range(map_w):
-                terrain = ig[r][c]
-                if terrain in (10, 5, 1, 2):
-                    continue
-                d = dist_map[r][c]
-                if d < 1 or d > 3:
-                    continue
-                # Sample one observation from GT
-                probs = gt[r][c]
-                rand = random.random()
-                cumsum = 0
-                cls = 0
-                for k in range(6):
-                    cumsum += probs[k]
-                    if rand < cumsum:
-                        cls = k
-                        break
-                total_obs += 1
-                if cls == 1:  # settlement
-                    settle_obs += 1
-
-        if total_obs > 0:
-            expansion_rates.append((settle_obs / total_obs, total_obs))
-
-    if expansion_rates:
-        total_samples = sum(n for _, n in expansion_rates)
-        return sum(r * n for r, n in expansion_rates) / total_samples
-    return 0.10
-
-
-def backtest_round(round_id, round_num, n_sims, params,
-                   sim_weight=SIM_WEIGHT, prior_weight=PRIOR_WEIGHT,
-                   iteration_id=None, config=None, quiet=False):
-    """Score predictions against real ground truth for a completed round.
-
-    Uses the same generate_prediction() from run.py that the live pipeline uses.
-    Estimates expansion rate from GT to simulate what observations would provide.
-    """
-    if not quiet:
-        print(f"\n=== Backtest Round {round_num} ({round_id[:8]}...) ===")
-
-    rd = get_round(round_id)
-    map_w, map_h = extract_map_dimensions(rd)
-
-    # Estimate expansion rate (simulating live observation analysis)
-    expansion_rate = _estimate_expansion_from_gt(round_id, rd, map_w, map_h)
-    if not quiet:
-        print(f"  Expansion rate: {expansion_rate:.3f}")
-
-    seed_results = {}
-
-    for seed in range(N_SEEDS):
-        if not quiet:
-            print(f"  Seed {seed}: ", end="", flush=True)
-
-        analysis = get_analysis(round_id, seed)
-        ground_truth = analysis["ground_truth"]
-
-        grid, settlements = extract_grid_and_settlements(rd, seed)
-        t0 = time.time()
-        pred = generate_prediction(
-            grid, settlements, n_sims, params, seed * 10000,
-            map_w, map_h, sim_weight=sim_weight, prior_weight=prior_weight,
-            expansion_rate=expansion_rate)
-        elapsed = time.time() - t0
-
-        # Distance-aware prior-only for comparison
-        dist_map = compute_settlement_distances(grid, map_h, map_w)
-        prior_pred = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-        for r in range(map_h):
-            for c in range(map_w):
-                prior_pred[r][c] = get_distance_aware_prior(
-                    grid, r, c, map_h, map_w, dist_map, expansion_rate)
-        prior_pred = floor_and_normalize(prior_pred)
-
-        sim_result = score_prediction(pred, ground_truth)
-        prior_result = score_prediction(prior_pred, ground_truth)
-
-        seed_results[seed] = {
-            "sim_score": sim_result["score"],
-            "prior_score": prior_result["score"],
-            "weighted_kl": sim_result["weighted_kl"],
-            "scored_cells": sim_result["scored_cells"],
-            "elapsed_s": round(elapsed, 1),
-            "initial_grid": grid,
-            "prediction": pred,
-            "ground_truth": ground_truth,
-        }
-
-        if not quiet:
-            print(f"sim={sim_result['score']:.1f}  prior={prior_result['score']:.1f}  ({elapsed:.1f}s)")
-
-    scores = [s["sim_score"] for s in seed_results.values()]
-    round_score = round(sum(scores) / len(scores), 4) if scores else 0
-
-    save_backtest(round_id, round_num, n_sims, seed_results, round_score,
-                  iteration_id=iteration_id, config=config)
-
-    if not quiet:
-        print(f"\n  Round score: {round_score}")
-    return seed_results, round_score
-
 
 # --- Full pipeline backtest (with simulated queries) ---
 
@@ -359,16 +226,14 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
         analysis = get_analysis(round_id, seed)
         seed_gt[seed] = analysis["ground_truth"]
 
-    # Find dynamic viewports per seed (greedy set cover)
-    seed_dynamic_vps = {}
-    for s in range(N_SEEDS):
-        grid = seed_grids.get(s, initial_grid)
-        seed_dynamic_vps[s] = find_dynamic_viewports(grid, map_w, map_h)
+    # Full-coverage tiling (same for all seeds)
+    tiling = build_tiling(map_w, map_h)
+    seed_viewports = {s: tiling for s in range(N_SEEDS)}
 
-    phase1_total = sum(len(seed_dynamic_vps[s]) for s in range(N_SEEDS))
+    phase1_total = len(tiling) * N_SEEDS
     if not quiet:
-        print(f"  Per-seed viewports: {[len(seed_dynamic_vps[s]) for s in range(N_SEEDS)]}")
-        print(f"  Phase 1: {phase1_total} queries, Phase 2: {max(0, budget - phase1_total)} queries")
+        print(f"  Full-coverage tiling: {len(tiling)} viewports/seed × {N_SEEDS} seeds = {phase1_total} queries")
+        print(f"  Phase 2: {max(0, budget - phase1_total)} queries")
 
     # Seeded RNG for reproducibility
     rng = random.Random(rng_seed if rng_seed is not None else round_num * 7919)
@@ -383,8 +248,8 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
 
     print_fn = (lambda *a: None) if quiet else print
 
-    seed_counts, avg_expansion, dist_multipliers, prior_table = run_observation_phases(
-        seed_grids, seed_dynamic_vps, budget, map_w, map_h,
+    seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio = run_observation_phases(
+        seed_grids, seed_viewports, budget, map_w, map_h,
         observe_fn=local_observe, print_fn=print_fn,
     )
 
@@ -405,18 +270,11 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
             sim_weight=eff_sim_w, prior_weight=eff_prior_w,
             obs_counts=seed_counts[seed], obs_weight=eff_obs_w,
             expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
+            port_ratio=port_ratio, ruin_ratio=ruin_ratio,
             prior_table=prior_table)
         elapsed = time.time() - t0
 
-        # Sim+prior only (no observations) for comparison
-        sim_pred = generate_prediction(
-            grid, settlements, n_sims, params, seed * 10000,
-            map_w, map_h,
-            sim_weight=eff_sim_w, prior_weight=eff_prior_w,
-            expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
-            prior_table=prior_table)
-
-        # Prior-only for comparison
+        # Prior-only for comparison (cheap — no sim)
         dist_map = compute_settlement_distances(grid, map_h, map_w)
         prior_pred = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
         for r in range(map_h):
@@ -424,16 +282,15 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
                 prior_pred[r][c] = get_distance_aware_prior(
                     grid, r, c, map_h, map_w, dist_map, avg_expansion,
                     dist_multipliers=dist_multipliers,
+                    port_ratio=port_ratio, ruin_ratio=ruin_ratio,
                     prior_table=prior_table)
         prior_pred = floor_and_normalize(prior_pred)
 
         obs_result = score_prediction(obs_pred, ground_truth)
-        sim_result = score_prediction(sim_pred, ground_truth)
         prior_result = score_prediction(prior_pred, ground_truth)
 
         seed_results[seed] = {
             "obs_score": obs_result["score"],
-            "sim_score": sim_result["score"],
             "prior_score": prior_result["score"],
             "weighted_kl": obs_result["weighted_kl"],
             "scored_cells": obs_result["scored_cells"],
@@ -446,7 +303,7 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
         }
 
         if not quiet:
-            print(f"obs={obs_result['score']:.1f}  sim={sim_result['score']:.1f}  "
+            print(f"obs={obs_result['score']:.1f}  "
                   f"prior={prior_result['score']:.1f}  ({elapsed:.1f}s, {seed_results[seed]['n_queries']}q)")
 
     # Round score uses obs_score (the full pipeline score)
@@ -461,10 +318,9 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
                   iteration_id=iteration_id, config=save_config)
 
     if not quiet:
-        sim_avg = sum(s["sim_score"] for s in seed_results.values()) / N_SEEDS
         prior_avg = sum(s["prior_score"] for s in seed_results.values()) / N_SEEDS
-        print(f"\n  Round scores: obs={round_score:.1f}  sim={sim_avg:.1f}  prior={prior_avg:.1f}")
-        print(f"  Obs improvement over sim: {round_score - sim_avg:+.1f}")
+        print(f"\n  Round scores: obs={round_score:.1f}  prior={prior_avg:.1f}")
+        print(f"  Obs improvement over prior: {round_score - prior_avg:+.1f}")
 
     return seed_results, round_score
 
@@ -544,10 +400,6 @@ def main():
                         help="Generate predictions without submitting")
     parser.add_argument("--output", type=str, default=None,
                         help="Save predictions to JSON file")
-    parser.add_argument("--backtest", type=int, default=None, nargs="?", const=-1,
-                        help="Backtest against a completed round (number, or latest if omitted)")
-    parser.add_argument("--backtest-all", action="store_true",
-                        help="Backtest against all completed rounds")
     parser.add_argument("--backtest-full", type=int, default=None, nargs="?", const=-1,
                         help="Full pipeline backtest with simulated queries (round number, or latest)")
     parser.add_argument("--budget", type=int, default=50,
@@ -568,26 +420,6 @@ def main():
                 return
         backtest_full_pipeline(target["id"], target["round_number"], args.sims, params,
                                budget=args.budget)
-        return
-
-    if args.backtest_all:
-        rounds = get_rounds()
-        completed = [r for r in rounds if r["status"] == "completed"]
-        for r in completed:
-            backtest_round(r["id"], r["round_number"], args.sims, params)
-        return
-
-    if args.backtest is not None:
-        rounds = get_rounds()
-        completed = [r for r in rounds if r["status"] == "completed"]
-        if args.backtest == -1:
-            target = completed[-1]
-        else:
-            target = next((r for r in completed if r["round_number"] == args.backtest), None)
-            if not target:
-                print(f"Round {args.backtest} not found or not completed.")
-                return
-        backtest_round(target["id"], target["round_number"], args.sims, params)
         return
 
     run_active(args.sims, params, args.no_submit, args.output)
