@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
 import SimulationGrid, { GridCanvas, Legend, TerrainStats, PredictionGridCanvas, PredictionStats } from './SimulationGrid'
 import { generateExampleSimulation } from './exampleSimulation'
+import OfflineView from './OfflineView'
 import { fetchRounds } from './api'
 import './App.css'
 
@@ -484,6 +485,12 @@ function App() {
             Simulation
           </button>
           <button
+            className={`tab-btn ${tab === 'offline' ? 'active' : ''}`}
+            onClick={() => setTab('offline')}
+          >
+            Offline
+          </button>
+          <button
             className={`tab-btn ${tab === 'logs' ? 'active' : ''}`}
             onClick={() => setTab('logs')}
           >
@@ -518,6 +525,7 @@ function App() {
         )}
 
         {tab === 'simulation' && <SimulationView logData={logData} fetchRoundLog={fetchRoundLog} apiRounds={rounds} />}
+        {tab === 'offline' && <OfflineView apiRounds={rounds} />}
         {tab === 'logs' && <LogsView logData={logData} fetchRoundLog={fetchRoundLog} apiRounds={rounds} />}
       </main>
     </div>

@@ -1,0 +1,20 @@
+{
+  "description": "Create supplier",
+  "checks": [
+    {
+      "endpoint": "/customer",
+      "params": {"name": "Skyløsninger Nord AS", "fields": "id,name,email,organizationNumber,isSupplier"},
+      "expect": {
+        "minResults": 1,
+        "fields": {
+          "name": "Skyløsninger Nord AS",
+          "email": "salg@skylosninger.no",
+          "organizationNumber": "956781234",
+          "isSupplier": true
+        }
+      }
+    }
+  ],
+  "maxApiCalls": 1,
+  "maxErrors": 0
+}
