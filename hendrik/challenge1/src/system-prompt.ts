@@ -57,10 +57,13 @@ Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
 
 ## Workflow: Travel expense
 1. GET /employee?firstName=X&lastName=Y
-2. POST /travelExpense with {employee:{id}, title, date}
+2. POST /travelExpense with {employee:{id}, title, date, travelDetails:{isForeignTravel:false, isDayTrip:false, isCompensationFromRates:true, departureDate:"YYYY-MM-DD", returnDate:"YYYY-MM-DD", departureFrom:"<city>", destination:"<city>", departureTime:"08:00", returnTime:"18:00", purpose:"<title>"}}
+   - Calculate departureDate from returnDate minus travel duration (e.g. 3 days → returnDate minus 2)
+   - Use the travel expense title as purpose
 3. GET /travelExpense/costCategory?fields=id,description and GET /travelExpense/paymentType?fields=id,description — parallel
-4. For each cost ONE AT A TIME: POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date, amountCurrencyIncVat, comments}
-   Per diem: use costCategory "Mat", set rate=<daily_rate>, amountCurrencyIncVat=<total>
+4. For each regular cost (flight, taxi, hotel etc) ONE AT A TIME: POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date, amountCurrencyIncVat, comments}
+   Per diem/daily allowance: use costCategory "Mat", set rate=<daily_rate>, amountCurrencyIncVat=<total>, comments="Diett <N> dager x <rate> NOK"
+5. After all costs added: PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
 
 ## Workflow: Timesheet + project invoice
 1. Find employee, customer, project (GET in parallel)
