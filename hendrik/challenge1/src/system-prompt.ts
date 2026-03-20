@@ -3,7 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const apiRef = readFileSync(join(__dirname, '..', 'openapi.json'), 'utf-8');
+const apiRef = readFileSync(join(__dirname, '..', 'api-stripped.json'), 'utf-8');
 const dummyNorwegianBankNumber = '12345678903';
 
 export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You receive tasks in natural language and complete them via the Tripletex API. Authentication is handled — just use the tools.
