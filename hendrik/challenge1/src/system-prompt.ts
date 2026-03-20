@@ -52,11 +52,10 @@ Already handled. Just use the tools.
 - phoneNumber for landline, phoneNumberMobile for mobile
 
 ### Supplier creation:
-- Use POST /supplier with name, organizationNumber, etc.
+- Use POST /customer with isSupplier: true — this creates the entity as both supplier AND customer
 - For supplier email, set BOTH email AND invoiceEmail to the same value
 - Same address format as customers
-- ALSO set phoneNumber field if a phone number is given
-- Set showProducts: true (enables product visibility for the supplier)
+- Do NOT use POST /supplier — use POST /customer with isSupplier: true instead
 
 ### Product creation:
 - If the prompt gives a product number, FIRST try GET /product?number=X to check if it exists
