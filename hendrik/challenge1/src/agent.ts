@@ -1,10 +1,33 @@
+import { appendFileSync } from 'fs';
+import { join, dirname } from 'path';
+import { fileURLToPath } from 'url';
 import { generateText, type LanguageModel } from 'ai';
 import { createVertex } from '@ai-sdk/google-vertex';
 import { createVertexAnthropic } from '@ai-sdk/google-vertex/anthropic';
 import { TripletexClient } from './tripletex';
 import { createTools } from './tools';
 import { SYSTEM_PROMPT } from './system-prompt';
-import { MODEL, GCP_PROJECT, GCP_LOCATION, GCP_LOCATION_ANTHROPIC } from './config';
+import { GCP_PROJECT, GCP_LOCATION, GCP_LOCATION_ANTHROPIC } from './config';
+
+const MODEL = process.env.MODEL ?? 'claude-opus-4-6';
+const __dirname = dirname(fileURLToPath(import.meta.url));
+const LOGS_DIR = join(__dirname, '..', 'logs');
+
+let currentLogFile = '';
+
+const startLog = () => {
+    const ts = new Date().toISOString().replace(/[:.]/g, '-');
+    currentLogFile = join(LOGS_DIR, `${ts}.log`);
+    return currentLogFile;
+};
+
+const log = (msg: string) => {
+    const line = `[${new Date().toISOString()}] ${msg}`;
+    console.log(line);
+    if (currentLogFile) {
+        appendFileSync(currentLogFile, line + '\n');
+    }
+};
 
 const vertex = createVertex({ project: GCP_PROJECT, location: GCP_LOCATION });
 const vertexAnthropic = createVertexAnthropic({ project: GCP_PROJECT, location: GCP_LOCATION_ANTHROPIC });
@@ -26,11 +49,15 @@ interface SolveRequest {
 }
 
 export const solve = async (body: SolveRequest) => {
+    startLog();
+    const start = Date.now();
     const { prompt, files, tripletex_credentials } = body;
     const client = new TripletexClient(tripletex_credentials.base_url, tripletex_credentials.session_token);
     const tools = createTools(client);
 
     const today = new Date().toISOString().split('T')[0];
+
+    log(`[AGENT] model=${MODEL} prompt="${prompt.slice(0, 100)}..."`);
 
     // Build user message content
     const userContent: Array<
@@ -38,7 +65,6 @@ export const solve = async (body: SolveRequest) => {
     | { type: 'image'; image: string; mimeType?: string }
   > = [];
 
-    // Add files as multimodal content
     if (files?.length) {
         for (const f of files) {
             if (f.mime_type.startsWith('image/')) {
@@ -46,6 +72,12 @@ export const solve = async (body: SolveRequest) => {
                     type: 'image',
                     image: `data:${f.mime_type};base64,${f.content_base64}`,
                 });
+            } else if (f.mime_type === 'application/pdf') {
+                userContent.push({
+                    type: 'file',
+                    data: f.content_base64,
+                    mimeType: f.mime_type,
+                } as any);
             } else {
                 userContent.push({
                     type: 'text',
@@ -53,6 +85,7 @@ export const solve = async (body: SolveRequest) => {
                 });
             }
         }
+        log(`[AGENT] files: ${files.map(f => f.filename).join(', ')}`);
     }
 
     userContent.push({
@@ -60,18 +93,48 @@ export const solve = async (body: SolveRequest) => {
         text: `Today's date: ${today}\n\nTask:\n${prompt}`,
     });
 
-    console.log(`[AGENT] Using model: ${MODEL}, prompt: ${prompt.slice(0, 80)}...`);
+    const abortController = new AbortController();
+    const timeout = setTimeout(() => {
+        log('[AGENT] TIMEOUT — aborting after 240s');
+        abortController.abort();
+    }, 240_000);
 
-    const result = await generateText({
-        model: getModel(MODEL),
-        system: SYSTEM_PROMPT,
-        messages: [{ role: 'user', content: userContent }],
-        tools,
-        maxSteps: 15,
-    });
+    let result;
+    try {
+        result = await generateText({
+            model: getModel(MODEL),
+            system: SYSTEM_PROMPT,
+            messages: [{ role: 'user', content: userContent }],
+            tools,
+            maxSteps: 15,
+            abortSignal: abortController.signal,
+        });
+    } finally {
+        clearTimeout(timeout);
+    }
 
+    const elapsed = ((Date.now() - start) / 1000).toFixed(1);
     const apiCalls = client.callLog.length;
     const errors = client.callLog.filter(c => c.status >= 400).length;
-    console.log(`[AGENT] Done. Steps: ${result.steps.length}, API calls: ${apiCalls}, errors: ${errors}`);
-    console.log(`[AGENT] Final text: ${result.text?.slice(0, 200)}`);
+
+    // Log step details
+    for (let i = 0; i < result.steps.length; i++) {
+        const step = result.steps[i];
+        const toolCalls = step.toolCalls?.map(tc => `${tc.toolName}(${JSON.stringify(tc.args)})`).join(', ') || '';
+        const toolResults = step.toolResults?.map(tr => `${tr.toolName}→${JSON.stringify(tr.result)}`).join(', ') || '';
+        if (toolCalls) {
+            log(`[STEP ${i + 1}] calls: ${toolCalls}`);
+        }
+        if (toolResults) {
+            log(`[STEP ${i + 1}] results: ${toolResults}`);
+        }
+        if (step.text) {
+            log(`[STEP ${i + 1}] text: ${step.text}`);
+        }
+    }
+
+    log(`[AGENT] DONE elapsed=${elapsed}s steps=${result.steps.length} apiCalls=${apiCalls} errors=${errors}`);
+    log(`[AGENT] apiLog: ${JSON.stringify(client.callLog)}`);
+    log(`[AGENT] response: ${result.text}`);
+    log('---');
 };
