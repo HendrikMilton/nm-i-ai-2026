@@ -991,6 +991,47 @@ def run_observation_phases(seed_grids, seed_viewports, total_budget, map_w, map_
     return seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio
 
 
+def reconstruct_counts_from_log(round_id, map_w, map_h):
+    """Reconstruct per-seed observation counts from previously logged queries.
+
+    Returns: dict of seed_index → H x W x N_CLASSES counts grid, or None if no queries found.
+    """
+    round_data = _load_round(round_id)
+    if round_data is None:
+        return None
+
+    queries = round_data.get("queries") or []
+    if not queries:
+        return None
+
+    seed_counts = {}
+    for q in queries:
+        seed_idx = q.get("seed_index")
+        if seed_idx is None:
+            continue
+        if seed_idx not in seed_counts:
+            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+
+        vp = q.get("viewport") or {}
+        vx, vy = vp.get("x", 0), vp.get("y", 0)
+        grid = q.get("grid") or []
+
+        for r, row in enumerate(grid):
+            for c, val in enumerate(row):
+                map_r = vy + r
+                map_c = vx + c
+                if 0 <= map_r < map_h and 0 <= map_c < map_w:
+                    cls = TERRAIN_TO_CLASS.get(val, 0)
+                    seed_counts[seed_idx][map_r][map_c][cls] += 1
+
+    if not seed_counts:
+        return None
+
+    total_queries = len(queries)
+    print(f"  Reconstructed counts from {total_queries} logged queries across {len(seed_counts)} seeds")
+    return seed_counts
+
+
 def main():
     # 1. Find active round
     print("Fetching active round...")
@@ -1040,42 +1081,109 @@ def main():
     total_budget = int(max_q) - int(used)
     print(f"Budget: {total_budget} remaining ({used} used / {max_q} max)")
 
-    # 4. Plan viewports — full-coverage 3×3 tiling (same for all seeds)
-    tiling = build_tiling(map_w, map_h)
-    seed_viewports = {s: tiling for s in range(N_SEEDS)}
+    # 4. Try to reconstruct counts from previous run's logged queries
+    cached_counts = reconstruct_counts_from_log(round_id, map_w, map_h)
 
-    phase1_total = len(tiling) * N_SEEDS
-    log_action(round_id, "plan_v6", {
-        "strategy": "full_coverage_tiling",
-        "total_budget": total_budget,
-        "viewports_per_seed": len(tiling),
-        "phase1_queries": phase1_total,
-        "phase2_budget": max(0, total_budget - phase1_total),
-        "n_sims": N_SIMS,
-        "sim_weight": SIM_WEIGHT,
-        "prior_weight": PRIOR_WEIGHT,
-    })
-    print(f"Full-coverage tiling: {len(tiling)} viewports/seed × {N_SEEDS} seeds = {phase1_total} queries")
-    print(f"Phase 2: {max(0, total_budget - phase1_total)} queries (extra on hardest)")
+    if cached_counts and total_budget == 0:
+        # No budget left — reuse cached queries entirely
+        print("No budget remaining — reusing cached queries from previous run")
+        log_action(round_id, "reuse_cached_queries", {"num_seeds": len(cached_counts)})
 
-    # 5-7. Run observations + estimate expansion rate (shared logic)
-    def live_observe(seed_idx, viewports):
-        print(f"\n--- Seed {seed_idx} ({len(viewports)} queries) ---")
-        log_action(round_id, "start_seed_observation", {
-            "seed_index": seed_idx, "num_queries": len(viewports),
+        # Ensure all seeds have counts
+        seed_counts = {}
+        for s in range(N_SEEDS):
+            seed_counts[s] = cached_counts.get(s, [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)])
+
+    else:
+        # Budget available — run fresh observations (will also be logged for next time)
+        # 4b. Plan viewports — full-coverage 3×3 tiling (same for all seeds)
+        tiling = build_tiling(map_w, map_h)
+        seed_viewports = {s: tiling for s in range(N_SEEDS)}
+
+        phase1_total = len(tiling) * N_SEEDS
+        log_action(round_id, "plan_v6", {
+            "strategy": "full_coverage_tiling",
+            "total_budget": total_budget,
+            "viewports_per_seed": len(tiling),
+            "phase1_queries": phase1_total,
+            "phase2_budget": max(0, total_budget - phase1_total),
+            "n_sims": N_SIMS,
+            "sim_weight": SIM_WEIGHT,
+            "prior_weight": PRIOR_WEIGHT,
         })
-        return observe_seed(round_id, seed_idx, viewports, map_w, map_h)
+        print(f"Full-coverage tiling: {len(tiling)} viewports/seed × {N_SEEDS} seeds = {phase1_total} queries")
+        print(f"Phase 2: {max(0, total_budget - phase1_total)} queries (extra on hardest)")
 
-    seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio = run_observation_phases(
-        seed_grids, seed_viewports, total_budget, map_w, map_h,
-        observe_fn=live_observe,
-    )
+        # 5-7. Run observations + estimate expansion rate (shared logic)
+        def live_observe(seed_idx, viewports):
+            print(f"\n--- Seed {seed_idx} ({len(viewports)} queries) ---")
+            log_action(round_id, "start_seed_observation", {
+                "seed_index": seed_idx, "num_queries": len(viewports),
+            })
+            return observe_seed(round_id, seed_idx, viewports, map_w, map_h)
+
+        seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio = run_observation_phases(
+            seed_grids, seed_viewports, total_budget, map_w, map_h,
+            observe_fn=live_observe,
+        )
+
+        # Merge with cached counts if available
+        if cached_counts:
+            print("Merging new observations with cached queries")
+            for s in range(N_SEEDS):
+                if s in cached_counts:
+                    merge_counts(seed_counts[s], cached_counts[s], map_w, map_h)
+
+    # Estimate expansion parameters from whatever counts we have
+    agg_dist_settle = {}
+    expansion_rates = []
+    for s in range(N_SEEDS):
+        grid = seed_grids.get(s, initial_grid)
+        dist_map = compute_settlement_distances(grid, map_h, map_w)
+        rate, n_samples = estimate_expansion_rate(seed_counts[s], grid, dist_map, map_h, map_w)
+        if n_samples > 0:
+            expansion_rates.append((rate, n_samples))
+        for r in range(map_h):
+            for c in range(map_w):
+                n_obs = sum(seed_counts[s][r][c])
+                if n_obs == 0:
+                    continue
+                terrain = grid[r][c]
+                if terrain in (10, 5, 1, 2):
+                    continue
+                d = dist_map[r][c]
+                if d < 1 or d > 7:
+                    continue
+                if d not in agg_dist_settle:
+                    agg_dist_settle[d] = [0, 0]
+                agg_dist_settle[d][0] += seed_counts[s][r][c][1]
+                agg_dist_settle[d][1] += n_obs
+
+    if expansion_rates:
+        total_samples = sum(n for _, n in expansion_rates)
+        avg_expansion = sum(r * n for r, n in expansion_rates) / total_samples
+    else:
+        avg_expansion = 0.10
+
+    d13_settle = sum(agg_dist_settle.get(d, [0, 0])[0] for d in [1, 2, 3])
+    d13_total = sum(agg_dist_settle.get(d, [0, 0])[1] for d in [1, 2, 3])
+    base_rate = d13_settle / d13_total if d13_total > 0 else avg_expansion
+
+    dist_multipliers = {}
+    for d in range(1, 8):
+        if d in agg_dist_settle and agg_dist_settle[d][1] >= 10 and base_rate > 0.001:
+            dist_multipliers[d] = (agg_dist_settle[d][0] / agg_dist_settle[d][1]) / base_rate
+        else:
+            dist_multipliers[d] = _DIST_DECAY_DEFAULT.get(d, 0.0)
+
+    port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_w, map_h)
+    prior_table, warmth = classify_round_warmth(avg_expansion)
 
     log_action(round_id, "expansion_rate_estimate", {
         "pooled_rate": round(avg_expansion, 4),
         "dist_multipliers": {str(k): round(v, 3) for k, v in dist_multipliers.items()},
     })
-    print(f"\nExpansion rate estimate: {avg_expansion:.3f}")
+    print(f"\nExpansion rate estimate: {avg_expansion:.3f} ({warmth})")
 
     # 8. Run simulator + blend with observations + distance-aware priors, then submit
     params = DEFAULT_PARAMS.copy()
