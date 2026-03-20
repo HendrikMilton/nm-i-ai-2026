@@ -94,14 +94,8 @@ const putValidators: Record<string, Validator> = {
 };
 
 export function validatePost(path: string, body: Record<string, unknown>): string | null {
-  // Exact match first
+  // Exact match only — no prefix matching to avoid /employee matching /employee/employment
   if (postValidators[path]) return postValidators[path](body, undefined);
-  // Try without trailing segments for nested paths
-  for (const [pattern, validator] of Object.entries(postValidators)) {
-    if (path === pattern || path.startsWith(pattern + "/")) {
-      return validator(body, undefined);
-    }
-  }
   return null;
 }
 
