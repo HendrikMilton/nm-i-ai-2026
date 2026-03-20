@@ -41,14 +41,17 @@ def main():
     parser.add_argument("--batch", type=int, default=64)
     parser.add_argument("--lr", type=float, default=1e-3)
     parser.add_argument("--patience", type=int, default=10)
+    parser.add_argument("--arch", type=str, default="efficientnet_v2_s", choices=["efficientnet_v2_s", "efficientnet_v2_m"])
+    parser.add_argument("--imgsz", type=int, default=224)
     args = parser.parse_args()
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     print(f"Device: {device}")
 
     # Data transforms
+    imgsz = args.imgsz
     train_transform = transforms.Compose([
-        transforms.RandomResizedCrop(224, scale=(0.6, 1.0)),
+        transforms.RandomResizedCrop(imgsz, scale=(0.6, 1.0)),
         transforms.RandomHorizontalFlip(),
         transforms.RandomRotation(15),
         transforms.ColorJitter(brightness=0.3, contrast=0.3, saturation=0.2),
@@ -57,8 +60,8 @@ def main():
     ])
 
     val_transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(int(imgsz * 1.14)),
+        transforms.CenterCrop(imgsz),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
@@ -72,14 +75,18 @@ def main():
     train_loader = DataLoader(train_dataset, batch_size=args.batch, shuffle=True, num_workers=4, pin_memory=True)
     val_loader = DataLoader(val_dataset, batch_size=args.batch, shuffle=False, num_workers=4, pin_memory=True)
 
-    # Model: EfficientNet-V2-S (pretrained)
+    # Model: EfficientNet-V2 (pretrained)
     # Available in torchvision 0.21.0 (sandbox compatible)
-    model = models.efficientnet_v2_s(weights=models.EfficientNet_V2_S_Weights.IMAGENET1K_V1)
+    model_name = args.arch
+    if model_name == "efficientnet_v2_m":
+        model = models.efficientnet_v2_m(weights=models.EfficientNet_V2_M_Weights.IMAGENET1K_V1)
+    else:
+        model = models.efficientnet_v2_s(weights=models.EfficientNet_V2_S_Weights.IMAGENET1K_V1)
     num_classes = len(train_dataset.classes)
     model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
     model = model.to(device)
 
-    print(f"Model: EfficientNet-V2-S, classes: {num_classes}")
+    print(f"Model: {model_name}, classes: {num_classes}")
     param_count = sum(p.numel() for p in model.parameters())
     print(f"Parameters: {param_count:,}")
 
@@ -180,6 +187,8 @@ def main():
                 "model_state_dict": model.state_dict(),
                 "class_to_idx": train_dataset.class_to_idx,
                 "num_classes": num_classes,
+                "arch": args.arch,
+                "imgsz": imgsz,
                 "val_acc": val_acc,
                 "val_top5": val_top5,
                 "epoch": epoch + 1,
