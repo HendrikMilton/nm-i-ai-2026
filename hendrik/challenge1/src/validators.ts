@@ -102,7 +102,7 @@ const validFields: Record<string, Set<string>> = {
   "/timesheet/salaryProjectTypeSpecification": new Set(["id","version","employee","project","activity","salaryType","description","date","count","wagePayment"]),
   "/timesheet/salaryTypeSpecification": new Set(["id","version","employee","salaryType","description","date","count"]),
   "/travelExpense/accommodationAllowance": new Set(["id","version","travelExpense","rateType","rateCategory","zone","location","address","count","rate","amount"]),
-  "/travelExpense/cost": new Set(["id","version","travelExpense","vatType","currency","costCategory","paymentType","category","comments","rate","amountCurrencyIncVat","amountNOKInclVAT","isChargeable","date","participants","predictions"]),
+  "/travelExpense/cost": new Set(["id","version","travelExpense","vatType","currency","costCategory","paymentType","category","comments","rate","amountCurrencyIncVat","amountNOKInclVAT","isChargeable","date","participants","predictions","isPaidByEmployee"]),
   "/travelExpense/costParticipant": new Set(["id","version","displayName","employeeId","cost"]),
   "/travelExpense/drivingStop": new Set(["id","version","locationName","latitude","longitude","sortIndex","type","mileageAllowance"]),
   "/travelExpense/mileageAllowance": new Set(["id","version","travelExpense","rateType","rateCategory","date","departureLocation","destination","km","rate","amount","isCompanyCar","vehicleType","passengerSupplement","trailerSupplement","tollCost"]),

@@ -52,7 +52,8 @@ Already handled. Just use the tools.
 - phoneNumber for landline, phoneNumberMobile for mobile
 
 ### Supplier creation:
-- Suppliers use POST /customer with isSupplier: true (NOT isCustomer)
+- POST /supplier with name, organizationNumber, etc.
+- For supplier email, set BOTH email AND invoiceEmail to the same value
 - Same address format as customers
 
 ### Product creation:
@@ -143,9 +144,9 @@ Already handled. Just use the tools.
 3. GET /travelExpense/costCategory?fields=id,description — find cost category IDs
 4. GET /travelExpense/paymentType?fields=id,description — find payment type ID (need this for cost creation)
 5. For each cost ONE AT A TIME sequentially (NOT in parallel — parallel causes 409/500 conflicts):
-   POST /travelExpense/cost with {travelExpense: {id}, costCategory: {id}, paymentType: {id}, date, amountCurrencyIncVat, comments}
+   POST /travelExpense/cost with {travelExpense: {id}, costCategory: {id}, paymentType: {id}, date, amountCurrencyIncVat, comments, isPaidByEmployee: true}
 - ALWAYS include paymentType in cost creation — it's required, not optional
-- isPaidByEmployee: true if the employee paid out of pocket
+- ALWAYS set isPaidByEmployee: true (employee paid out of pocket) unless told otherwise
 - For per diem / daily allowance (diett): use costCategory "Mat" — do NOT use /travelExpense/perDiemCompensation or /travelExpense/rateCategory
 - Do NOT make exploratory calls to /travelExpense/rateCategory or /travelExpense/perDiemCompensation — just use cost categories directly
 - Common cost categories: Fly, Taxi, Hotell, Mat, Tog, Buss, Parkering, Drivstoff
