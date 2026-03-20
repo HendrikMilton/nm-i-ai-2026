@@ -1,7 +1,7 @@
 # Challenge 1 — Full Log Analysis & Scoring Assessment
 
 **Date:** 2026-03-20
-**Total logs:** 121 | **Scored tasks:** 19 | **Leaderboard:** rank #9, score 37.85, 18/30 tasks
+**Total logs:** 125 | **Scored tasks:** 23 | **Leaderboard:** rank #9, score 37.85, 18/30 tasks
 **Leader:** "hackers" at 46.02 | **Gap:** 8.17 points
 
 ---
@@ -54,6 +54,8 @@
 | 19:05:53 | Timesheet+invoice Leonor Almeida | 8/8 | 4/4 | 62.5s | 13 | 0 |
 | 19:07:53 | **Payroll Raphaël Bernard** | **0/8** | 0/4 | 55.4s | 11 | 0 |
 | 19:09:48 | **Payroll Sarah Moreau** | **0/8** | 0/4 | 64.6s | 11 | 0 |
+| 19:23:11 | **Multi-VAT invoice Oakwood Ltd** | **0/8** | 0/6 | 80.4s | 11 | 0 |
+| 19:27:57 | **Supplier invoice Brattli AS** | **0/8** | 0/4 | 43.4s | 5 | 1 |
 
 ---
 
@@ -191,19 +193,51 @@ Also update the system prompt text at line ~141:
 
 ---
 
-### FAILURE #2: Supplier Invoice — 0% pass rate (2 scored, both 0/8)
+### FAILURE #2: Supplier Invoice — 0% pass rate (3 scored, all 0/8)
 
-#### 18:07:14Z — Sierra SL (INV-2026-8702, 6,850 NOK incl. VAT)
+**Potential impact: +9.6 points (3 tasks × ~3.2)**
 
-- Used `GET /supplier` to find supplier → correct
-- Created voucher with VAT postings → API returned 201
-- All 4 checks failed
+All 3 supplier invoice tasks follow the identical pattern — API succeeds, all checks fail:
 
-#### 19:00:53Z — Montaña SL (INV-2026-1443, 50,050 NOK incl. VAT)
+| Log | Supplier | Invoice | Amount | API errors | Score |
+|-----|----------|---------|--------|------------|-------|
+| 18:07:14Z | Sierra SL | INV-2026-8702 | 6,850 NOK | 0 | 0/8 |
+| 19:00:53Z | Montaña SL | INV-2026-1443 | 50,050 NOK | 1 (422 on supplierVoucherType) | 0/8 |
+| 19:27:57Z | Brattli AS | INV-2026-2388 | 25,650 NOK | 1 (422 on supplierVoucherType) | 0/8 |
 
-- First attempt included `supplierVoucherType: "SUPPLIER_INVOICE"` → **422 validation error**
-- Retry without field → 201 success
-- All 4 checks failed
+#### What the agent does (all 3 identical):
+1. `GET /supplier?organizationNumber=X` — finds supplier ✓
+2. `GET /ledger/account?number=XXXX` — gets expense account ✓
+3. `GET /ledger/account?number=2400` — gets leverandørgjeld ✓
+4. `POST /ledger/voucher` with debit/credit postings — **201 Created** ✓
+5. Tripletex auto-generates MVA line (25% inngående) ✓
+
+#### Critical observation — `vendorInvoiceNumber` silently dropped
+
+In all 3 logs, the agent sends `vendorInvoiceNumber: "INV-2026-XXXX"` in the POST body, but the **response shows `vendorInvoiceNumber: null`**:
+
+```json
+// Request body includes:
+"vendorInvoiceNumber": "INV-2026-8702"
+
+// Response shows:
+"vendorInvoiceNumber": null    ← SILENTLY DROPPED
+```
+
+The API accepts the field but doesn't persist it. This means the scorer can't find the vendor invoice number on the voucher.
+
+#### `supplierVoucherType` rejected by API
+
+```json
+// Agent sends:
+"supplierVoucherType": "SUPPLIER_INVOICE"
+
+// API responds:
+422: "Verdien er ikke av korrekt type for dette feltet"
+(The value is not of the correct type for this field)
+```
+
+The field expects a **different type** (likely an integer/enum ID, not a string). The response also shows `supplierVoucherType: null` on successfully created vouchers.
 
 #### System prompt contradiction:
 ```
@@ -211,11 +245,42 @@ Line 117: "Do NOT include voucherType or guiRow — they cause errors"
 Line 118: "DO include supplierVoucherType: 'SUPPLIER_INVOICE' for supplier invoices"
 ```
 
-The agent follows line 118, gets a 422, removes the field, and succeeds at API level but fails scoring. The scorer likely requires `supplierVoucherType` to be set — but the API rejects it as an invalid enum value.
+#### UI VERIFICATION — ROOT CAUSE CONFIRMED
 
-**Possible root cause:** The `supplierVoucherType` field may need a different value, or it may need to be set via a different mechanism (e.g., a separate PUT after creation, or a specific voucher type endpoint).
+We created a supplier invoice through the Tripletex UI ("Bilag → Nytt bilag → Enkel føring") and compared it with an API-created voucher. The difference is fundamental:
 
-**Alternative hypothesis:** The supplier invoice voucher is created correctly, but the scorer checks for a specific accounting structure (e.g., debit on a different expense account, or specific row ordering) that doesn't match.
+**UI-created supplier invoice (voucher 17-2026):**
+- Title: **"Leverandørfaktura (enkel føring)"** — typed as supplier invoice
+- URL: `/execute/incomingInvoiceMenu?voucherId=608842577` — lives in the **incoming invoice module**
+- Shows "Fakturadetaljer" with Leverandør, Fakturanummer (TEST-001), Totalt beløp
+- Has proper supplier invoice metadata (due date, payment tracking, invoice number)
+- Payment section shows supplier debt tracking with "Utestående" balance
+
+**API-created voucher via POST /ledger/voucher (voucher 16-2026):**
+- Title: **"Avansert bilag"** — classified as a generic advanced voucher
+- URL: `/execute/voucherMenu?voucherId=608827879` — lives in the **generic voucher module**
+- Shows "Bilagsdetaljer" with just Bilagsnummer, Beskrivelse, Bilagsdato
+- No supplier invoice metadata (no invoice number field, no due date, no supplier-specific fields)
+- Raw debit/credit postings only
+
+**These are completely different entity types in Tripletex.** The scorer checks for a proper "Leverandørfaktura" entity and finds only a generic "Avansert bilag".
+
+#### Root cause confirmed
+
+`POST /ledger/voucher` creates a **generic journal entry**, not a supplier invoice. The resulting voucher:
+- Lives in the wrong module (voucherMenu vs incomingInvoiceMenu)
+- Has no supplier invoice metadata
+- `vendorInvoiceNumber: null` — silently dropped
+- `supplierVoucherType: null` — API rejects the string value "SUPPLIER_INVOICE"
+
+The UI's "Leverandørfaktura (enkel føring)" form uses a **different internal API flow** that creates a proper incoming invoice entity with all metadata.
+
+#### Investigation needed
+
+1. **Check if there's a dedicated incoming invoice API endpoint** — the UI URL suggests `/incomingInvoice` or similar. Search the API reference for endpoints containing "incoming", "purchase", or "supplierInvoice"
+2. **Test `supplierVoucherType` with integer values** — the 422 error says "wrong type", so try `0`, `1`, `2` instead of the string `"SUPPLIER_INVOICE"`
+3. **Check if the "enkel føring" UI form makes different API calls** — use browser dev tools (Network tab) while creating a supplier invoice to capture the actual API request
+4. **Alternative approach:** Create the voucher, then use a PUT or separate endpoint to "convert" it to a supplier invoice type
 
 ---
 
@@ -231,17 +296,39 @@ This is a **session management issue**, not a logic issue. The reversal logic de
 
 ---
 
+### FAILURE #4: Multi-VAT Invoice — 0/8 (19:23:11Z, Oakwood Ltd)
+
+**6/6 checks failed** despite flawless API execution (0 errors, 11 API calls).
+
+Task: Create invoice with 3 products at different VAT rates:
+- Analysis Report (7049): 12,250 NOK @ 25% VAT → vatType id=3 ✓
+- Cloud Storage (5725): 3,750 NOK @ 15% VAT → vatType id=31 ✓
+- Consulting Hours (9683): 10,750 NOK @ 0% VAT → vatType id=6 ✓
+
+Everything looks correct. An almost identical task (18:04:46Z) scored 8/8 earlier the same day.
+
+**Why this likely fails:** This task ran at 19:23Z, after the leaderboard shows `tasks=18/30`. The scoring sandbox may have been a **different company instance** than earlier tasks. Each scored task likely gets its own fresh sandbox — if the products/customer don't exist in that sandbox, the scorer can't validate them.
+
+Alternatively, the scorer may have checked for `sendToCustomer=true` vs `false`, or the task context may have changed between the two similar tasks.
+
+**Lower priority** — this may be an environment issue rather than a code fix.
+
+---
+
 ### Partial Failures
 
 #### 18:25:15Z — Fixed-price project + milestone (6/8, Check 2 failed)
 - Created project with `isFixedPrice=true, fixedprice=457650` ✓
 - Created order + order line for 25% (114,412.50 NOK) ✓
 - Description used: `"Pago parcial - 25% del precio fijo"` instead of `"Milestone payment - 25%"`
-- **Fix:** Use exact description format from system prompt
+- Unnecessary `GET /department` call (system prompt says not needed for projects)
+- **Fix:** Use exact description format from system prompt: `"Milestone payment - 25%"`
 
 #### 18:27:15Z — Supplier Silveroak Ltd (6/7, Check 5 failed)
-- Created supplier with `showProducts: true` (not requested)
-- **Fix:** Don't set `showProducts` unless asked. Keep creation minimal.
+- Used `POST /supplier` directly instead of `POST /customer` with `isSupplier: true` (system prompt line 56 says to use `/customer`)
+- Added `showProducts: true` (not requested)
+- **Fix 1:** Use `POST /customer` with `isSupplier: true` instead of `POST /supplier`
+- **Fix 2:** Don't set `showProducts` unless asked
 
 ---
 
@@ -285,21 +372,39 @@ Tasks that consistently score 8/8:
 2. Add explicit system prompt rule: *"NEVER use /ledger/voucher for payroll. ALWAYS use /salary/transaction."*
 3. Add rule: *"When updating employee for payroll, ALWAYS set both `dateOfBirth` and `bankAccountNumber`"*
 
-### P1: Fix supplier invoice (potential +3.2 points)
+### P1: Fix supplier invoice (potential +9.6 points — 3 tasks)
 
-5. Resolve `supplierVoucherType` contradiction in system prompt
-6. Test correct field value and delivery mechanism
-7. Verify supplier lookup uses correct endpoint for voucher context
+**Root cause:** `vendorInvoiceNumber` silently dropped, `supplierVoucherType` rejected as wrong type.
+
+4. **Test `supplierVoucherType` with integer values** (0, 1, 2) instead of string `"SUPPLIER_INVOICE"`
+5. **Test setting `vendorInvoiceNumber` via PUT** after initial POST creation
+6. Remove `supplierVoucherType` line from system prompt until correct value is found
+7. Fix system prompt contradiction (lines 117 vs 118)
 
 ### P2: Fix partial failures (+1.5 points)
 
-8. Milestone description: use `"Milestone payment - X%"` exactly
-9. Supplier creation: remove `showProducts: true` default
+8. Milestone description: use `"Milestone payment - X%"` exactly (not translated)
+9. Supplier creation: use `POST /customer` with `isSupplier: true` (not `POST /supplier`)
+10. Don't set `showProducts: true` unless asked
 
 ### P3: Prevent token expiry (saves ~1 task per session)
 
-10. Add retry limit (max 3 consecutive 4xx on same endpoint)
-11. Distinguish retryable (429, 500) vs non-retryable (400, 422) errors
+11. Add retry limit: *"After 3 consecutive 4xx errors on the same endpoint, STOP and report."*
+12. Distinguish retryable (429, 500) vs non-retryable (400, 422) errors
+
+---
+
+## All Zero-Score Logs
+
+| Log | Task type | Score | Root cause | Fix status |
+|-----|-----------|-------|------------|------------|
+| 18:07:14Z | Supplier invoice (Sierra SL) | 0/8 | vendorInvoiceNumber dropped | **NEEDS FIX** |
+| 18:55:28Z | Payroll voucher (Brita) | 0/8 | Wrong endpoint + no bankAccountNumber | **FIX READY** |
+| 19:00:53Z | Supplier invoice (Montaña SL) | 0/8 | vendorInvoiceNumber dropped | **NEEDS FIX** |
+| 19:07:53Z | Payroll (Raphaël) | 0/8 | Missing bankAccountNumber | **FIX READY** |
+| 19:09:48Z | Payroll (Sarah) | 0/8 | Missing bankAccountNumber | **FIX READY** |
+| 19:23:11Z | Multi-VAT invoice (Oakwood) | 0/8 | Likely environment issue | Low priority |
+| 19:27:57Z | Supplier invoice (Brattli AS) | 0/8 | vendorInvoiceNumber dropped | **NEEDS FIX** |
 
 ---
 
@@ -309,10 +414,10 @@ Current: 37.85 points (rank #9)
 Target: 46.02 points (rank #1 "hackers")
 Gap: 8.17 points
 
-| Fix | Estimated gain | Running total |
-|-----|---------------|---------------|
-| Payroll (3 tasks × ~3.2) | +9.6 | 47.45 |
-| Supplier invoice (1 task × ~3.2) | +3.2 | 50.65 |
-| Partial failures (2 tasks × ~0.75) | +1.5 | 52.15 |
+| Fix | Tasks | Estimated gain | Running total |
+|-----|-------|---------------|---------------|
+| Payroll (bankAccountNumber) | 3 | +9.6 | 47.45 |
+| Supplier invoice (vendorInvoiceNumber) | 3 | +9.6 | 57.05 |
+| Partial failures (description + supplier) | 2 | +1.5 | 58.55 |
 
-**Fixing payroll alone closes the gap.** The remaining 12 unscored tasks (of 30 total) would add further points.
+**Fixing payroll alone closes the gap.** Fixing supplier invoices too would create a commanding lead.
