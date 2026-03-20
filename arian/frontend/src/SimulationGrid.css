@@ -1,0 +1,137 @@
+.simulation-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+/* --- Legend --- */
+.legend {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  padding: 0.75rem 1rem;
+  background: var(--dark-card);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+}
+
+.legend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.legend-swatch {
+  width: 14px;
+  height: 14px;
+  border-radius: 2px;
+  display: inline-block;
+  flex-shrink: 0;
+}
+
+.legend-label {
+  font-size: 0.78rem;
+  color: var(--light-grey);
+}
+
+/* --- Grids --- */
+.grids-row {
+  display: flex;
+  gap: 1.5rem;
+  justify-content: center;
+  flex-wrap: wrap;
+}
+
+.grid-panel {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.grid-title {
+  font-size: 0.85rem;
+  color: var(--grey);
+  font-weight: 400;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.grid-svg {
+  border-radius: 4px;
+  background: var(--dark);
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.4);
+}
+
+/* --- Terrain Stats --- */
+.terrain-stats {
+  flex: 1;
+  min-width: 260px;
+  background: var(--dark-card);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.terrain-stats h4 {
+  font-size: 0.8rem;
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.75rem;
+  font-weight: 400;
+}
+
+.stats-rows {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.stats-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+}
+
+.stats-name {
+  width: 80px;
+  color: var(--light-grey);
+}
+
+.stats-count {
+  width: 36px;
+  text-align: right;
+  color: var(--grey);
+  font-family: 'Courier New', monospace;
+  font-size: 0.75rem;
+}
+
+.stats-bar-outer {
+  flex: 1;
+  height: 6px;
+  background: var(--dark-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.stats-bar-inner {
+  height: 100%;
+  border-radius: 3px;
+  transition: width 0.3s;
+}
+
+.stats-pct {
+  width: 40px;
+  text-align: right;
+  color: var(--grey);
+  font-size: 0.75rem;
+}
+
+.stats-avg-conf {
+  font-weight: 400;
+  font-size: 0.7rem;
+  color: var(--papaya);
+  margin-left: 0.5rem;
+}

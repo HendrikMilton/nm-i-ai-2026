@@ -1,0 +1,1187 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Astar Island Dashboard</title>
+<style>
+  :root {
+    --bg: #0f172a; --bg2: #1e293b; --bg3: #334155;
+    --text: #e2e8f0; --text2: #94a3b8; --text3: #64748b;
+    --accent: #3b82f6; --accent2: #60a5fa;
+    --green: #22c55e; --red: #ef4444; --orange: #f59e0b; --pink: #ec4899;
+    --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { background: var(--bg); color: var(--text); font-family: 'SF Mono', 'Cascadia Code', 'Fira Code', monospace; font-size: 13px; }
+
+  /* Layout */
+  .header { background: var(--bg2); border-bottom: 1px solid var(--bg3); padding: 12px 20px; display: flex; align-items: center; gap: 20px; }
+  .header h1 { font-size: 16px; font-weight: 600; white-space: nowrap; }
+  .header .badge { background: var(--accent); color: white; padding: 3px 10px; border-radius: 12px; font-size: 11px; font-weight: 600; }
+  .header .badge.green { background: var(--green); }
+  .header .badge.orange { background: var(--orange); }
+  .header .badge.red { background: var(--red); }
+  .header .spacer { flex: 1; }
+  .header button { background: var(--bg3); color: var(--text); border: none; padding: 6px 14px; border-radius: var(--radius); cursor: pointer; font-family: inherit; font-size: 12px; }
+  .header button:hover { background: var(--accent); }
+
+  .tabs { display: flex; background: var(--bg2); border-bottom: 1px solid var(--bg3); padding: 0 20px; }
+  .tab { padding: 10px 18px; cursor: pointer; color: var(--text3); border-bottom: 2px solid transparent; font-size: 12px; font-weight: 500; }
+  .tab:hover { color: var(--text2); }
+  .tab.active { color: var(--accent2); border-bottom-color: var(--accent); }
+
+  .content { padding: 20px; }
+  .tab-content { display: none; }
+  .tab-content.active { display: block; }
+
+  /* Cards */
+  .card { background: var(--bg2); border: 1px solid var(--bg3); border-radius: var(--radius); padding: 16px; margin-bottom: 16px; }
+  .card h3 { font-size: 13px; font-weight: 600; margin-bottom: 12px; color: var(--text2); text-transform: uppercase; letter-spacing: 0.5px; }
+
+  /* Grid layouts */
+  .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 16px; }
+  .grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
+  .grid-sidebar { display: grid; grid-template-columns: 2fr 1fr; gap: 16px; }
+
+  /* Seed selector */
+  .seed-bar { display: flex; gap: 8px; margin-bottom: 16px; align-items: center; }
+  .seed-btn { background: var(--bg3); color: var(--text2); border: none; padding: 6px 16px; border-radius: var(--radius); cursor: pointer; font-family: inherit; font-size: 12px; }
+  .seed-btn:hover { background: #475569; }
+  .seed-btn.active { background: var(--accent); color: white; }
+
+  /* View mode selector */
+  .view-bar { display: flex; gap: 6px; margin-bottom: 16px; flex-wrap: wrap; }
+  .view-btn { background: var(--bg); color: var(--text3); border: 1px solid var(--bg3); padding: 5px 12px; border-radius: var(--radius); cursor: pointer; font-family: inherit; font-size: 11px; }
+  .view-btn:hover { border-color: var(--text3); color: var(--text2); }
+  .view-btn.active { background: var(--accent); border-color: var(--accent); color: white; }
+
+  /* Canvas grid */
+  .grid-container { position: relative; display: inline-block; }
+  canvas.map-canvas { border: 1px solid var(--bg3); border-radius: 4px; image-rendering: pixelated; cursor: crosshair; }
+  .tooltip { position: fixed; background: var(--bg2); border: 1px solid var(--bg3); border-radius: 6px; padding: 10px 14px; font-size: 11px; pointer-events: none; z-index: 100; box-shadow: 0 4px 12px rgba(0,0,0,0.5); max-width: 280px; }
+  .tooltip .tt-header { font-weight: 600; margin-bottom: 6px; color: var(--accent2); }
+  .tooltip .tt-row { display: flex; justify-content: space-between; gap: 12px; margin: 2px 0; }
+  .tooltip .tt-bar { height: 6px; background: var(--bg3); border-radius: 3px; flex: 1; max-width: 80px; overflow: hidden; }
+  .tooltip .tt-fill { height: 100%; border-radius: 3px; }
+
+  /* Legend */
+  .legend { display: flex; gap: 16px; margin-top: 12px; flex-wrap: wrap; }
+  .legend-item { display: flex; align-items: center; gap: 6px; font-size: 11px; color: var(--text2); }
+  .legend-swatch { width: 14px; height: 14px; border-radius: 3px; border: 1px solid rgba(255,255,255,0.1); }
+
+  /* Score table */
+  table { width: 100%; border-collapse: collapse; }
+  th, td { padding: 8px 12px; text-align: left; border-bottom: 1px solid var(--bg3); font-size: 12px; }
+  th { color: var(--text3); font-weight: 500; text-transform: uppercase; font-size: 10px; letter-spacing: 0.5px; }
+  td { color: var(--text); }
+
+  /* Bar chart */
+  .bar-chart { display: flex; align-items: flex-end; gap: 6px; height: 120px; padding-top: 8px; }
+  .bar-col { display: flex; flex-direction: column; align-items: center; flex: 1; height: 100%; justify-content: flex-end; }
+  .bar { width: 100%; border-radius: 3px 3px 0 0; min-height: 2px; transition: height 0.3s; }
+  .bar-label { font-size: 9px; color: var(--text3); margin-top: 4px; text-align: center; }
+  .bar-value { font-size: 10px; color: var(--text2); margin-bottom: 2px; }
+
+  /* Stats row */
+  .stats-row { display: flex; gap: 16px; margin-bottom: 16px; flex-wrap: wrap; }
+  .stat { background: var(--bg2); border: 1px solid var(--bg3); border-radius: var(--radius); padding: 12px 16px; min-width: 140px; }
+  .stat .label { font-size: 10px; color: var(--text3); text-transform: uppercase; letter-spacing: 0.5px; }
+  .stat .value { font-size: 22px; font-weight: 700; margin-top: 4px; }
+  .stat .value.green { color: var(--green); }
+  .stat .value.orange { color: var(--orange); }
+  .stat .value.red { color: var(--red); }
+  .stat .value.blue { color: var(--accent2); }
+
+  /* Heatmap scale */
+  .heatmap-scale { display: flex; align-items: center; gap: 8px; margin-top: 8px; font-size: 10px; color: var(--text3); }
+  .heatmap-gradient { width: 120px; height: 10px; border-radius: 3px; }
+
+  /* Mini map for cross-seed */
+  .mini-map-label { font-size: 11px; color: var(--text2); text-align: center; margin-bottom: 6px; font-weight: 600; }
+  .mini-map-score { font-size: 10px; color: var(--text3); text-align: center; margin-top: 4px; }
+
+  /* Loading */
+  .loading { text-align: center; padding: 40px; color: var(--text3); }
+
+  /* Round selector */
+  .round-selector { display: flex; gap: 6px; align-items: center; }
+  .round-selector select { background: var(--bg3); color: var(--text); border: 1px solid var(--bg3); padding: 5px 10px; border-radius: var(--radius); font-family: inherit; font-size: 12px; }
+
+  /* Error banner */
+  .error-banner { background: #451a03; border: 1px solid #92400e; border-radius: var(--radius); padding: 10px 16px; margin-bottom: 16px; color: #fbbf24; font-size: 12px; }
+
+  @media (max-width: 900px) {
+    .grid-2, .grid-sidebar { grid-template-columns: 1fr; }
+    .grid-5 { grid-template-columns: repeat(3, 1fr); }
+  }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <h1>Astar Island</h1>
+  <div class="round-selector">
+    <span style="color: var(--text3)">Round:</span>
+    <select id="round-select" onchange="onRoundChange()"></select>
+  </div>
+  <div id="header-score"></div>
+  <div id="header-budget"></div>
+  <div class="spacer"></div>
+  <button onclick="refreshData()">Refresh Data</button>
+</div>
+
+<div class="tabs">
+  <div class="tab active" data-tab="overview">Overview</div>
+  <div class="tab" data-tab="explorer">Map Explorer</div>
+  <div class="tab" data-tab="analysis">Analysis</div>
+  <div class="tab" data-tab="crossseed">Cross-Seed</div>
+</div>
+
+<div class="content">
+  <!-- OVERVIEW TAB -->
+  <div id="tab-overview" class="tab-content active">
+    <div id="overview-error"></div>
+    <div id="overview-stats" class="stats-row"></div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Round Scores</h3>
+        <table id="rounds-table">
+          <thead><tr><th>Round</th><th>Status</th><th>Score</th><th>Rank</th><th>Queries</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </div>
+      <div class="card">
+        <h3>Score History</h3>
+        <canvas id="score-chart" width="500" height="200"></canvas>
+      </div>
+    </div>
+    <div class="grid-2">
+      <div class="card">
+        <h3>Per-Seed Scores (Selected Round)</h3>
+        <div id="seed-scores-chart" class="bar-chart"></div>
+      </div>
+      <div class="card">
+        <h3>Class Distribution (Initial Grid)</h3>
+        <div id="class-dist-chart" class="bar-chart"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MAP EXPLORER TAB -->
+  <div id="tab-explorer" class="tab-content">
+    <div class="seed-bar">
+      <span style="color: var(--text3)">Seed:</span>
+      <button class="seed-btn active" data-seed="0" onclick="selectSeed(0)">0</button>
+      <button class="seed-btn" data-seed="1" onclick="selectSeed(1)">1</button>
+      <button class="seed-btn" data-seed="2" onclick="selectSeed(2)">2</button>
+      <button class="seed-btn" data-seed="3" onclick="selectSeed(3)">3</button>
+      <button class="seed-btn" data-seed="4" onclick="selectSeed(4)">4</button>
+    </div>
+    <div class="view-bar">
+      <button class="view-btn active" data-view="initial" onclick="selectView('initial')">Initial Grid</button>
+      <button class="view-btn" data-view="observed" onclick="selectView('observed')">Observations</button>
+      <button class="view-btn" data-view="obs_counts" onclick="selectView('obs_counts')">Observation Counts</button>
+      <button class="view-btn" data-view="prediction" onclick="selectView('prediction')">Prediction (argmax)</button>
+      <button class="view-btn" data-view="confidence" onclick="selectView('confidence')">Confidence</button>
+      <button class="view-btn" data-view="ground_truth" onclick="selectView('ground_truth')">Ground Truth</button>
+      <button class="view-btn" data-view="kl" onclick="selectView('kl')">KL Divergence</button>
+      <button class="view-btn" data-view="entropy" onclick="selectView('entropy')">Entropy</button>
+    </div>
+    <div class="grid-sidebar">
+      <div>
+        <div class="grid-container">
+          <canvas id="main-canvas" class="map-canvas" width="560" height="560"></canvas>
+        </div>
+        <div class="legend" id="main-legend"></div>
+        <div class="heatmap-scale" id="heatmap-scale" style="display:none;">
+          <span>0</span>
+          <canvas id="heatmap-gradient" class="heatmap-gradient" width="120" height="10"></canvas>
+          <span id="heatmap-max">1.0</span>
+        </div>
+      </div>
+      <div>
+        <div class="card">
+          <h3>Cell Info</h3>
+          <div id="cell-info" style="color: var(--text3);">Hover over the map</div>
+        </div>
+        <div class="card">
+          <h3>Map Stats</h3>
+          <div id="map-stats"></div>
+        </div>
+        <div class="card">
+          <h3>Class Counts</h3>
+          <div id="explorer-class-counts"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ANALYSIS TAB -->
+  <div id="tab-analysis" class="tab-content">
+    <div class="seed-bar">
+      <span style="color: var(--text3)">Seed:</span>
+      <button class="seed-btn active" data-seed-a="0" onclick="selectAnalysisSeed(0)">0</button>
+      <button class="seed-btn" data-seed-a="1" onclick="selectAnalysisSeed(1)">1</button>
+      <button class="seed-btn" data-seed-a="2" onclick="selectAnalysisSeed(2)">2</button>
+      <button class="seed-btn" data-seed-a="3" onclick="selectAnalysisSeed(3)">3</button>
+      <button class="seed-btn" data-seed-a="4" onclick="selectAnalysisSeed(4)">4</button>
+    </div>
+    <div id="analysis-no-data" class="card" style="color: var(--text3);">
+      No analysis data available. Analysis is only available for completed rounds.
+    </div>
+    <div id="analysis-content" style="display:none;">
+      <div id="analysis-stats" class="stats-row"></div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Our Prediction (argmax)</h3>
+          <canvas id="pred-canvas" class="map-canvas" width="400" height="400"></canvas>
+        </div>
+        <div class="card">
+          <h3>Ground Truth (argmax)</h3>
+          <canvas id="gt-canvas" class="map-canvas" width="400" height="400"></canvas>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>KL Divergence per Cell</h3>
+          <canvas id="kl-canvas" class="map-canvas" width="400" height="400"></canvas>
+          <div class="heatmap-scale">
+            <span>0</span>
+            <canvas id="kl-gradient" class="heatmap-gradient" width="120" height="10"></canvas>
+            <span id="kl-max-label">max</span>
+          </div>
+        </div>
+        <div class="card">
+          <h3>Ground Truth Entropy</h3>
+          <canvas id="entropy-canvas" class="map-canvas" width="400" height="400"></canvas>
+          <div class="heatmap-scale">
+            <span>0</span>
+            <canvas id="entropy-gradient" class="heatmap-gradient" width="120" height="10"></canvas>
+            <span id="entropy-max-label">max</span>
+          </div>
+        </div>
+      </div>
+      <div class="grid-2">
+        <div class="card">
+          <h3>Per-Class Error (Pred vs GT)</h3>
+          <div id="class-error-chart" class="bar-chart"></div>
+        </div>
+        <div class="card">
+          <h3>Worst Cells (Highest KL)</h3>
+          <table id="worst-cells-table">
+            <thead><tr><th>Cell</th><th>KL</th><th>Entropy</th><th>GT Top</th><th>Pred Top</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- CROSS-SEED TAB -->
+  <div id="tab-crossseed" class="tab-content">
+    <div class="view-bar">
+      <button class="view-btn active" data-view-cs="observed" onclick="selectCrossView('observed')">Observations</button>
+      <button class="view-btn" data-view-cs="initial" onclick="selectCrossView('initial')">Initial Grid</button>
+      <button class="view-btn" data-view-cs="ground_truth" onclick="selectCrossView('ground_truth')">Ground Truth</button>
+    </div>
+    <div class="grid-5" id="cross-seed-grids"></div>
+    <div class="legend" id="cross-legend" style="margin-top: 16px;"></div>
+    <div class="card" style="margin-top: 16px;">
+      <h3>Observation Agreement (cells where all seeds agree)</h3>
+      <div id="agreement-stats"></div>
+    </div>
+  </div>
+</div>
+
+<!-- Tooltip -->
+<div class="tooltip" id="tooltip" style="display:none;"></div>
+
+<script>
+// ========== CONSTANTS ==========
+const CLASS_NAMES = ['Empty/Ocean', 'Settlement', 'Port', 'Ruin', 'Forest', 'Mountain'];
+const CLASS_COLORS = ['#1e40af', '#f97316', '#ec4899', '#a8a29e', '#22c55e', '#6b7280'];
+const CLASS_COLORS_BRIGHT = ['#3b82f6', '#fb923c', '#f472b6', '#d6d3d1', '#4ade80', '#9ca3af'];
+const INITIAL_COLORS = {
+  0: '#1e293b', 1: '#f97316', 2: '#ec4899', 3: '#a8a29e',
+  4: '#22c55e', 5: '#6b7280', 10: '#1e40af', 11: '#365314'
+};
+const INITIAL_NAMES = {
+  0: 'Empty', 1: 'Settlement', 2: 'Port', 3: 'Ruin',
+  4: 'Forest', 5: 'Mountain', 10: 'Ocean', 11: 'Plains'
+};
+const API_TO_CLASS = { 0:0, 1:1, 2:2, 3:3, 4:4, 5:5, 10:0, 11:0 };
+
+// ========== STATE ==========
+let DATA = null;
+let selectedRound = null;
+let selectedSeed = 0;
+let selectedView = 'initial';
+let analysisSeed = 0;
+let crossView = 'observed';
+
+// ========== INIT ==========
+document.addEventListener('DOMContentLoaded', () => {
+  setupTabs();
+  fetchData();
+});
+
+function setupTabs() {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      document.querySelectorAll('.tab-content').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.getElementById('tab-' + t.dataset.tab).classList.add('active');
+      renderCurrentTab();
+    });
+  });
+}
+
+async function fetchData() {
+  try {
+    const resp = await fetch('/api/data');
+    DATA = await resp.json();
+    populateRoundSelector();
+    renderAll();
+  } catch (e) {
+    document.getElementById('overview-error').innerHTML =
+      `<div class="error-banner">Failed to load data: ${e.message}. Is the server running?</div>`;
+  }
+}
+
+async function refreshData() {
+  try {
+    await fetch('/api/refresh');
+    await fetchData();
+  } catch (e) {
+    alert('Refresh failed: ' + e.message);
+  }
+}
+
+function populateRoundSelector() {
+  const sel = document.getElementById('round-select');
+  sel.innerHTML = '';
+  if (!DATA.rounds.length) {
+    sel.innerHTML = '<option>No rounds</option>';
+    return;
+  }
+  // Sort by round_number desc
+  const sorted = [...DATA.rounds].sort((a, b) => (b.round_number || 0) - (a.round_number || 0));
+  sorted.forEach(r => {
+    const opt = document.createElement('option');
+    opt.value = r.id;
+    opt.textContent = `Round ${r.round_number || '?'} (${r.status})`;
+    sel.appendChild(opt);
+  });
+  selectedRound = sorted[0]?.id;
+}
+
+function onRoundChange() {
+  selectedRound = document.getElementById('round-select').value;
+  renderAll();
+}
+
+function renderAll() {
+  renderOverview();
+  renderCurrentTab();
+}
+
+function renderCurrentTab() {
+  const active = document.querySelector('.tab.active').dataset.tab;
+  if (active === 'overview') renderOverview();
+  else if (active === 'explorer') renderExplorer();
+  else if (active === 'analysis') renderAnalysis();
+  else if (active === 'crossseed') renderCrossSeed();
+}
+
+// ========== OVERVIEW ==========
+function renderOverview() {
+  if (!DATA) return;
+  const round = DATA.rounds.find(r => r.id === selectedRound);
+
+  // Error banner
+  if (DATA.api_error) {
+    document.getElementById('overview-error').innerHTML =
+      `<div class="error-banner">${DATA.api_error}</div>`;
+  }
+
+  // Header badges
+  if (round) {
+    const score = round.round_score;
+    const scoreClass = score == null ? '' : score >= 70 ? 'green' : score >= 40 ? 'orange' : 'red';
+    document.getElementById('header-score').innerHTML = score != null
+      ? `<div class="badge ${scoreClass}">Score: ${score.toFixed(1)}</div>` : '';
+    document.getElementById('header-budget').innerHTML =
+      `<div class="badge">${round.queries_used || 0}/${round.queries_max || 50} queries</div>`;
+  }
+
+  // Stats
+  const completed = DATA.rounds.filter(r => r.status === 'completed' || r.status === 'scoring');
+  const bestScore = completed.length ? Math.max(...completed.map(r => r.round_score || 0)) : null;
+  const latestRank = round?.rank;
+  const totalTeams = round?.total_teams;
+
+  document.getElementById('overview-stats').innerHTML = `
+    <div class="stat"><div class="label">Rounds Played</div><div class="value blue">${DATA.rounds.length}</div></div>
+    <div class="stat"><div class="label">Best Score</div><div class="value ${bestScore >= 70 ? 'green' : bestScore >= 40 ? 'orange' : 'red'}">${bestScore != null ? bestScore.toFixed(1) : '-'}</div></div>
+    <div class="stat"><div class="label">Current Rank</div><div class="value blue">${latestRank != null ? `#${latestRank}` : '-'}${totalTeams ? ` / ${totalTeams}` : ''}</div></div>
+    <div class="stat"><div class="label">Queries Used</div><div class="value">${round?.queries_used || 0} / ${round?.queries_max || 50}</div></div>
+  `;
+
+  // Rounds table
+  const tbody = document.querySelector('#rounds-table tbody');
+  tbody.innerHTML = '';
+  DATA.rounds.sort((a, b) => (a.round_number || 0) - (b.round_number || 0)).forEach(r => {
+    const tr = document.createElement('tr');
+    tr.style.cursor = 'pointer';
+    tr.onclick = () => { document.getElementById('round-select').value = r.id; onRoundChange(); };
+    const sc = r.round_score;
+    const scColor = sc == null ? 'var(--text3)' : sc >= 70 ? 'var(--green)' : sc >= 40 ? 'var(--orange)' : 'var(--red)';
+    tr.innerHTML = `
+      <td>Round ${r.round_number || '?'}</td>
+      <td>${r.status}</td>
+      <td style="color:${scColor}; font-weight:600;">${sc != null ? sc.toFixed(1) : '-'}</td>
+      <td>${r.rank != null ? `#${r.rank}` : '-'}</td>
+      <td>${r.queries_used || 0}/${r.queries_max || 50}</td>
+    `;
+    tbody.appendChild(tr);
+  });
+
+  // Score chart
+  renderScoreChart();
+
+  // Per-seed scores
+  renderSeedScores();
+
+  // Class distribution
+  renderClassDist();
+}
+
+function renderScoreChart() {
+  const canvas = document.getElementById('score-chart');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const rounds = DATA.rounds.filter(r => r.round_score != null).sort((a, b) => (a.round_number || 0) - (b.round_number || 0));
+  if (!rounds.length) {
+    ctx.fillStyle = '#64748b';
+    ctx.font = '12px monospace';
+    ctx.fillText('No score data yet', W / 2 - 50, H / 2);
+    return;
+  }
+
+  const pad = { t: 20, r: 20, b: 30, l: 45 };
+  const cW = W - pad.l - pad.r, cH = H - pad.t - pad.b;
+  const maxScore = 100;
+
+  // Grid lines
+  ctx.strokeStyle = '#334155';
+  ctx.lineWidth = 0.5;
+  for (let s = 0; s <= 100; s += 25) {
+    const y = pad.t + cH * (1 - s / maxScore);
+    ctx.beginPath(); ctx.moveTo(pad.l, y); ctx.lineTo(W - pad.r, y); ctx.stroke();
+    ctx.fillStyle = '#64748b'; ctx.font = '10px monospace'; ctx.fillText(s, 5, y + 3);
+  }
+
+  // Plot
+  const dx = cW / Math.max(rounds.length - 1, 1);
+  ctx.strokeStyle = '#3b82f6';
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  rounds.forEach((r, i) => {
+    const x = pad.l + i * dx;
+    const y = pad.t + cH * (1 - r.round_score / maxScore);
+    i === 0 ? ctx.moveTo(x, y) : ctx.lineTo(x, y);
+  });
+  ctx.stroke();
+
+  // Points
+  rounds.forEach((r, i) => {
+    const x = pad.l + i * dx;
+    const y = pad.t + cH * (1 - r.round_score / maxScore);
+    ctx.fillStyle = r.id === selectedRound ? '#f59e0b' : '#3b82f6';
+    ctx.beginPath(); ctx.arc(x, y, 4, 0, Math.PI * 2); ctx.fill();
+    ctx.fillStyle = '#94a3b8'; ctx.font = '10px monospace';
+    ctx.fillText(`R${r.round_number || '?'}`, x - 6, H - 8);
+  });
+}
+
+function renderSeedScores() {
+  const container = document.getElementById('seed-scores-chart');
+  const round = DATA.rounds.find(r => r.id === selectedRound);
+  const scores = round?.seed_scores || [];
+  if (!scores.length) {
+    container.innerHTML = '<div style="color: var(--text3); padding: 20px;">No seed scores available</div>';
+    return;
+  }
+  container.innerHTML = scores.map((s, i) => {
+    const h = s != null ? Math.max(2, s * 1.1) : 0;
+    const color = s >= 70 ? 'var(--green)' : s >= 40 ? 'var(--orange)' : 'var(--red)';
+    return `<div class="bar-col">
+      <div class="bar-value">${s != null ? s.toFixed(1) : '-'}</div>
+      <div class="bar" style="height:${h}%; background:${color}"></div>
+      <div class="bar-label">Seed ${i}</div>
+    </div>`;
+  }).join('');
+}
+
+function renderClassDist() {
+  const container = document.getElementById('class-dist-chart');
+  const roundData = DATA.initial_states[selectedRound];
+  if (!roundData || !roundData.initial_states.length) {
+    container.innerHTML = '<div style="color: var(--text3); padding: 20px;">No grid data</div>';
+    return;
+  }
+  const grid = roundData.initial_states[0].grid;
+  const counts = [0, 0, 0, 0, 0, 0];
+  for (const row of grid) {
+    for (const v of row) {
+      const cls = API_TO_CLASS[v] ?? 0;
+      counts[cls]++;
+    }
+  }
+  const max = Math.max(...counts, 1);
+  container.innerHTML = counts.map((c, i) => {
+    const h = Math.max(2, (c / max) * 100);
+    return `<div class="bar-col">
+      <div class="bar-value">${c}</div>
+      <div class="bar" style="height:${h}%; background:${CLASS_COLORS[i]}"></div>
+      <div class="bar-label">${CLASS_NAMES[i].split('/')[0]}</div>
+    </div>`;
+  }).join('');
+}
+
+// ========== MAP EXPLORER ==========
+function selectSeed(s) {
+  selectedSeed = s;
+  document.querySelectorAll('.seed-btn[data-seed]').forEach(b => b.classList.toggle('active', +b.dataset.seed === s));
+  renderExplorer();
+}
+
+function selectView(v) {
+  selectedView = v;
+  document.querySelectorAll('.view-btn[data-view]').forEach(b => b.classList.toggle('active', b.dataset.view === v));
+  renderExplorer();
+}
+
+function renderExplorer() {
+  if (!DATA) return;
+  const canvas = document.getElementById('main-canvas');
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  ctx.clearRect(0, 0, W, H);
+
+  const roundStates = DATA.initial_states[selectedRound];
+  if (!roundStates) {
+    ctx.fillStyle = '#64748b'; ctx.font = '14px monospace';
+    ctx.fillText('No data for this round', W / 2 - 80, H / 2);
+    return;
+  }
+
+  const mapW = roundStates.map_width || 40;
+  const mapH = roundStates.map_height || 40;
+  const cellW = W / mapW;
+  const cellH = H / mapH;
+
+  const initialState = roundStates.initial_states[selectedSeed];
+  if (!initialState) {
+    ctx.fillStyle = '#64748b'; ctx.font = '14px monospace';
+    ctx.fillText('No data for this seed', W / 2 - 70, H / 2);
+    return;
+  }
+
+  const grid = initialState.grid;
+  const obs = getObservations(selectedRound, selectedSeed);
+  const analysis = DATA.analysis[selectedRound]?.[String(selectedSeed)];
+
+  // Build data grids based on view
+  let heatmapMode = false;
+  let heatmapMax = 1;
+
+  if (selectedView === 'initial') {
+    // Draw initial grid with full terrain colors
+    for (let y = 0; y < mapH; y++) {
+      for (let x = 0; x < mapW; x++) {
+        const v = grid[y]?.[x] ?? 0;
+        ctx.fillStyle = INITIAL_COLORS[v] || '#1e293b';
+        ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+      }
+    }
+    // Settlement markers
+    if (initialState.settlements) {
+      initialState.settlements.forEach(s => {
+        if (s.alive) {
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(s.x * cellW + 1, s.y * cellH + 1, cellW - 2, cellH - 2);
+        }
+      });
+    }
+    renderInitialLegend();
+  } else if (selectedView === 'observed') {
+    drawClassGrid(ctx, grid, mapW, mapH, cellW, cellH, true);
+    if (obs.length) {
+      drawObservations(ctx, obs, cellW, cellH);
+    } else {
+      ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.font = '14px monospace';
+      ctx.fillText('No observations for this seed', W / 2 - 120, H / 2);
+    }
+    renderClassLegend();
+  } else if (selectedView === 'obs_counts') {
+    heatmapMode = true;
+    const counts = buildObsCounts(obs, mapW, mapH);
+    heatmapMax = Math.max(...counts.flat(), 1);
+    drawHeatmap(ctx, counts, mapW, mapH, cellW, cellH, heatmapMax, 'blue');
+    showHeatmapScale('blue', heatmapMax);
+  } else if (selectedView === 'prediction' && analysis) {
+    drawProbGrid(ctx, analysis.prediction, mapW, mapH, cellW, cellH);
+    renderClassLegend();
+  } else if (selectedView === 'confidence' && analysis) {
+    heatmapMode = true;
+    const conf = analysis.prediction.map(row => row.map(cell => Math.max(...cell)));
+    drawHeatmap(ctx, conf, mapW, mapH, cellW, cellH, 1.0, 'green');
+    showHeatmapScale('green', 1.0);
+  } else if (selectedView === 'ground_truth' && analysis) {
+    drawProbGrid(ctx, analysis.ground_truth, mapW, mapH, cellW, cellH);
+    renderClassLegend();
+  } else if (selectedView === 'kl' && analysis) {
+    heatmapMode = true;
+    const kl = computeKL(analysis.ground_truth, analysis.prediction);
+    heatmapMax = Math.max(...kl.flat(), 0.01);
+    drawHeatmap(ctx, kl, mapW, mapH, cellW, cellH, heatmapMax, 'red');
+    showHeatmapScale('red', heatmapMax);
+  } else if (selectedView === 'entropy' && analysis) {
+    heatmapMode = true;
+    const ent = computeEntropy(analysis.ground_truth);
+    heatmapMax = Math.max(...ent.flat(), 0.01);
+    drawHeatmap(ctx, ent, mapW, mapH, cellW, cellH, heatmapMax, 'purple');
+    showHeatmapScale('purple', heatmapMax);
+  } else {
+    // Fallback: draw initial as class grid
+    drawClassGrid(ctx, grid, mapW, mapH, cellW, cellH, false);
+    renderClassLegend();
+    if (['prediction', 'confidence', 'ground_truth', 'kl', 'entropy'].includes(selectedView)) {
+      ctx.fillStyle = 'rgba(255,255,255,0.15)'; ctx.font = '13px monospace';
+      ctx.fillText('No analysis data for this round/seed', W / 2 - 140, H / 2);
+    }
+  }
+
+  document.getElementById('heatmap-scale').style.display = heatmapMode ? 'flex' : 'none';
+
+  // Map stats
+  renderMapStats(grid, obs, analysis, mapW, mapH);
+
+  // Hover tooltip
+  setupCanvasHover(canvas, mapW, mapH, cellW, cellH, grid, obs, analysis);
+}
+
+function getObservations(roundId, seed) {
+  const seedObs = DATA.observations[roundId]?.[String(seed)];
+  if (!seedObs) return [];
+  return seedObs;
+}
+
+function drawClassGrid(ctx, grid, mapW, mapH, cellW, cellH, dim) {
+  for (let y = 0; y < mapH; y++) {
+    for (let x = 0; x < mapW; x++) {
+      const v = grid[y]?.[x] ?? 0;
+      const cls = API_TO_CLASS[v] ?? 0;
+      ctx.fillStyle = dim ? darken(CLASS_COLORS[cls], 0.3) : CLASS_COLORS[cls];
+      ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+    }
+  }
+}
+
+function drawObservations(ctx, obs, cellW, cellH) {
+  // Aggregate: take last observation per cell
+  const map = {};
+  for (const [x, y, cls] of obs) {
+    map[`${x},${y}`] = cls;
+  }
+  for (const [key, cls] of Object.entries(map)) {
+    const [x, y] = key.split(',').map(Number);
+    ctx.fillStyle = CLASS_COLORS_BRIGHT[cls] || CLASS_COLORS[cls];
+    ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+  }
+}
+
+function drawProbGrid(ctx, probs, mapW, mapH, cellW, cellH) {
+  for (let y = 0; y < mapH; y++) {
+    for (let x = 0; x < mapW; x++) {
+      const cell = probs[y]?.[x];
+      if (!cell) continue;
+      const argmax = cell.indexOf(Math.max(...cell));
+      const conf = Math.max(...cell);
+      const color = CLASS_COLORS[argmax];
+      ctx.fillStyle = adjustAlpha(color, 0.3 + conf * 0.7);
+      ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+    }
+  }
+}
+
+function drawHeatmap(ctx, values, mapW, mapH, cellW, cellH, max, scheme) {
+  for (let y = 0; y < mapH; y++) {
+    for (let x = 0; x < mapW; x++) {
+      const v = values[y]?.[x] ?? 0;
+      const t = Math.min(v / max, 1);
+      ctx.fillStyle = heatColor(t, scheme);
+      ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+    }
+  }
+}
+
+function showHeatmapScale(scheme, max) {
+  const canvas = document.getElementById('heatmap-gradient');
+  const ctx = canvas.getContext('2d');
+  for (let x = 0; x < 120; x++) {
+    ctx.fillStyle = heatColor(x / 119, scheme);
+    ctx.fillRect(x, 0, 1, 10);
+  }
+  document.getElementById('heatmap-max').textContent = max.toFixed(2);
+  document.getElementById('heatmap-scale').style.display = 'flex';
+}
+
+function heatColor(t, scheme) {
+  t = Math.max(0, Math.min(1, t));
+  if (scheme === 'red') {
+    const r = Math.round(40 + t * 215);
+    const g = Math.round(40 - t * 20);
+    const b = Math.round(60 - t * 30);
+    return `rgb(${r},${g},${b})`;
+  } else if (scheme === 'blue') {
+    const r = Math.round(15 + t * 40);
+    const g = Math.round(23 + t * 100);
+    const b = Math.round(42 + t * 213);
+    return `rgb(${r},${g},${b})`;
+  } else if (scheme === 'green') {
+    const r = Math.round(15 + t * 20);
+    const g = Math.round(30 + t * 170);
+    const b = Math.round(20 + t * 60);
+    return `rgb(${r},${g},${b})`;
+  } else { // purple
+    const r = Math.round(30 + t * 170);
+    const g = Math.round(20 + t * 30);
+    const b = Math.round(60 + t * 180);
+    return `rgb(${r},${g},${b})`;
+  }
+}
+
+function buildObsCounts(obs, mapW, mapH) {
+  const counts = Array.from({ length: mapH }, () => Array(mapW).fill(0));
+  for (const [x, y] of obs) {
+    if (x >= 0 && x < mapW && y >= 0 && y < mapH) counts[y][x]++;
+  }
+  return counts;
+}
+
+function computeKL(gt, pred) {
+  const H = gt.length, W = gt[0].length;
+  const kl = Array.from({ length: H }, () => Array(W).fill(0));
+  const eps = 1e-10;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let sum = 0;
+      for (let c = 0; c < 6; c++) {
+        const p = Math.max(gt[y][x][c], eps);
+        const q = Math.max(pred[y][x][c], eps);
+        sum += p * Math.log(p / q);
+      }
+      kl[y][x] = sum;
+    }
+  }
+  return kl;
+}
+
+function computeEntropy(gt) {
+  const H = gt.length, W = gt[0].length;
+  const ent = Array.from({ length: H }, () => Array(W).fill(0));
+  const eps = 1e-10;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      let sum = 0;
+      for (let c = 0; c < 6; c++) {
+        const p = Math.max(gt[y][x][c], eps);
+        sum -= p * Math.log(p);
+      }
+      ent[y][x] = sum;
+    }
+  }
+  return ent;
+}
+
+// ========== HOVER TOOLTIP ==========
+function setupCanvasHover(canvas, mapW, mapH, cellW, cellH, grid, obs, analysis) {
+  const tooltip = document.getElementById('tooltip');
+  const cellInfo = document.getElementById('cell-info');
+
+  canvas.onmousemove = (e) => {
+    const rect = canvas.getBoundingClientRect();
+    const mx = e.clientX - rect.left;
+    const my = e.clientY - rect.top;
+    const x = Math.floor(mx / cellW);
+    const y = Math.floor(my / cellH);
+    if (x < 0 || x >= mapW || y < 0 || y >= mapH) { tooltip.style.display = 'none'; return; }
+
+    const v = grid[y]?.[x] ?? 0;
+    const cls = API_TO_CLASS[v] ?? 0;
+
+    let html = `<div class="tt-header">Cell (${x}, ${y})</div>`;
+    html += `<div class="tt-row"><span>Initial:</span><span>${INITIAL_NAMES[v] || v} (class ${cls})</span></div>`;
+
+    // Observations for this cell
+    const cellObs = obs.filter(o => o[0] === x && o[1] === y);
+    if (cellObs.length) {
+      html += `<div class="tt-row"><span>Observed:</span><span>${CLASS_NAMES[cellObs[cellObs.length - 1][2]]}</span></div>`;
+      html += `<div class="tt-row"><span>Obs count:</span><span>${cellObs.length}</span></div>`;
+    }
+
+    // Analysis data
+    if (analysis) {
+      const pred = analysis.prediction[y]?.[x];
+      const gt = analysis.ground_truth[y]?.[x];
+      if (pred && gt) {
+        html += `<div style="margin-top:6px; font-weight:600; font-size:10px; color:var(--text3);">PREDICTION vs GROUND TRUTH</div>`;
+        for (let c = 0; c < 6; c++) {
+          const pv = pred[c], gv = gt[c];
+          const pW = Math.round(pv * 100);
+          const gW = Math.round(gv * 100);
+          html += `<div class="tt-row">
+            <span style="width:55px">${CLASS_NAMES[c].split('/')[0].slice(0, 6)}</span>
+            <div class="tt-bar"><div class="tt-fill" style="width:${pW}%; background:${CLASS_COLORS[c]}"></div></div>
+            <span style="width:30px; text-align:right">${(pv * 100).toFixed(0)}%</span>
+            <span style="color:var(--text3)">|</span>
+            <div class="tt-bar"><div class="tt-fill" style="width:${gW}%; background:${CLASS_COLORS_BRIGHT[c]}"></div></div>
+            <span style="width:30px; text-align:right">${(gv * 100).toFixed(0)}%</span>
+          </div>`;
+        }
+      }
+    }
+
+    tooltip.innerHTML = html;
+    tooltip.style.display = 'block';
+    tooltip.style.left = (e.clientX + 15) + 'px';
+    tooltip.style.top = (e.clientY + 15) + 'px';
+
+    // Also update cell info panel
+    cellInfo.innerHTML = html;
+  };
+
+  canvas.onmouseleave = () => { tooltip.style.display = 'none'; };
+}
+
+function renderMapStats(grid, obs, analysis, mapW, mapH) {
+  const total = mapW * mapH;
+  const obsMap = {};
+  for (const [x, y] of obs) obsMap[`${x},${y}`] = true;
+  const obsCoverage = Object.keys(obsMap).length;
+
+  let html = `<div style="margin-bottom:8px"><b>Grid:</b> ${mapW}x${mapH} (${total} cells)</div>`;
+  html += `<div style="margin-bottom:8px"><b>Observed:</b> ${obsCoverage}/${total} cells (${(obsCoverage / total * 100).toFixed(0)}%)</div>`;
+  if (analysis?.score != null) {
+    html += `<div><b>Score:</b> <span style="color:${analysis.score >= 70 ? 'var(--green)' : 'var(--orange)'}">${analysis.score.toFixed(1)}</span></div>`;
+  }
+  document.getElementById('map-stats').innerHTML = html;
+
+  // Class counts
+  const counts = [0, 0, 0, 0, 0, 0];
+  for (let y = 0; y < mapH; y++) {
+    for (let x = 0; x < mapW; x++) {
+      const cls = API_TO_CLASS[grid[y]?.[x] ?? 0] ?? 0;
+      counts[cls]++;
+    }
+  }
+  let ccHtml = '';
+  for (let c = 0; c < 6; c++) {
+    ccHtml += `<div style="display:flex; align-items:center; gap:8px; margin:4px 0;">
+      <div style="width:12px; height:12px; border-radius:2px; background:${CLASS_COLORS[c]}"></div>
+      <span style="width:70px">${CLASS_NAMES[c].split('/')[0]}</span>
+      <span style="color:var(--text2)">${counts[c]}</span>
+    </div>`;
+  }
+  document.getElementById('explorer-class-counts').innerHTML = ccHtml;
+}
+
+function renderClassLegend() {
+  document.getElementById('main-legend').innerHTML = CLASS_NAMES.map((n, i) =>
+    `<div class="legend-item"><div class="legend-swatch" style="background:${CLASS_COLORS[i]}"></div>${n}</div>`
+  ).join('');
+}
+
+function renderInitialLegend() {
+  const items = [
+    [10, 'Ocean'], [11, 'Plains'], [0, 'Empty'], [4, 'Forest'],
+    [5, 'Mountain'], [1, 'Settlement'], [2, 'Port'], [3, 'Ruin']
+  ];
+  document.getElementById('main-legend').innerHTML = items.map(([v, n]) =>
+    `<div class="legend-item"><div class="legend-swatch" style="background:${INITIAL_COLORS[v]}"></div>${n}</div>`
+  ).join('');
+}
+
+// ========== ANALYSIS ==========
+function selectAnalysisSeed(s) {
+  analysisSeed = s;
+  document.querySelectorAll('.seed-btn[data-seed-a]').forEach(b => b.classList.toggle('active', +b.dataset.seedA === s));
+  renderAnalysis();
+}
+
+function renderAnalysis() {
+  if (!DATA) return;
+  const analysis = DATA.analysis[selectedRound]?.[String(analysisSeed)];
+  if (!analysis) {
+    document.getElementById('analysis-no-data').style.display = 'block';
+    document.getElementById('analysis-content').style.display = 'none';
+    return;
+  }
+  document.getElementById('analysis-no-data').style.display = 'none';
+  document.getElementById('analysis-content').style.display = 'block';
+
+  const gt = analysis.ground_truth;
+  const pred = analysis.prediction;
+  const H = gt.length, W = gt[0].length;
+
+  // Stats
+  const kl = computeKL(gt, pred);
+  const ent = computeEntropy(gt);
+  let totalWKL = 0, totalEnt = 0;
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      totalWKL += ent[y][x] * kl[y][x];
+      totalEnt += ent[y][x];
+    }
+  }
+  const wkl = totalEnt > 0 ? totalWKL / totalEnt : 0;
+  const score = Math.max(0, Math.min(100, 100 * Math.exp(-3 * wkl)));
+  const dynamicCells = ent.flat().filter(e => e > 0.01).length;
+  const staticCells = H * W - dynamicCells;
+
+  document.getElementById('analysis-stats').innerHTML = `
+    <div class="stat"><div class="label">Score</div><div class="value ${score >= 70 ? 'green' : score >= 40 ? 'orange' : 'red'}">${score.toFixed(1)}</div></div>
+    <div class="stat"><div class="label">Weighted KL</div><div class="value">${wkl.toFixed(4)}</div></div>
+    <div class="stat"><div class="label">Dynamic Cells</div><div class="value blue">${dynamicCells}</div></div>
+    <div class="stat"><div class="label">Static Cells</div><div class="value">${staticCells}</div></div>
+    <div class="stat"><div class="label">API Score</div><div class="value ${(analysis.score || 0) >= 70 ? 'green' : 'orange'}">${analysis.score?.toFixed(1) ?? '-'}</div></div>
+  `;
+
+  // Pred grid
+  const predCanvas = document.getElementById('pred-canvas');
+  drawProbGrid(predCanvas.getContext('2d'), pred, W, H, predCanvas.width / W, predCanvas.height / H);
+
+  // GT grid
+  const gtCanvas = document.getElementById('gt-canvas');
+  drawProbGrid(gtCanvas.getContext('2d'), gt, W, H, gtCanvas.width / W, gtCanvas.height / H);
+
+  // KL heatmap
+  const klCanvas = document.getElementById('kl-canvas');
+  const klMax = Math.max(...kl.flat(), 0.01);
+  drawHeatmap(klCanvas.getContext('2d'), kl, W, H, klCanvas.width / W, klCanvas.height / H, klMax, 'red');
+  const klGrad = document.getElementById('kl-gradient').getContext('2d');
+  for (let x = 0; x < 120; x++) { klGrad.fillStyle = heatColor(x / 119, 'red'); klGrad.fillRect(x, 0, 1, 10); }
+  document.getElementById('kl-max-label').textContent = klMax.toFixed(3);
+
+  // Entropy heatmap
+  const entCanvas = document.getElementById('entropy-canvas');
+  const entMax = Math.max(...ent.flat(), 0.01);
+  drawHeatmap(entCanvas.getContext('2d'), ent, W, H, entCanvas.width / W, entCanvas.height / H, entMax, 'purple');
+  const entGrad = document.getElementById('entropy-gradient').getContext('2d');
+  for (let x = 0; x < 120; x++) { entGrad.fillStyle = heatColor(x / 119, 'purple'); entGrad.fillRect(x, 0, 1, 10); }
+  document.getElementById('entropy-max-label').textContent = entMax.toFixed(3);
+
+  // Per-class error
+  renderClassError(gt, pred, H, W);
+
+  // Worst cells
+  renderWorstCells(kl, ent, gt, pred, H, W);
+}
+
+function renderClassError(gt, pred, H, W) {
+  const gtCounts = [0, 0, 0, 0, 0, 0];
+  const predCounts = [0, 0, 0, 0, 0, 0];
+  const matchCounts = [0, 0, 0, 0, 0, 0];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      const gtMax = gt[y][x].indexOf(Math.max(...gt[y][x]));
+      const predMax = pred[y][x].indexOf(Math.max(...pred[y][x]));
+      gtCounts[gtMax]++;
+      predCounts[predMax]++;
+      if (gtMax === predMax) matchCounts[gtMax]++;
+    }
+  }
+  const container = document.getElementById('class-error-chart');
+  container.innerHTML = CLASS_NAMES.map((n, i) => {
+    const acc = gtCounts[i] > 0 ? (matchCounts[i] / gtCounts[i] * 100) : 100;
+    return `<div class="bar-col">
+      <div class="bar-value">${acc.toFixed(0)}%</div>
+      <div class="bar" style="height:${Math.max(2, acc)}%; background:${CLASS_COLORS[i]}"></div>
+      <div class="bar-label">${n.split('/')[0].slice(0, 5)}</div>
+      <div class="bar-label">${gtCounts[i]}gt</div>
+    </div>`;
+  }).join('');
+}
+
+function renderWorstCells(kl, ent, gt, pred, H, W) {
+  const cells = [];
+  for (let y = 0; y < H; y++) {
+    for (let x = 0; x < W; x++) {
+      cells.push({ x, y, kl: kl[y][x], ent: ent[y][x] });
+    }
+  }
+  cells.sort((a, b) => b.kl - a.kl);
+  const top10 = cells.slice(0, 10);
+
+  const tbody = document.querySelector('#worst-cells-table tbody');
+  tbody.innerHTML = '';
+  top10.forEach(c => {
+    const gtArgmax = gt[c.y][c.x].indexOf(Math.max(...gt[c.y][c.x]));
+    const predArgmax = pred[c.y][c.x].indexOf(Math.max(...pred[c.y][c.x]));
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td>(${c.x}, ${c.y})</td>
+      <td style="color:${c.kl > 0.5 ? 'var(--red)' : 'var(--orange)'}">${c.kl.toFixed(3)}</td>
+      <td>${c.ent.toFixed(3)}</td>
+      <td><span style="color:${CLASS_COLORS_BRIGHT[gtArgmax]}">${CLASS_NAMES[gtArgmax].split('/')[0].slice(0, 6)}</span> ${(Math.max(...gt[c.y][c.x]) * 100).toFixed(0)}%</td>
+      <td><span style="color:${CLASS_COLORS_BRIGHT[predArgmax]}">${CLASS_NAMES[predArgmax].split('/')[0].slice(0, 6)}</span> ${(Math.max(...pred[c.y][c.x]) * 100).toFixed(0)}%</td>
+    `;
+    tbody.appendChild(tr);
+  });
+}
+
+// ========== CROSS-SEED ==========
+function selectCrossView(v) {
+  crossView = v;
+  document.querySelectorAll('.view-btn[data-view-cs]').forEach(b => b.classList.toggle('active', b.dataset.viewCs === v));
+  renderCrossSeed();
+}
+
+function renderCrossSeed() {
+  if (!DATA) return;
+  const container = document.getElementById('cross-seed-grids');
+  container.innerHTML = '';
+
+  const roundStates = DATA.initial_states[selectedRound];
+  if (!roundStates) {
+    container.innerHTML = '<div style="color: var(--text3); grid-column: 1/-1;">No data for this round</div>';
+    return;
+  }
+
+  const mapW = roundStates.map_width || 40;
+  const mapH = roundStates.map_height || 40;
+  const nSeeds = roundStates.seeds_count || 5;
+  const round = DATA.rounds.find(r => r.id === selectedRound);
+
+  for (let s = 0; s < nSeeds; s++) {
+    const div = document.createElement('div');
+    const seedScore = round?.seed_scores?.[s];
+    div.innerHTML = `<div class="mini-map-label">Seed ${s}</div>`;
+
+    const canvas = document.createElement('canvas');
+    canvas.className = 'map-canvas';
+    canvas.width = 200;
+    canvas.height = 200;
+    canvas.style.width = '100%';
+    canvas.style.height = 'auto';
+    div.appendChild(canvas);
+
+    if (seedScore != null) {
+      div.innerHTML += `<div class="mini-map-score">Score: ${seedScore.toFixed(1)}</div>`;
+    }
+
+    const ctx = canvas.getContext('2d');
+    const cellW = 200 / mapW;
+    const cellH = 200 / mapH;
+    const initialState = roundStates.initial_states[s];
+    if (!initialState) continue;
+
+    if (crossView === 'initial') {
+      for (let y = 0; y < mapH; y++) {
+        for (let x = 0; x < mapW; x++) {
+          const v = initialState.grid[y]?.[x] ?? 0;
+          ctx.fillStyle = INITIAL_COLORS[v] || '#1e293b';
+          ctx.fillRect(x * cellW, y * cellH, cellW + 0.5, cellH + 0.5);
+        }
+      }
+    } else if (crossView === 'observed') {
+      drawClassGrid(ctx, initialState.grid, mapW, mapH, cellW, cellH, true);
+      const obs = getObservations(selectedRound, s);
+      if (obs.length) drawObservations(ctx, obs, cellW, cellH);
+    } else if (crossView === 'ground_truth') {
+      const analysis = DATA.analysis[selectedRound]?.[String(s)];
+      if (analysis) {
+        drawProbGrid(ctx, analysis.ground_truth, mapW, mapH, cellW, cellH);
+      } else {
+        drawClassGrid(ctx, initialState.grid, mapW, mapH, cellW, cellH, false);
+        ctx.fillStyle = 'rgba(255,255,255,0.1)'; ctx.font = '11px monospace';
+        ctx.fillText('No GT', 70, 100);
+      }
+    }
+
+    container.appendChild(div);
+  }
+
+  // Agreement stats
+  renderAgreementStats(roundStates, mapW, mapH, nSeeds);
+
+  // Legend
+  document.getElementById('cross-legend').innerHTML = CLASS_NAMES.map((n, i) =>
+    `<div class="legend-item"><div class="legend-swatch" style="background:${CLASS_COLORS[i]}"></div>${n}</div>`
+  ).join('');
+}
+
+function renderAgreementStats(roundStates, mapW, mapH, nSeeds) {
+  const allObs = [];
+  for (let s = 0; s < nSeeds; s++) {
+    const obs = getObservations(selectedRound, s);
+    const map = {};
+    for (const [x, y, cls] of obs) map[`${x},${y}`] = cls;
+    allObs.push(map);
+  }
+
+  let agreeCells = 0, disagreeCells = 0, totalCovered = 0;
+  const covered = {};
+  for (const map of allObs) {
+    for (const key of Object.keys(map)) covered[key] = true;
+  }
+
+  for (const key of Object.keys(covered)) {
+    const vals = allObs.map(m => m[key]).filter(v => v !== undefined);
+    if (vals.length < 2) continue;
+    totalCovered++;
+    if (vals.every(v => v === vals[0])) agreeCells++;
+    else disagreeCells++;
+  }
+
+  const pct = totalCovered > 0 ? (agreeCells / totalCovered * 100).toFixed(1) : '-';
+  document.getElementById('agreement-stats').innerHTML = `
+    <div style="margin-top:8px;">
+      <b>Cells observed in 2+ seeds:</b> ${totalCovered}<br>
+      <b>All seeds agree:</b> ${agreeCells} (${pct}%)<br>
+      <b>Seeds disagree:</b> <span style="color:var(--orange)">${disagreeCells}</span>
+      ${disagreeCells > 0 ? ' — these are the stochastic/dynamic cells' : ''}
+    </div>
+  `;
+}
+
+// ========== UTILS ==========
+function darken(hex, amount) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  return `rgb(${Math.round(r * (1 - amount))},${Math.round(g * (1 - amount))},${Math.round(b * (1 - amount))})`;
+}
+
+function adjustAlpha(hex, alpha) {
+  const r = parseInt(hex.slice(1, 3), 16);
+  const g = parseInt(hex.slice(3, 5), 16);
+  const b = parseInt(hex.slice(5, 7), 16);
+  // Blend with dark background
+  const bg = 15;
+  const rr = Math.round(bg + (r - bg) * alpha);
+  const gg = Math.round(bg + (g - bg) * alpha);
+  const bb = Math.round(bg + (b - bg) * alpha);
+  return `rgb(${rr},${gg},${bb})`;
+}
+</script>
+</body>
+</html>
