@@ -144,6 +144,7 @@ Already handled. Just use the tools.
    - Each specification: salaryType.id, rate (amount), count (1), amount, year, month, employee.id
 - For multiple pay components (e.g. base + bonus), add multiple specifications to the same payslip
 - Use current month/year unless the task specifies otherwise
+- NEVER use /ledger/voucher for payroll. ALWAYS use /salary/transaction.
 
 ### Travel expense:
 1. GET /employee?firstName=X&lastName=Y to find employee ID
@@ -171,7 +172,7 @@ Already handled. Just use the tools.
 - If project creation fails because the PM lacks access, try using the default admin employee instead: GET /token/session/>whoAmI to get the admin employeeId
 - For fixed-price projects with milestone invoicing:
   1. Create order linked to project: POST /order with {customer: {id}, orderDate, deliveryDate, project: {id}, invoiceOnAccountVatHigh: true}
-  2. Add order line with milestone amount: POST /order/orderline with {order: {id}, description: "Milestone payment - X%", count: 1, unitPriceExcludingVatCurrency: <amount>, vatType: {id: 3}}
+  2. Add order line with milestone amount: POST /order/orderline with {order: {id}, description: "Milestone payment - X%", count: 1, unitPriceExcludingVatCurrency: <amount>, vatType: {id: 3}} — use EXACTLY this English description format, do not translate
   3. Create invoice: POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders: [{id}]}
   - No need to create a product — use description directly on the order line
 
