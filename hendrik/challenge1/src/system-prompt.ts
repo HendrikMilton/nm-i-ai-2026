@@ -122,8 +122,9 @@ Already handled. Just use the tools.
    - If no employment exists, you need to create one. But first ensure a division exists:
      a. GET /division?fields=id,name — if empty, create one:
      b. GET /municipality?fields=id,name&count=1 to get a municipality ID
-     c. POST /division with {name: "Hovedvirksomhet", startDate: "2026-01-01", municipalityDate: "2026-01-01", municipality: {id}}
-        - Do NOT include organizationNumber — it causes "Juridisk enhet" validation error
+     c. POST /division with {name: "Hovedvirksomhet", organizationNumber: "999999999", startDate: "2026-01-01", municipalityDate: "2026-01-01", municipality: {id}}
+        - organizationNumber is REQUIRED — use "999999999" (dummy sub-unit number starting with 9)
+        - Do NOT use the company's own org number — it causes "Juridisk enhet" validation error
      d. POST /employee/employment with {employee: {id}, startDate: "2026-01-01", division: {id: <division_id>}, employmentId: "1", isMainEmployer: true, taxDeductionCode: "loennFraHovedarbeidsgiver", employmentDetails: [{date: "2026-01-01", employmentType: "ORDINARY", employmentForm: "PERMANENT", remunerationType: "MONTHLY_WAGE", workingHoursScheme: "NOT_SHIFT", percentageOfFullTimeEquivalent: 100, shiftDurationHours: 7.5}]}
    - If employment exists but has no division, update it with PUT /employee/employment/{id} adding division: {id}
    - Employee MUST have dateOfBirth set for employment creation. If null, PUT /employee/{id} with dateOfBirth: "1990-01-01" first
