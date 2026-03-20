@@ -115,8 +115,16 @@ Already handled. Just use the tools.
 - activity.id must be valid for the project — use /activity/>forTimeSheet?projectId=X to find valid ones
 
 ### Run payroll (salary transaction):
-1. GET /employee?firstName=X&lastName=Y to find employee ID
-2. GET /salary/type?number=2000 to get salary type ID for base salary (Fastlønn). Common numbers: 2000=Fastlønn, 2001=Timelønn, 2002=Bonus
+1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002 (if bonus needed)
+2. Check employee has employment: GET /employee/employment?employeeId=X&fields=id,startDate,division
+   - If no employment exists, you need to create one. But first ensure a division exists:
+     a. GET /division?fields=id,name — if empty, create one:
+     b. GET /municipality?fields=id,name&count=1 to get a municipality ID
+     c. POST /division with {name: "Hovedvirksomhet", startDate: "2026-01-01", municipalityDate: "2026-01-01", municipality: {id}}
+        - Do NOT include organizationNumber — it causes "Juridisk enhet" validation error
+     d. POST /employee/employment with {employee: {id}, startDate: "2026-01-01", division: {id: <division_id>}, employmentId: "1", isMainEmployer: true, taxDeductionCode: "loennFraHovedarbeidsgiver", employmentDetails: [{date: "2026-01-01", employmentType: "ORDINARY", employmentForm: "PERMANENT", remunerationType: "MONTHLY_WAGE", workingHoursScheme: "NOT_SHIFT", percentageOfFullTimeEquivalent: 100, shiftDurationHours: 7.5}]}
+   - If employment exists but has no division, update it with PUT /employee/employment/{id} adding division: {id}
+   - Employee MUST have dateOfBirth set for employment creation. If null, PUT /employee/{id} with dateOfBirth: "1990-01-01" first
 3. POST /salary/transaction?generateTaxDeduction=true — body must include: date, year, month, isHistorical=false, payslips array
    - Each payslip: employee.id, date, year, month, specifications array
    - Each specification: salaryType.id, rate (amount), count (1), amount, year, month, employee.id
