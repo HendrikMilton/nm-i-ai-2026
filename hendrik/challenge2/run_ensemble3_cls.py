@@ -191,8 +191,8 @@ def main():
 
             det_data.append((x1, y1, x2, y2, float(score), int(yolo_label)))
 
-            # Only classify if YOLO is uncertain (score < 0.8)
-            if float(score) < 0.8 and cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
+            # Only classify if YOLO is uncertain (score < 0.9)
+            if float(score) < 0.9 and cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
                 crop = img_pil.crop((cx1, cy1, cx2, cy2))
                 crop_tensors.append(cls_transform(crop))
                 crop_indices.append(i)
