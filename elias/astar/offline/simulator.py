@@ -287,7 +287,7 @@ class Simulator:
         for i, a in enumerate(ports):
             for b in ports[i + 1:]:
                 if a.owner_id == b.owner_id or self.rng.random() < 0.5:
-                    # Same faction or random chance to trade
+                    # Same faction always trades; different factions trade sometimes
                     dist = self._dist(a.x, a.y, b.x, b.y)
                     if dist <= p["trade_range"]:
                         a.food += p["trade_food_bonus"]
@@ -428,13 +428,14 @@ def run_monte_carlo(grid, settlements_data, n_sims=200, params=None, base_seed=N
             for c in range(w):
                 counts[r][c][class_grid[r][c]] += 1
 
-    # Convert counts to probabilities with floor
+    # Convert counts to probabilities with minimal smoothing
+    # Uses per-class floors matching floor_and_normalize to avoid double-inflation
+    class_floors = [0.005, 0.005, 0.001, 0.002, 0.005, 0.001]
     prediction = [[[0.0] * 6 for _ in range(w)] for _ in range(h)]
-    floor = 0.01
     for r in range(h):
         for c in range(w):
             for k in range(6):
-                prediction[r][c][k] = max(counts[r][c][k] / n_sims, floor)
+                prediction[r][c][k] = max(counts[r][c][k] / n_sims, class_floors[k])
             total = sum(prediction[r][c])
             for k in range(6):
                 prediction[r][c][k] /= total

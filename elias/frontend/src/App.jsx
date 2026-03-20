@@ -277,9 +277,9 @@ function RoundSelector({ roundIds, selected, onSelect, apiRounds }) {
   )
 }
 
-// --- Simulation View ---
+// --- Live Game View ---
 
-function RoundSimulationView({ round }) {
+function RoundLiveGameView({ round }) {
   const [seedIndex, setSeedIndex] = useState(0)
   const mapW = round.map_width || 40
   const mapH = round.map_height || 40
@@ -288,6 +288,16 @@ function RoundSimulationView({ round }) {
     () => buildMapFromQueries(round.queries || [], seedIndex, mapW, mapH),
     [round.queries, seedIndex, mapW, mapH]
   )
+
+  // Extract initial grid from fetch_round_details action
+  const initialGrid = useMemo(() => {
+    const action = (round.actions || []).find(
+      a => a.action === 'fetch_round_details'
+    )
+    const states = action?.details?.raw_response?.initial_states
+    if (states && states[seedIndex]?.grid) return states[seedIndex].grid
+    return null
+  }, [round.actions, seedIndex])
 
   const seedQueries = (round.queries || []).filter(q => q.seed_index === seedIndex)
   const seedSubmission = (round.submissions || []).find(s => s.seed_index === seedIndex)
@@ -340,6 +350,13 @@ function RoundSimulationView({ round }) {
       <Legend />
 
       <div className="grids-row">
+        {initialGrid && (
+          <GridCanvas
+            grid={initialGrid}
+            title={`Seed ${seedIndex} — Initial`}
+            viewportOverlays={viewports}
+          />
+        )}
         <GridCanvas
           grid={grid}
           title={`Seed ${seedIndex} — Observed`}
@@ -349,6 +366,7 @@ function RoundSimulationView({ round }) {
           <PredictionGridCanvas
             prediction={seedPrediction}
             title={`Seed ${seedIndex} — Prediction`}
+            viewportOverlays={viewports}
           />
         )}
       </div>
@@ -363,7 +381,7 @@ function RoundSimulationView({ round }) {
   )
 }
 
-function SimulationView({ logData, fetchRoundLog, apiRounds }) {
+function LiveGameView({ logData, fetchRoundLog, apiRounds }) {
   const [selectedRound, setSelectedRound] = useState(null)
   const roundIds = (logData?.index?.rounds || []).map(r => r.id)
   const activeRound = selectedRound || roundIds[roundIds.length - 1]
@@ -386,7 +404,7 @@ function SimulationView({ logData, fetchRoundLog, apiRounds }) {
   return (
     <>
       <div className="section-header">
-        <h2>Simulation Visualizer</h2>
+        <h2>Live Game Visualizer</h2>
         {roundIds.length > 0 ? (
           <RoundSelector
             roundIds={roundIds}
@@ -400,7 +418,7 @@ function SimulationView({ logData, fetchRoundLog, apiRounds }) {
       </div>
 
       {hasRounds ? (
-        <RoundSimulationView round={round} />
+        <RoundLiveGameView round={round} />
       ) : round && !round.queries?.length ? (
         <div className="empty-state"><p>No queries logged for this round yet.</p></div>
       ) : (
@@ -479,10 +497,10 @@ function App() {
             Rounds
           </button>
           <button
-            className={`tab-btn ${tab === 'simulation' ? 'active' : ''}`}
-            onClick={() => setTab('simulation')}
+            className={`tab-btn ${tab === 'live' ? 'active' : ''}`}
+            onClick={() => setTab('live')}
           >
-            Simulation
+            Live Game
           </button>
           <button
             className={`tab-btn ${tab === 'offline' ? 'active' : ''}`}
@@ -524,7 +542,7 @@ function App() {
           </>
         )}
 
-        {tab === 'simulation' && <SimulationView logData={logData} fetchRoundLog={fetchRoundLog} apiRounds={rounds} />}
+        {tab === 'live' && <LiveGameView logData={logData} fetchRoundLog={fetchRoundLog} apiRounds={rounds} />}
         {tab === 'offline' && <OfflineView apiRounds={rounds} />}
         {tab === 'logs' && <LogsView logData={logData} fetchRoundLog={fetchRoundLog} apiRounds={rounds} />}
       </main>

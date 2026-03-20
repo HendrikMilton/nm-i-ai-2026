@@ -2,7 +2,7 @@
   "id": "R4_iter1_prior_only",
   "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
   "round_number": 4,
-  "timestamp": "2026-03-20T10:52:07.119775+00:00",
+  "timestamp": "2026-03-20T11:05:39.159905+00:00",
   "n_sims": 10,
   "round_score": 87.5563,
   "config": {
@@ -18,7 +18,7 @@
       "prior_score": 87.5259,
       "weighted_kl": 0.044412,
       "scored_cells": 1344,
-      "elapsed_s": 1.0,
+      "elapsed_s": 1.1,
       "prediction": [
         [
           [

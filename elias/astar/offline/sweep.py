@@ -1,110 +1,109 @@
 """
-Parameter sweep — run 50 iterations across completed rounds to find optimal settings.
-10 iterations per round, 5 rounds = 50 total.
+Astar Island — Sweep runner for iterative improvement.
 
-Each iteration varies:
-  - sim_weight: how much to trust the simulator
-  - prior_weight: how much to trust learned priors
-  - n_sims: number of Monte Carlo simulations
+Runs backtest_full_pipeline with configurable overrides and saves each
+iteration with a named ID for the frontend.
 
-Results are saved to logs/offline/ with unique iteration IDs visible in the dashboard.
+Usage:
+  python offline/sweep.py --round 7 --iterations 10 --label strategy_v2
+  python offline/sweep.py --round 7 --label strategy_v2 --start 11 --obs-weight 0.5
 """
 
+import argparse
 import os
 import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 
-from utils import get_rounds
-from offline.run_local import backtest_round, load_custom_params
+from utils import get_rounds, get_round
+from offline.simulator import DEFAULT_PARAMS
+from offline.run_local import backtest_full_pipeline, load_custom_params
 
-CONFIGS = [
-    # iter, label, sim_weight, prior_weight, n_sims
-    (1,  "prior_only",        0.0,  1.0,  10),
-    (2,  "sw0.1_pw4",         0.1,  4.0,  100),
-    (3,  "sw0.25_pw4",        0.25, 4.0,  100),
-    (4,  "sw0.5_pw4",         0.5,  4.0,  100),
-    (5,  "sw1_pw4",           1.0,  4.0,  100),
-    (6,  "sw0.5_pw2",         0.5,  2.0,  100),
-    (7,  "sw0.5_pw6",         0.5,  6.0,  100),
-    (8,  "sw0.5_pw8",         0.5,  8.0,  100),
-    (9,  "sw0.25_pw6",        0.25, 6.0,  100),
-    (10, "sw0.1_pw8",         0.1,  8.0,  100),
-]
+
+def run_sweep(round_num, iterations, label, start_iter=1, budget=50,
+              obs_weight=None, sim_weight=None, prior_weight=None, n_sims=None):
+    """Run multiple backtest iterations with overrides, logging each one."""
+
+    rounds = get_rounds()
+    completed = [r for r in rounds if r["status"] == "completed"]
+    target = next((r for r in completed if r["round_number"] == round_num), None)
+    if not target:
+        print(f"Round {round_num} not found or not completed.")
+        return
+
+    round_id = target["id"]
+    from run import N_SIMS as DEFAULT_N_SIMS
+    eff_sims = n_sims if n_sims is not None else DEFAULT_N_SIMS
+
+    print(f"Sweep: {label} on Round {round_num}")
+    print(f"  Weights: obs={obs_weight} sim={sim_weight} prior={prior_weight} n_sims={eff_sims}")
+    print(f"  Budget: {budget}, Iterations: {start_iter}-{start_iter + iterations - 1}")
+    print()
+
+    params = DEFAULT_PARAMS.copy()
+    all_scores = []
+
+    for it in range(start_iter, start_iter + iterations):
+        iter_id = f"{label}.{it:02d}"
+        print(f"--- {iter_id} ---")
+
+        config = {
+            "label": iter_id,
+            "budget": budget,
+            "mode": "sweep",
+            "round_number": round_num,
+            "obs_weight": obs_weight,
+            "sim_weight": sim_weight,
+            "prior_weight": prior_weight,
+            "n_sims": eff_sims,
+        }
+
+        t0 = time.time()
+        seed_results, round_score = backtest_full_pipeline(
+            round_id, round_num, eff_sims, params, budget=budget,
+            quiet=True, iteration_id=iter_id, config=config,
+            obs_weight=obs_weight, sim_weight=sim_weight,
+            prior_weight=prior_weight,
+            rng_seed=round_num * 7919 + it * 131,
+        )
+        elapsed = time.time() - t0
+
+        all_scores.append(round_score)
+        seed_str = " ".join(
+            f"s{s}={seed_results[s]['obs_score']:.1f}" for s in range(5))
+        print(f"  Score: {round_score:.1f}  ({seed_str})  [{elapsed:.0f}s]")
+
+    print(f"\n=== Summary ===")
+    print(f"  Scores: {[f'{s:.1f}' for s in all_scores]}")
+    print(f"  Mean: {sum(all_scores)/len(all_scores):.1f}")
+    print(f"  Min: {min(all_scores):.1f}  Max: {max(all_scores):.1f}")
 
 
 def main():
-    params = load_custom_params()
-    rounds = get_rounds()
-    completed = [r for r in rounds if r["status"] == "completed"]
-    completed.sort(key=lambda r: r.get("round_number", 0))
+    parser = argparse.ArgumentParser(description="Astar sweep runner")
+    parser.add_argument("--round", type=int, required=True, help="Round number")
+    parser.add_argument("--iterations", type=int, default=10, help="Number of iterations")
+    parser.add_argument("--label", type=str, default="strategy_v2", help="Label prefix")
+    parser.add_argument("--start", type=int, default=1, help="Starting iteration number")
+    parser.add_argument("--budget", type=int, default=50, help="Query budget")
+    parser.add_argument("--obs-weight", type=float, default=None)
+    parser.add_argument("--sim-weight", type=float, default=None)
+    parser.add_argument("--prior-weight", type=float, default=None)
+    parser.add_argument("--n-sims", type=int, default=None)
+    args = parser.parse_args()
 
-    print(f"Sweep: {len(CONFIGS)} configs × {len(completed)} rounds = {len(CONFIGS) * len(completed)} iterations")
-    print(f"Rounds: {[r['round_number'] for r in completed]}")
-    print()
-
-    results_summary = []
-    total = len(CONFIGS) * len(completed)
-    done = 0
-
-    for cfg_idx, label, sim_w, prior_w, n_sims in CONFIGS:
-        for rd in completed:
-            round_id = rd["id"]
-            round_num = rd["round_number"]
-            iteration_id = f"R{round_num}_iter{cfg_idx}_{label}"
-
-            config = {
-                "label": label,
-                "sim_weight": sim_w,
-                "prior_weight": prior_w,
-                "n_sims": n_sims,
-                "iteration": cfg_idx,
-            }
-
-            done += 1
-            print(f"[{done}/{total}] R{round_num} {label} (sw={sim_w}, pw={prior_w}, sims={n_sims})")
-
-            t0 = time.time()
-            _, round_score = backtest_round(
-                round_id, round_num, n_sims, params,
-                sim_weight=sim_w, prior_weight=prior_w,
-                iteration_id=iteration_id, config=config,
-                quiet=True,
-            )
-            elapsed = time.time() - t0
-
-            results_summary.append({
-                "iteration_id": iteration_id,
-                "round": round_num,
-                "label": label,
-                "score": round_score,
-                "elapsed": round(elapsed, 1),
-            })
-            print(f"  score={round_score:.1f}  ({elapsed:.0f}s)")
-
-    # Print summary table
-    print("\n" + "=" * 80)
-    print("SUMMARY — Average score across all rounds per config:")
-    print("=" * 80)
-
-    config_scores = {}
-    for r in results_summary:
-        label = r["label"]
-        if label not in config_scores:
-            config_scores[label] = []
-        config_scores[label].append(r["score"])
-
-    ranked = sorted(config_scores.items(), key=lambda x: -sum(x[1])/len(x[1]))
-    print(f"{'Config':<20} {'Avg':>6} {'R1':>6} {'R2':>6} {'R3':>6} {'R4':>6} {'R5':>6}")
-    print("-" * 80)
-    for label, scores in ranked:
-        avg = sum(scores) / len(scores)
-        per_round = {r["round"]: r["score"] for r in results_summary if r["label"] == label}
-        row = f"{label:<20} {avg:>6.1f}"
-        for rn in sorted(per_round.keys()):
-            row += f" {per_round[rn]:>6.1f}"
-        print(row)
+    run_sweep(
+        round_num=args.round,
+        iterations=args.iterations,
+        label=args.label,
+        start_iter=args.start,
+        budget=args.budget,
+        obs_weight=args.obs_weight,
+        sim_weight=args.sim_weight,
+        prior_weight=args.prior_weight,
+        n_sims=args.n_sims,
+    )
 
 
 if __name__ == "__main__":

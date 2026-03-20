@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect, useMemo } from 'react'
-import { PredictionGridCanvas, PredictionStats, Legend } from './SimulationGrid'
+import { GridCanvas, PredictionGridCanvas, PredictionStats, Legend } from './SimulationGrid'
 import './OfflineView.css'
 
 function formatDateTime(ts) {
@@ -29,15 +29,26 @@ function ScoreBar({ score, label, color }) {
 }
 
 function BacktestSeedView({ seedData, seedIndex }) {
-  const [view, setView] = useState('prediction') // prediction | ground_truth | both
+  const hasQueries = seedData?.queries?.length > 0
+  const hasInitialGrid = seedData?.initial_grid?.length > 0
+  const [view, setView] = useState('both') // prediction | ground_truth | both | observed | initial
 
   if (!seedData) return null
+
+  // Extract viewport overlays from query data
+  const viewportOverlays = useMemo(() => {
+    if (!seedData.queries) return null
+    return seedData.queries.map(q => q.viewport)
+  }, [seedData.queries])
 
   return (
     <div className="backtest-seed">
       <div className="backtest-seed-header">
         <h4>Seed {seedIndex}</h4>
         <div className="backtest-seed-scores">
+          {seedData.obs_score != null && (
+            <ScoreBar score={seedData.obs_score} label="Obs+Sim+Prior" color="var(--green)" />
+          )}
           <ScoreBar score={seedData.sim_score} label="Sim+Prior" color="var(--papaya)" />
           <ScoreBar score={seedData.prior_score} label="Prior only" color="var(--grey)" />
         </div>
@@ -45,10 +56,21 @@ function BacktestSeedView({ seedData, seedIndex }) {
           <span>KL: {seedData.weighted_kl?.toFixed(4)}</span>
           <span>Scored cells: {seedData.scored_cells}</span>
           <span>{seedData.elapsed_s}s</span>
+          {seedData.n_queries != null && <span>{seedData.n_queries} queries</span>}
         </div>
       </div>
 
       <div className="backtest-view-toggle">
+        <button
+          className={`filter-btn ${view === 'both' ? 'active' : ''}`}
+          onClick={() => setView('both')}
+        >Side by Side</button>
+        {hasInitialGrid && (
+          <button
+            className={`filter-btn ${view === 'initial' ? 'active' : ''}`}
+            onClick={() => setView('initial')}
+          >Initial Grid</button>
+        )}
         <button
           className={`filter-btn ${view === 'prediction' ? 'active' : ''}`}
           onClick={() => setView('prediction')}
@@ -57,23 +79,48 @@ function BacktestSeedView({ seedData, seedIndex }) {
           className={`filter-btn ${view === 'ground_truth' ? 'active' : ''}`}
           onClick={() => setView('ground_truth')}
         >Ground Truth</button>
-        <button
-          className={`filter-btn ${view === 'both' ? 'active' : ''}`}
-          onClick={() => setView('both')}
-        >Side by Side</button>
+        {hasQueries && (
+          <button
+            className={`filter-btn ${view === 'observed' ? 'active' : ''}`}
+            onClick={() => setView('observed')}
+          >Observed</button>
+        )}
       </div>
 
       <div className="grids-row">
+        {view === 'both' && seedData.initial_grid && (
+          <GridCanvas
+            grid={seedData.initial_grid}
+            title="Initial Grid"
+            viewportOverlays={hasQueries ? viewportOverlays : undefined}
+          />
+        )}
         {(view === 'prediction' || view === 'both') && seedData.prediction && (
           <PredictionGridCanvas
             prediction={seedData.prediction}
             title="Prediction"
+            viewportOverlays={hasQueries ? viewportOverlays : undefined}
           />
         )}
         {(view === 'ground_truth' || view === 'both') && seedData.ground_truth && (
           <PredictionGridCanvas
             prediction={seedData.ground_truth}
             title="Ground Truth"
+            viewportOverlays={hasQueries ? viewportOverlays : undefined}
+          />
+        )}
+        {view === 'observed' && seedData.prediction && (
+          <PredictionGridCanvas
+            prediction={seedData.prediction}
+            title="Prediction (with query viewports)"
+            viewportOverlays={viewportOverlays}
+          />
+        )}
+        {view === 'initial' && seedData.initial_grid && (
+          <GridCanvas
+            grid={seedData.initial_grid}
+            title="Initial Grid"
+            viewportOverlays={hasQueries ? viewportOverlays : undefined}
           />
         )}
       </div>
@@ -84,6 +131,9 @@ function BacktestSeedView({ seedData, seedIndex }) {
         )}
         {(view === 'ground_truth' || view === 'both') && seedData.ground_truth && (
           <PredictionStats prediction={seedData.ground_truth} label="Ground Truth" />
+        )}
+        {view === 'observed' && seedData.prediction && (
+          <PredictionStats prediction={seedData.prediction} label="Prediction" />
         )}
       </div>
     </div>
@@ -121,8 +171,14 @@ function BacktestDetail({ data }) {
             onClick={() => setSeedIndex(Number(idx))}
           >
             <div className="backtest-scores-card-seed">Seed {idx}</div>
-            <div className="backtest-scores-card-score">{s.sim_score?.toFixed(1)}</div>
-            <div className="backtest-scores-card-prior">prior: {s.prior_score?.toFixed(1)}</div>
+            <div className="backtest-scores-card-score">
+              {(s.obs_score ?? s.sim_score)?.toFixed(1)}
+            </div>
+            {s.obs_score != null ? (
+              <div className="backtest-scores-card-prior">sim: {s.sim_score?.toFixed(1)}</div>
+            ) : (
+              <div className="backtest-scores-card-prior">prior: {s.prior_score?.toFixed(1)}</div>
+            )}
           </div>
         ))}
       </div>
