@@ -166,6 +166,155 @@ export function TerrainStats({ grid, label }) {
   )
 }
 
+// Class index → terrain code for coloring predictions
+const CLASS_TO_TERRAIN = { 0: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5 }
+const CLASS_LABELS = ['Empty', 'Settlement', 'Port', 'Ruin', 'Forest', 'Mountain']
+
+/**
+ * Convert a H×W×6 prediction tensor to an argmax grid + confidence grid.
+ */
+export function predictionToGrids(prediction) {
+  if (!prediction || prediction.length === 0) return null
+  const H = prediction.length
+  const W = prediction[0].length
+  const argmaxGrid = Array.from({ length: H }, () => Array(W).fill(0))
+  const confidenceGrid = Array.from({ length: H }, () => Array(W).fill(0))
+
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
+      const probs = prediction[r][c]
+      let maxIdx = 0
+      let maxVal = probs[0]
+      for (let k = 1; k < probs.length; k++) {
+        if (probs[k] > maxVal) {
+          maxIdx = k
+          maxVal = probs[k]
+        }
+      }
+      argmaxGrid[r][c] = CLASS_TO_TERRAIN[maxIdx] ?? 0
+      confidenceGrid[r][c] = maxVal
+    }
+  }
+
+  return { argmaxGrid, confidenceGrid }
+}
+
+/**
+ * Render a prediction tensor as a grid — terrain color from argmax,
+ * opacity from confidence.
+ */
+export function PredictionGridCanvas({ prediction, title }) {
+  const grids = useMemo(() => predictionToGrids(prediction), [prediction])
+  if (!grids) return null
+
+  const { argmaxGrid, confidenceGrid } = grids
+  const height = argmaxGrid.length
+  const width = argmaxGrid[0].length
+  const cellSize = Math.max(8, Math.min(14, Math.floor(560 / Math.max(width, height))))
+
+  const cells = useMemo(() => {
+    const result = []
+    for (let r = 0; r < height; r++) {
+      for (let c = 0; c < width; c++) {
+        const terrain = argmaxGrid[r][c]
+        const confidence = confidenceGrid[r][c]
+        const fill = TERRAIN_COLORS[terrain] || TERRAIN_COLORS[0]
+        // Lower confidence = more transparent
+        const opacity = 0.3 + 0.7 * confidence
+        result.push(
+          <rect
+            key={`${r}-${c}`}
+            x={c * cellSize}
+            y={r * cellSize}
+            width={cellSize}
+            height={cellSize}
+            fill={fill}
+            opacity={opacity}
+          />
+        )
+      }
+    }
+    return result
+  }, [argmaxGrid, confidenceGrid, cellSize, width, height])
+
+  return (
+    <div className="grid-panel">
+      {title && <h3 className="grid-title">{title}</h3>}
+      <svg
+        width={width * cellSize}
+        height={height * cellSize}
+        className="grid-svg"
+      >
+        {cells}
+      </svg>
+    </div>
+  )
+}
+
+/**
+ * Show per-class confidence breakdown for a prediction.
+ */
+export function PredictionStats({ prediction, label }) {
+  if (!prediction || prediction.length === 0) return null
+
+  const H = prediction.length
+  const W = prediction[0].length
+  const total = H * W
+
+  // Count argmax per class + average confidence
+  const classCounts = Array(6).fill(0)
+  const classConfSum = Array(6).fill(0)
+  let totalConf = 0
+
+  for (let r = 0; r < H; r++) {
+    for (let c = 0; c < W; c++) {
+      const probs = prediction[r][c]
+      let maxIdx = 0
+      let maxVal = probs[0]
+      for (let k = 1; k < probs.length; k++) {
+        if (probs[k] > maxVal) { maxIdx = k; maxVal = probs[k] }
+      }
+      classCounts[maxIdx]++
+      classConfSum[maxIdx] += maxVal
+      totalConf += maxVal
+    }
+  }
+
+  const avgConf = (totalConf / total * 100).toFixed(1)
+
+  const entries = CLASS_LABELS.map((name, i) => ({
+    code: CLASS_TO_TERRAIN[i],
+    label: name,
+    count: classCounts[i],
+    pct: ((classCounts[i] / total) * 100).toFixed(1),
+    avgConf: classCounts[i] > 0 ? (classConfSum[i] / classCounts[i] * 100).toFixed(0) : '—',
+    color: TERRAIN_COLORS[CLASS_TO_TERRAIN[i]] || TERRAIN_COLORS[0],
+  })).filter(e => e.count > 0).sort((a, b) => b.count - a.count)
+
+  return (
+    <div className="terrain-stats">
+      <h4>{label} <span className="stats-avg-conf">avg confidence: {avgConf}%</span></h4>
+      <div className="stats-rows">
+        {entries.map(e => (
+          <div key={e.code} className="stats-row">
+            <span className="legend-swatch" style={{ backgroundColor: e.color }} />
+            <span className="stats-name">{e.label}</span>
+            <span className="stats-count">{e.count}</span>
+            <div className="stats-bar-outer">
+              <div
+                className="stats-bar-inner"
+                style={{ width: `${e.pct}%`, backgroundColor: e.color }}
+              />
+            </div>
+            <span className="stats-pct">{e.pct}%</span>
+            <span className="stats-pct">{e.avgConf}%</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // Legacy: example simulation with initial/after grids
 export default function SimulationGrid({ data }) {
   if (!data) return null

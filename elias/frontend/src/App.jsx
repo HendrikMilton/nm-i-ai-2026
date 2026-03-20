@@ -1,5 +1,5 @@
 import { useState, useCallback, useMemo, useEffect } from 'react'
-import SimulationGrid, { GridCanvas, Legend, TerrainStats } from './SimulationGrid'
+import SimulationGrid, { GridCanvas, Legend, TerrainStats, PredictionGridCanvas, PredictionStats } from './SimulationGrid'
 import { generateExampleSimulation } from './exampleSimulation'
 import { fetchRounds } from './api'
 import './App.css'
@@ -291,6 +291,14 @@ function RoundSimulationView({ round }) {
   const seedQueries = (round.queries || []).filter(q => q.seed_index === seedIndex)
   const seedSubmission = (round.submissions || []).find(s => s.seed_index === seedIndex)
 
+  // Extract prediction tensor from build_prediction action
+  const seedPrediction = useMemo(() => {
+    const action = (round.actions || []).find(
+      a => a.action === 'build_prediction' && a.details?.seed_index === seedIndex
+    )
+    return action?.details?.prediction || null
+  }, [round.actions, seedIndex])
+
   const seedsWithData = useMemo(() => {
     const seeds = new Set()
     for (const q of (round.queries || [])) seeds.add(q.seed_index)
@@ -320,6 +328,12 @@ function RoundSimulationView({ round }) {
         <span>{seedQueries.length} queries</span>
         <span className="seed-info-sep" />
         <span>{seedSubmission ? 'Submitted' : 'Not submitted'}</span>
+        {seedPrediction && (
+          <>
+            <span className="seed-info-sep" />
+            <span>Prediction logged</span>
+          </>
+        )}
       </div>
 
       <Legend />
@@ -327,13 +341,22 @@ function RoundSimulationView({ round }) {
       <div className="grids-row">
         <GridCanvas
           grid={grid}
-          title={`Seed ${seedIndex} — Observed Map`}
+          title={`Seed ${seedIndex} — Observed`}
           viewportOverlays={viewports}
         />
+        {seedPrediction && (
+          <PredictionGridCanvas
+            prediction={seedPrediction}
+            title={`Seed ${seedIndex} — Prediction`}
+          />
+        )}
       </div>
 
       <div className="grids-row">
-        <TerrainStats grid={grid} label={`Seed ${seedIndex} Terrain`} />
+        <TerrainStats grid={grid} label="Observed Terrain" />
+        {seedPrediction && (
+          <PredictionStats prediction={seedPrediction} label="Predicted Terrain" />
+        )}
       </div>
     </div>
   )
