@@ -131,8 +131,10 @@ Already handled. Just use the tools.
 ### Project creation:
 1. Find/create customer: GET /customer?name=... or POST /customer
 2. Find project manager: GET /employee?firstName=X&lastName=Y
-3. POST /project with {name, customer: {id}, projectManager: {id}, ...}
+3. POST /project with {name, customer: {id}, projectManager: {id}, startDate, isFixedPrice, fixedprice}
+- Do NOT fetch department for project creation — it's not needed
 - If project creation fails because the PM lacks access, try using the default admin employee instead: GET /token/session/>whoAmI to get the admin employeeId
+- For fixed-price projects with milestone invoicing: create order linked to project, add order line for the milestone amount, then create invoice from the order
 
 ### Department creation:
 - POST /department with {name: "..."}
