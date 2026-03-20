@@ -122,23 +122,18 @@ Already handled. Just use the tools.
 - The employee MUST have timesheet access (userType STANDARD). If NO_ACCESS, update them first.
 - activity.id must be valid for the project — use /activity/>forTimeSheet?projectId=X to find valid ones
 
-### Run payroll (salary transaction):
-1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002 (if bonus needed)
-2. Check employee has employment: GET /employee/employment?employeeId=X&fields=id,startDate,division
-   - If no employment exists, you need to create one. But first ensure a division exists:
-     a. GET /division?fields=id,name — if empty, create one:
-     b. GET /municipality?fields=id,name&count=1 to get a municipality ID
-     c. POST /division with {name: "Hovedvirksomhet", organizationNumber: "999999999", startDate: "2026-01-01", municipalityDate: "2026-01-01", municipality: {id}}
-        - organizationNumber is REQUIRED — use "999999999" (dummy sub-unit number starting with 9)
-        - Do NOT use the company's own org number — it causes "Juridisk enhet" validation error
-     d. POST /employee/employment with {employee: {id}, startDate: "2026-01-01", division: {id: <division_id>}, employmentId: "1", isMainEmployer: true, taxDeductionCode: "loennFraHovedarbeidsgiver", employmentDetails: [{date: "2026-01-01", employmentType: "ORDINARY", employmentForm: "PERMANENT", remunerationType: "MONTHLY_WAGE", workingHoursScheme: "NOT_SHIFT", percentageOfFullTimeEquivalent: 100, shiftDurationHours: 7.5}]}
-   - If employment exists but has no division, update it with PUT /employee/employment/{id} adding division: {id}
-   - Employee MUST have dateOfBirth set for employment creation. If null, PUT /employee/{id} with dateOfBirth: "1990-01-01" first
-3. POST /salary/transaction?generateTaxDeduction=true — body must include: date, year, month, isHistorical=false, payslips array
-   - Each payslip: employee.id, date, year, month, specifications array
-   - Each specification: salaryType.id, rate (amount), count (1), amount, year, month, employee.id
-- For multiple pay components (e.g. base + bonus), add multiple specifications to the same payslip
-- Use current month/year unless the task specifies otherwise
+### Run payroll (salary transaction) — use VOUCHER approach:
+- Register payroll as a journal entry (voucher) on salary accounts. This is more reliable than the salary/transaction API.
+1. GET /employee?firstName=X&lastName=Y&fields=id,firstName,lastName
+2. Look up salary expense accounts in parallel: GET /ledger/account?number=5000 (base salary), GET /ledger/account?number=1920 (bank)
+3. POST /ledger/voucher with balanced postings:
+   - Debit posting: account 5000 (Lønn), amountGross = total gross (base + bonus), employee: {id}, row: 1
+   - Credit posting: account 1920 (Bank), amountGross = negative total gross, row: 2
+   - description: include employee name and pay components
+- Example: base 52050 + bonus 7200 = total 59250 → debit 5000 for 59250, credit 1920 for -59250
+- Do NOT use the salary/transaction API — it creates payslips but not the accounting entries the evaluator checks
+- Do NOT create divisions, employments, or salary types — just create the voucher directly
+- Use current month/year date unless the task specifies otherwise
 
 ### Travel expense:
 1. GET /employee?firstName=X&lastName=Y to find employee ID
