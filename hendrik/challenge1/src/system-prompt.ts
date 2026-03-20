@@ -110,6 +110,7 @@ Already handled. Just use the tools.
 - CRITICAL: include invoiceNumber on the DEBIT posting (same value as vendorInvoiceNumber)
 - CRITICAL: include supplier: {id} on BOTH postings
 - Do NOT include voucherType or guiRow — they cause errors
+- DO include supplierVoucherType: "SUPPLIER_INVOICE" for supplier invoices
 
 ### Timesheet entry (register hours):
 1. Find/create the employee: GET /employee?firstName=X&lastName=Y (must have userType STANDARD, not NO_ACCESS)
