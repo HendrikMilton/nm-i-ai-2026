@@ -47,3 +47,51 @@ def submit_prediction(round_id: str, seed_index: int, prediction: np.ndarray) ->
     resp = requests.post(f"{BASE_URL}/submit", json=payload, headers=_headers())
     resp.raise_for_status()
     return resp.json()
+
+
+def get_my_rounds() -> list[dict]:
+    """Return all rounds with team scores, rank, budget info."""
+    resp = requests.get(f"{BASE_URL}/my-rounds", headers=_headers())
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_analysis(round_id: str, seed_index: int) -> dict:
+    """
+    Fetch post-round analysis: our prediction vs ground truth.
+    Only available for completed/scoring rounds.
+    Returns {prediction, ground_truth, score, width, height, initial_grid}.
+    """
+    resp = requests.get(
+        f"{BASE_URL}/analysis/{round_id}/{seed_index}",
+        headers=_headers(),
+    )
+    resp.raise_for_status()
+    return resp.json()
+
+
+def get_budget() -> dict:
+    """Check remaining query budget for active round."""
+    resp = requests.get(f"{BASE_URL}/budget", headers=_headers())
+    resp.raise_for_status()
+    return resp.json()
+
+
+def simulate_viewport(
+    round_id: str, seed_index: int,
+    vx: int, vy: int, vw: int = 15, vh: int = 15,
+) -> dict:
+    """
+    Observe one stochastic simulation via viewport. Costs 1 query.
+    Returns {grid, settlements, viewport, queries_used, queries_max}.
+    """
+    resp = requests.post(f"{BASE_URL}/simulate", headers=_headers(), json={
+        "round_id": round_id,
+        "seed_index": seed_index,
+        "viewport_x": vx,
+        "viewport_y": vy,
+        "viewport_w": vw,
+        "viewport_h": vh,
+    })
+    resp.raise_for_status()
+    return resp.json()
