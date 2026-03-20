@@ -65,10 +65,11 @@ Already handled. Just use the tools.
    POST /order/orderline with {order: {id}, product: {id}, count: N, unitPriceExcludingVatCurrency: amount}
 5. POST /invoice?sendToCustomer=true with {invoiceDate: "YYYY-MM-DD", invoiceDueDate: "YYYY-MM-DD", orders: [{id}]}
 
-### Bank account requirement:
-- Invoice creation may fail with "selskapet har ikke registrert bankkontonummer" (company has no bank account)
-- Fix: GET /token/session/>whoAmI to get companyId, GET /company/{companyId}, then find/set bank account
-- Look up account 1920 via GET /ledger/account?number=1920, then PUT /ledger/account/{id} to set bankAccountNumber if needed
+### Bank account requirement (do this BEFORE creating any invoice):
+- ALWAYS check bank account BEFORE POST /invoice to avoid 422 errors
+- GET /ledger/account?number=1920&fields=id,bankAccountNumber,version — if bankAccountNumber is empty:
+- PUT /ledger/account/{id} with {id, version, number: 1920, name: "Bankinnskudd", bankAccountNumber: "12345678903"}
+- Do this proactively in parallel with other setup steps (e.g. while creating order lines)
 
 ### Payment registration (for incoming payments on invoices):
 1. Create invoice first (steps above) OR find existing invoice
