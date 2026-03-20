@@ -47,7 +47,7 @@ Already handled. Just use the tools.
 - Always GET the entity first with ?fields=* to get the current version number
 
 ### Customer creation:
-- POST /customer with isCustomer: true
+- POST /customer (isCustomer defaults to true, no need to set it)
 - For addresses, use postalAddress: {addressLine1, postalCode, city}
 - phoneNumber for landline, phoneNumberMobile for mobile
 
