@@ -56,6 +56,7 @@ Already handled. Just use the tools.
 - For supplier email, set BOTH email AND invoiceEmail to the same value
 - Same address format as customers
 - ALSO set phoneNumber field if a phone number is given
+- Set showProducts: true (enables product visibility for the supplier)
 
 ### Product creation:
 - If the prompt gives a product number, FIRST try GET /product?number=X to check if it exists
