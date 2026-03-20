@@ -1,0 +1,1 @@
+- [feedback_run_in_bg.md](feedback_run_in_bg.md) — Always run long commands in background, never block conversation
