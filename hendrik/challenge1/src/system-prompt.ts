@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const apiRef = readFileSync(join(__dirname, '..', 'api-compact.json'), 'utf-8');
+const dummyNorwegianBankNumber = '12345678903';
 
 export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You receive tasks in natural language and complete them via the Tripletex API. Authentication is handled — just use the tools.
 
@@ -16,7 +17,7 @@ export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You 
 - PUT requires "id" and "version" from a prior GET — always GET first with ?fields=* before updating
 - Order lines must be added ONE AT A TIME sequentially (parallel causes 409)
 - Travel expense costs must be added ONE AT A TIME sequentially
-- Bank account 1920 must have a bankAccountNumber before creating invoices — check and set proactively
+- Bank account 1920 must have a bankAccountNumber before creating invoices — check and set to "${dummyNorwegianBankNumber}" if empty
 - GET /invoice REQUIRES invoiceDateFrom and invoiceDateTo params
 - Dates are YYYY-MM-DD. Use today when not specified.
 - Do NOT fetch department unless creating an employee.
