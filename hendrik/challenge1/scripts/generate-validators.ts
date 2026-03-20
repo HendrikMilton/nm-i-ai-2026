@@ -1,10 +1,15 @@
 #!/usr/bin/env bun
 /**
- * Generate validators.ts from openapi.json + known required fields.
+ * Generate validators.ts from openapi.json.
  *
- * The OpenAPI spec doesn't mark required fields, so we maintain a manual
- * list of required fields per endpoint based on observed errors.
- * The script generates type-checking validators from the spec.
+ * For ALL POST endpoints:
+ *   - Extracts valid writable fields from the schema
+ *   - Generates a validator that rejects unknown fields
+ *
+ * For endpoints with known required fields:
+ *   - Also checks those are present
+ *
+ * Run: bun run scripts/generate-validators.ts
  */
 
 import { readFileSync, writeFileSync } from "fs";
@@ -18,13 +23,17 @@ const spec = JSON.parse(readFileSync(join(ROOT, "openapi.json"), "utf-8"));
 const schemas = spec.components?.schemas ?? {};
 const paths = spec.paths ?? {};
 
-// --- Known required fields per POST endpoint (from observed errors) ---
+// ============================================================
+// Known required fields per POST endpoint (learned from errors)
+// Add new entries here as we discover them!
+// ============================================================
 const REQUIRED_FIELDS: Record<string, string[]> = {
   "/employee": ["firstName", "lastName", "department.id", "userType"],
   "/customer": ["name"],
   "/supplier": ["name"],
   "/product": ["name"],
   "/department": ["name"],
+  "/division": ["name"],
   "/order": ["customer.id", "orderDate", "deliveryDate"],
   "/order/orderline": ["order.id"],
   "/invoice": ["invoiceDate", "invoiceDueDate", "orders"],
@@ -34,50 +43,66 @@ const REQUIRED_FIELDS: Record<string, string[]> = {
   "/contact": ["firstName", "lastName", "customer.id"],
   "/timesheet/entry": ["employee.id", "project.id", "activity.id", "date", "hours"],
   "/salary/transaction": ["date", "year", "month", "payslips"],
+  "/ledger/voucher": ["date", "postings"],
+  "/activity": ["name"],
+  "/employee/employment": ["employee.id", "startDate"],
 };
 
-// --- Known invalid values per field ---
-const FIELD_RULES: Record<string, { field: string; check: string; message: string }[]> = {
+// ============================================================
+// Known invalid value rules (learned from errors)
+// ============================================================
+const FIELD_RULES: Record<string, { check: string; message: string }[]> = {
   "/employee": [
-    { field: "userType", check: '!body.userType || body.userType === "" || body.userType === "0"', message: "userType is required. Use NO_ACCESS or STANDARD" },
-    { field: "userType", check: 'body.userType === "ADMINISTRATOR"', message: "userType ADMINISTRATOR is not valid. Use NO_ACCESS or STANDARD" },
+    { check: '!body.userType || body.userType === "" || body.userType === "0"', message: "userType is required. Use NO_ACCESS or STANDARD" },
+    { check: 'body.userType === "ADMINISTRATOR"', message: "userType ADMINISTRATOR is not valid. Use NO_ACCESS or STANDARD" },
   ],
 };
 
-// --- PUT validation rules ---
-// Action endpoints (contain /:) don't need id/version
+// ============================================================
+// Extract all POST endpoints from OpenAPI spec
+// ============================================================
+interface EndpointInfo {
+  path: string;
+  schemaName: string | null;
+  writableFields: string[];
+}
 
-// --- Get writable fields per schema ---
-function getWritableFields(schemaName: string): Map<string, { type: string; ref?: string }> {
+function getSchemaFields(schemaName: string): string[] {
   const schema = schemas[schemaName];
-  if (!schema) return new Map();
-  const props = schema.properties ?? {};
-  const fields = new Map<string, { type: string; ref?: string }>();
-  for (const [k, v] of Object.entries(props) as [string, any][]) {
-    if (v.readOnly) continue;
-    fields.set(k, {
-      type: v.type ?? "object",
-      ref: v.$ref?.split("/").pop(),
-    });
+  if (!schema?.properties) return [];
+  const fields: string[] = [];
+  for (const [k, v] of Object.entries(schema.properties) as [string, any][]) {
+    if (!v.readOnly) fields.push(k);
   }
   return fields;
 }
 
-// --- Find schema ref for POST endpoints ---
-function getPostSchemaRef(path: string): string | null {
-  const endpoint = paths[path]?.post;
-  if (!endpoint) return null;
-  const bodySchema = endpoint.requestBody?.content?.["application/json"]?.schema;
-  if (!bodySchema?.$ref) return null;
-  return bodySchema.$ref.split("/").pop() ?? null;
+const allPostEndpoints: EndpointInfo[] = [];
+
+for (const [path, methods] of Object.entries(paths) as [string, any][]) {
+  const post = methods.post;
+  if (!post) continue;
+
+  // Skip path-param endpoints like /employee/{id}/attachment
+  // We want base POST endpoints
+  const content = post.requestBody?.content ?? {};
+  const bodySchema = content["application/json"]?.schema ?? content["application/json; charset=utf-8"]?.schema ?? {};
+  const bodyRef = bodySchema.$ref;
+  const schemaName = bodyRef ? bodyRef.split("/").pop() : null;
+  const writableFields = schemaName ? getSchemaFields(schemaName) : [];
+
+  allPostEndpoints.push({ path, schemaName, writableFields });
 }
 
-// --- Generate ---
+// ============================================================
+// Generate validators.ts
+// ============================================================
 let output = `/**
  * Auto-generated validators from openapi.json + known required fields.
- * Generated by scripts/generate-validators.ts
+ * Generated by scripts/generate-validators.ts — DO NOT EDIT MANUALLY.
  *
- * DO NOT EDIT MANUALLY — edit the generator script instead.
+ * POST endpoints covered: ${allPostEndpoints.length}
+ * Endpoints with required field checks: ${Object.keys(REQUIRED_FIELDS).length}
  */
 
 type Validator = (body: Record<string, unknown>) => string | null;
@@ -95,34 +120,55 @@ const requireFields = (fields: string[], body: Record<string, unknown>): string 
   return null;
 };
 
-const postValidators: Record<string, Validator> = {
+// Valid writable fields per POST endpoint (from OpenAPI schema)
+const validFields: Record<string, Set<string>> = {
+`;
+
+for (const ep of allPostEndpoints) {
+  if (ep.writableFields.length > 0) {
+    output += `  "${ep.path}": new Set(${JSON.stringify(ep.writableFields)}),\n`;
+  }
+}
+
+output += `};
+
+// Required field validators
+const requiredFieldValidators: Record<string, (body: Record<string, unknown>) => string | null> = {
 `;
 
 for (const [path, requiredFields] of Object.entries(REQUIRED_FIELDS)) {
   const rules = FIELD_RULES[path] ?? [];
-
   output += `  "${path}": (body) => {\n`;
   output += `    const err = requireFields(${JSON.stringify(requiredFields)}, body);\n`;
   output += `    if (err) return err;\n`;
-
   for (const rule of rules) {
     output += `    if (${rule.check}) return "${rule.message}";\n`;
   }
-
   output += `    return null;\n`;
-  output += `  },\n\n`;
+  output += `  },\n`;
 }
 
 output += `};
 
 export function validatePost(path: string, body: Record<string, unknown>): string | null {
-  // Exact match only
-  if (postValidators[path]) return postValidators[path](body);
+  // Check required fields (known from experience)
+  if (requiredFieldValidators[path]) {
+    const err = requiredFieldValidators[path](body);
+    if (err) return err;
+  }
+
+  // Check for unknown fields (from OpenAPI schema)
+  const allowed = validFields[path];
+  if (allowed) {
+    const unknown = Object.keys(body).filter((k) => !allowed.has(k));
+    if (unknown.length > 0) return \`Unknown fields for \${path}: \${unknown.join(", ")}. Valid fields: \${[...allowed].join(", ")}\`;
+  }
+
   return null;
 }
 
 export function validatePut(path: string, body: Record<string, unknown>): string | null {
-  // Action endpoints (/:payment, /:createCreditNote) - no body validation needed
+  // Action endpoints (/:payment, /:createCreditNote) - no body validation
   if (path.includes("/:")) return null;
 
   // Regular PUT updates need id and version
@@ -136,5 +182,10 @@ export function validatePut(path: string, body: Record<string, unknown>): string
 
 const outPath = join(ROOT, "src", "validators.ts");
 writeFileSync(outPath, output);
+
+const withRequired = Object.keys(REQUIRED_FIELDS).length;
+const withSchema = allPostEndpoints.filter((e) => e.writableFields.length > 0).length;
 console.log(`Generated ${outPath}`);
-console.log(`POST validators: ${Object.keys(REQUIRED_FIELDS).length} endpoints`);
+console.log(`  Total POST endpoints: ${allPostEndpoints.length}`);
+console.log(`  With schema field validation: ${withSchema}`);
+console.log(`  With required field checks: ${withRequired}`);
