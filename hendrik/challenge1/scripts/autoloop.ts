@@ -19,6 +19,7 @@ const LOGS_DIR = join(ROOT, "logs");
 const ACCESS_TOKEN = process.env.ACCESS_TOKEN!;
 const ENDPOINT_URL = "https://tripletex.hycapital.io/solve";
 const SUBMIT_URL = "https://api.ainm.no/tasks/cccccccc-cccc-cccc-cccc-cccccccccccc/submissions";
+const LEADERBOARD_URL = "https://api.ainm.no/tripletex/leaderboard";
 const SUBMISSIONS_URL = "https://api.ainm.no/tripletex/my/submissions";
 
 if (!ACCESS_TOKEN) {
@@ -229,8 +230,17 @@ async function main() {
         const failed = checks.filter((c: string) => c.includes("failed"));
         console.log(`📊 Score: ${sub.score_raw}/${sub.score_max} (normalized: ${sub.normalized_score}) | ${sub.feedback?.comment ?? ""}`);
         if (failed.length > 0) console.log(`   Failed: ${failed.join(", ")}`);
+        // Fetch leaderboard for context
+        let leaderboardInfo = "";
+        try {
+          const lb = (await fetchJson(LEADERBOARD_URL)) as any[];
+          const us = lb.find((t: any) => t.team_slug === "agentic-avengers");
+          const top = lb[0];
+          leaderboardInfo = `\n  Leaderboard: rank=${us?.rank} score=${us?.total_score} tasks=${us?.tasks_touched}/30 | #1: ${top?.team_slug} ${top?.total_score}`;
+          console.log(leaderboardInfo);
+        } catch {}
         // Append full scoring feedback to the log file
-        appendFileSync(logPath, `\n[SCORING] ${JSON.stringify(sub, null, 2)}\n`);
+        appendFileSync(logPath, `\n[SCORING] ${JSON.stringify(sub, null, 2)}\n${leaderboardInfo}\n`);
         console.log(`📋 Scoring appended to ${logPath}`);
         break;
       }
