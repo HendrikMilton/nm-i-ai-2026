@@ -216,8 +216,27 @@ async function main() {
   }
 
   console.log(`📁 Log: ${logPath}`);
-  console.log("\n⏳ Sleeping 60s before exit (rate limit)...");
-  await sleep(60_000);
+
+  // Poll for score (platform needs time to evaluate)
+  console.log("\nWaiting for score...");
+  for (let i = 0; i < 6; i++) {
+    await sleep(10_000);
+    try {
+      const subs = (await fetchJson(SUBMISSIONS_URL)) as any[];
+      const sub = subs.find((s: any) => s.id === id);
+      if (sub?.score_raw !== undefined && sub?.score_raw !== null) {
+        const checks = sub.feedback?.checks ?? [];
+        const failed = checks.filter((c: string) => c.includes("failed"));
+        console.log(`📊 Score: ${sub.score_raw}/${sub.score_max} (normalized: ${sub.normalized_score}) | ${sub.feedback?.comment ?? ""}`);
+        if (failed.length > 0) console.log(`   Failed: ${failed.join(", ")}`);
+        break;
+      }
+    } catch {}
+    if (i === 5) console.log("📊 Score: still pending");
+  }
+
+  console.log("\n⏳ Sleeping 30s before exit (rate limit)...");
+  await sleep(30_000);
   process.exit(0);
 }
 
