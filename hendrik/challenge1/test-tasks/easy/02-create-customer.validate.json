@@ -1,0 +1,20 @@
+{
+  "description": "Create customer with full details",
+  "checks": [
+    {
+      "endpoint": "/customer",
+      "params": {"name": "Havfront Digital AS", "fields": "id,name,email,phoneNumber,organizationNumber,postalAddress"},
+      "expect": {
+        "minResults": 1,
+        "fields": {
+          "name": "Havfront Digital AS",
+          "email": "post@havfrontdigital.no",
+          "phoneNumber": "41557788",
+          "organizationNumber": "918273645"
+        }
+      }
+    }
+  ],
+  "maxApiCalls": 1,
+  "maxErrors": 0
+}

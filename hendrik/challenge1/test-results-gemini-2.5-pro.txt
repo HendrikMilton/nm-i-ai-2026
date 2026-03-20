@@ -1,0 +1,30 @@
+========== gemini-2.5-pro (port 4002) ==========
+
+--- easy ---
+  ✓ easy/01-create-employee (15471ms)
+  ✓ easy/02-create-customer (13702ms)
+  ✓ easy/03-create-product (5927ms)
+  ✓ easy/04-create-department (5453ms)
+  ✓ easy/05-create-supplier (14264ms)
+
+--- medium ---
+  ✓ medium/01-create-invoice (4218ms)
+  ✓ medium/02-register-payment (51780ms)
+  ✓ medium/03-create-project (7187ms)
+  ✓ medium/04-travel-expense (18997ms)
+  ✓ medium/05-update-customer (5597ms)
+
+--- hard ---
+  ✓ hard/01-invoice-with-credit-note (62734ms)
+  ✓ hard/02-full-workflow (275171ms)
+  ✓ hard/03-delete-travel-expense (34816ms)
+
+--- multilingual ---
+  ✗ multilingual/01-english FAILED (13633ms)
+  ✗ multilingual/02-spanish FAILED (7ms)
+  ✗ multilingual/03-german FAILED (7ms)
+  ✗ multilingual/04-french FAILED (8ms)
+  ✗ multilingual/05-portuguese FAILED (7ms)
+  ✗ multilingual/06-nynorsk FAILED (9ms)
+
+TOTAL: 19 | PASSED: 13 | FAILED: 6

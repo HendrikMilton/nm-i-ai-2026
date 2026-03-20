@@ -1,0 +1,52 @@
+"""
+Competition submission entry point.
+Runs inference on shelf images and outputs predictions in COCO format.
+
+Usage (by competition sandbox):
+    python run.py --input /data/images --output /output/predictions.json
+"""
+
+import argparse
+import json
+from pathlib import Path
+import torch
+from ultralytics import YOLO
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True)
+    parser.add_argument("--output", required=True)
+    args = parser.parse_args()
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    model = YOLO("best.pt")
+    predictions = []
+
+    for img in sorted(Path(args.input).iterdir()):
+        if img.suffix.lower() not in (".jpg", ".jpeg", ".png"):
+            continue
+        image_id = int(img.stem.split("_")[-1])
+
+        results = model(str(img), device=device, verbose=False, conf=0.01)
+        for r in results:
+            if r.boxes is None:
+                continue
+            for i in range(len(r.boxes)):
+                x1, y1, x2, y2 = r.boxes.xyxy[i].tolist()
+                predictions.append({
+                    "image_id": image_id,
+                    "category_id": int(r.boxes.cls[i].item()),
+                    "bbox": [round(x1, 1), round(y1, 1), round(x2 - x1, 1), round(y2 - y1, 1)],
+                    "score": round(float(r.boxes.conf[i].item()), 4),
+                })
+
+    Path(args.output).parent.mkdir(parents=True, exist_ok=True)
+    with open(args.output, "w") as f:
+        json.dump(predictions, f)
+
+    print(f"Wrote {len(predictions)} predictions to {args.output}")
+
+
+if __name__ == "__main__":
+    main()

@@ -2,6 +2,10 @@ import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Layout } from './components/Layout';
 import { LogsPage } from './pages/LogsPage';
 import { ReplayPage } from './pages/ReplayPage';
+import { ChallengePage } from './pages/ChallengePage';
+import { DatasetPage } from './pages/DatasetPage';
+import { ProductsPage } from './pages/ProductsPage';
+import { TrainingPage } from './pages/TrainingPage';
 import { ThemeContext, useThemeState } from './hooks/useTheme';
 import './compiled.css';
 
@@ -13,7 +17,11 @@ export function App() {
             <BrowserRouter>
                 <Layout>
                     <Routes>
-                        <Route path="/" element={<Navigate to="/logs" replace />} />
+                        <Route path="/" element={<Navigate to="/challenges/2" replace />} />
+                        <Route path="/challenges/2" element={<ChallengePage />} />
+                        <Route path="/challenges/2/dataset" element={<DatasetPage />} />
+                        <Route path="/challenges/2/products" element={<ProductsPage />} />
+                        <Route path="/challenges/2/training" element={<TrainingPage />} />
                         <Route path="/logs" element={<LogsPage />} />
                         <Route path="/replay/:challenge/:index" element={<ReplayPage />} />
                     </Routes>

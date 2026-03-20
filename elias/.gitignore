@@ -1,4 +1,7 @@
 venv
-*/*/__pycache__/
-*/__pycache__/
+.env
+*__pycache__/
 __pycache__/
+logs/rounds/
+logs/index.json
+logs/*
