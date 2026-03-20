@@ -100,7 +100,8 @@ if __name__ == "__main__":
     # Quick test: score priors against Round 4
     import sys, os
     sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    from utils import get_round, get_analysis, floor_and_normalize
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+    from shared.utils import get_round, get_analysis, floor_and_normalize
     from run import TERRAIN_PRIORS, parse_initial_grid, extract_map_dimensions
 
     round_id = "8e839974-b13b-407b-a5e7-fc749d877195"

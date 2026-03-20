@@ -17,10 +17,11 @@ import sys
 import time
 from datetime import datetime, timezone
 
-# Add parent directory to path for imports
+# Add parent directory and repo root to path for imports
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from utils import (
+from shared.utils import (
     get_active_round,
     get_round,
     get_rounds,

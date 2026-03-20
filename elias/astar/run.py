@@ -9,7 +9,9 @@ import os
 import time
 from datetime import datetime, timezone
 
-from utils import (
+import sys
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from shared.utils import (
     get_active_round,
     get_round,
     get_budget,

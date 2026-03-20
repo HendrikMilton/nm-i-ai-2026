@@ -5,8 +5,9 @@ import sys
 import time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from utils import get_rounds
+from shared.utils import get_rounds
 from offline.run_local import backtest_full_pipeline, load_custom_params
 
 CONFIGS = [
