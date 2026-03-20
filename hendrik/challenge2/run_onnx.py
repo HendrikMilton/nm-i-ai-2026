@@ -64,7 +64,7 @@ def nms(boxes, scores, iou_threshold=0.5):
 
 
 def postprocess(output: np.ndarray, scale: float, pad: tuple[int, int],
-                conf_threshold: float = 0.25, iou_threshold: float = 0.5) -> list[dict]:
+                conf_threshold: float = 0.01, iou_threshold: float = 0.5) -> list[dict]:
     """Process YOLO ONNX output to predictions."""
     # output shape: [1, num_classes+4, num_detections] for YOLOv8/11 format
     # or [1, num_detections, num_classes+4]

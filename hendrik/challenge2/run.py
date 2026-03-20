@@ -28,7 +28,7 @@ def main():
             continue
         image_id = int(img.stem.split("_")[-1])
 
-        results = model(str(img), device=device, verbose=False)
+        results = model(str(img), device=device, verbose=False, conf=0.01)
         for r in results:
             if r.boxes is None:
                 continue
