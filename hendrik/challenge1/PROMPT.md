@@ -48,3 +48,4 @@ Each submission creates a log file in `logs/` with the full prompt, every tool c
 - Check leaderboard every ~10 submissions: `bash scripts/check-score.sh`
 - If the submission fails (network error, platform down), wait 60 seconds and retry.
 - If you see the same error pattern 3+ times, it's a systemic issue worth fixing in the prompt.
+- Rate limit: 180 submissions/day, max 3 concurrent. autoloop.ts already handles waiting and rate limiting.
