@@ -3,6 +3,15 @@ import react from '@vitejs/plugin-react'
 import path from 'path'
 import fs from 'fs'
 
+// Load token from .env
+const envPath = path.resolve(__dirname, '..', '.env')
+let AINM_TOKEN = ''
+if (fs.existsSync(envPath)) {
+  const envContent = fs.readFileSync(envPath, 'utf-8')
+  const match = envContent.match(/AINM_TOKEN=(.+)/)
+  if (match) AINM_TOKEN = match[1].trim()
+}
+
 const logsDir = path.resolve(__dirname, '..', 'logs')
 
 function serveJson(filePath, fallback) {
@@ -61,6 +70,7 @@ export default defineConfig({
         target: 'https://api.ainm.no',
         changeOrigin: true,
         secure: true,
+        headers: AINM_TOKEN ? { Authorization: `Bearer ${AINM_TOKEN}` } : {},
       },
     },
   },

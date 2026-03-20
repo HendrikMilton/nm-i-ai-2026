@@ -3159,11 +3159,23 @@
       }
     },
     {
-      "id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "id": "new_queries_v1.06",
       "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
       "round_number": 7,
-      "timestamp": "2026-03-20T17:34:51.934670+00:00",
-      "round_score": 69.7885,
+      "timestamp": "2026-03-20T17:38:24.534297+00:00",
+      "round_score": 65.256,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.06",
+        "change": "observation-derived port/ruin ratios, fixed defaults from 0.75->0.10"
+      }
+    },
+    {
+      "id": "debug1",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:41:06.647820+00:00",
+      "round_score": 65.256,
       "n_sims": 25,
       "config": {
         "label": "full_pipeline_b50",
@@ -3175,15 +3187,19 @@
       }
     },
     {
-      "id": "new_queries_v1.06",
+      "id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
       "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
       "round_number": 7,
-      "timestamp": "2026-03-20T17:38:24.534297+00:00",
+      "timestamp": "2026-03-20T17:47:54.219156+00:00",
       "round_score": 65.256,
       "n_sims": 25,
       "config": {
-        "label": "v1.06",
-        "change": "observation-derived port/ruin ratios, fixed defaults from 0.75->0.10"
+        "label": "full_pipeline_b50",
+        "budget": 50,
+        "mode": "full_pipeline",
+        "obs_weight": 0.5,
+        "sim_weight": 0.3,
+        "prior_weight": 4.0
       }
     }
   ]
