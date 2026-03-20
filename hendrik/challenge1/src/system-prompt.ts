@@ -157,12 +157,11 @@ Already handled. Just use the tools.
 - Do NOT fetch department for project creation — it's not needed
 - ONLY fetch department when you are CREATING a new employee. Never fetch it "just in case"
 - If project creation fails because the PM lacks access, try using the default admin employee instead: GET /token/session/>whoAmI to get the admin employeeId
-- For fixed-price projects with milestone invoicing (a-konto):
-  1. Create order linked to project: POST /order with {customer: {id}, orderDate, deliveryDate, project: {id}} — NO order lines needed
-  2. Create invoice with on-account params: POST /invoice?createOnAccount=WITH_VAT&amountOnAccount=<amount_ex_vat>&sendToCustomer=false with body {invoiceDate, invoiceDueDate, orders: [{id}]}
-  - createOnAccount values: WITH_VAT (amount includes VAT calculation), WITHOUT_VAT, NONE
-  - amountOnAccount is the amount EXCLUDING VAT
-  - Do NOT create products or order lines for milestone/a-konto invoicing
+- For fixed-price projects with milestone invoicing:
+  1. Create order linked to project: POST /order with {customer: {id}, orderDate, deliveryDate, project: {id}, invoiceOnAccountVatHigh: true}
+  2. Add order line with milestone amount: POST /order/orderline with {order: {id}, description: "Milestone payment - X%", count: 1, unitPriceExcludingVatCurrency: <amount>, vatType: {id: 3}}
+  3. Create invoice: POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders: [{id}]}
+  - No need to create a product — use description directly on the order line
 
 ### Department creation:
 - POST /department with {name: "..."}
