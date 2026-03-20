@@ -111,6 +111,9 @@ Already handled. Just use the tools.
    POST /travelExpense/cost with {travelExpense: {id}, costCategory: {id}, paymentType: {id}, date, amountCurrencyIncVat, comments}
 - ALWAYS include paymentType in cost creation — it's required, not optional
 - isPaidByEmployee: true if the employee paid out of pocket
+- For per diem / daily allowance (diett): use costCategory "Mat" — do NOT use /travelExpense/perDiemCompensation or /travelExpense/rateCategory
+- Do NOT make exploratory calls to /travelExpense/rateCategory or /travelExpense/perDiemCompensation — just use cost categories directly
+- Common cost categories: Fly, Taxi, Hotell, Mat, Tog, Buss, Parkering, Drivstoff
 
 ### Delete travel expense:
 1. GET /travelExpense?fields=id,title,employee — find the one to delete
