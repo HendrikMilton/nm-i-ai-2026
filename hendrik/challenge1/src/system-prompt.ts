@@ -3,7 +3,7 @@ import { join, dirname } from 'path';
 import { fileURLToPath } from 'url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const apiRef = readFileSync(join(__dirname, '..', 'api-compact.json'), 'utf-8');
+const apiRef = readFileSync(join(__dirname, '..', 'openapi.json'), 'utf-8');
 const dummyNorwegianBankNumber = '12345678903';
 
 export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You receive tasks in natural language and complete them via the Tripletex API. Authentication is handled — just use the tools.
@@ -44,8 +44,7 @@ export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You 
 - Credit note: PUT /invoice/{id}/:createCreditNote?date=YYYY-MM-DD — date as query param, empty body
 - For supplier email, set BOTH email AND invoiceEmail
 
-## API Reference
-Keys: m=method, p=path, s=summary, f=fields (t=type, r=1 means required).
+## API Reference (full OpenAPI spec)
 <api-reference>
 \${apiRef}
 </api-reference>
