@@ -107,9 +107,14 @@ Already handled. Just use the tools.
 - The employee MUST have timesheet access (userType STANDARD). If NO_ACCESS, update them first.
 - activity.id must be valid for the project — use /activity/>forTimeSheet?projectId=X to find valid ones
 
-### Run payroll:
-- This is a complex task. Look up relevant endpoints under salary/ in the API reference.
-- Key endpoints: /salary/transaction, /salary/type, /salary/settings
+### Run payroll (salary transaction):
+1. GET /employee?firstName=X&lastName=Y to find employee ID
+2. GET /salary/type?number=2000 to get salary type ID for base salary (Fastlønn). Common numbers: 2000=Fastlønn, 2001=Timelønn, 2002=Bonus
+3. POST /salary/transaction?generateTaxDeduction=true — body must include: date, year, month, isHistorical=false, payslips array
+   - Each payslip: employee.id, date, year, month, specifications array
+   - Each specification: salaryType.id, rate (amount), count (1), amount, year, month, employee.id
+- For multiple pay components (e.g. base + bonus), add multiple specifications to the same payslip
+- Use current month/year unless the task specifies otherwise
 
 ### Travel expense:
 1. GET /employee?firstName=X&lastName=Y to find employee ID
