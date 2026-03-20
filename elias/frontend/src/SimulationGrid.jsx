@@ -1,16 +1,16 @@
 import { useMemo } from 'react'
 import './SimulationGrid.css'
 
-// Colors matched from official Astar Island docs
+// Terrain colors
 export const TERRAIN_COLORS = {
-  0:  '#1E3448', // Empty
-  10: '#2B5278', // Ocean
-  11: '#C8B87C', // Plains
-  1:  '#D4852A', // Settlement
-  2:  '#2A8C8C', // Port
-  3:  '#8C2A2A', // Ruin
-  4:  '#3D7C3F', // Forest
-  5:  '#7C7C8A', // Mountain
+  0:  '#C8B88A', // Empty
+  10: '#1F3A5F', // Ocean
+  11: '#C9B88B', // Plains
+  1:  '#D4760A', // Settlement
+  2:  '#0D7490', // Port
+  3:  '#7F1E1D', // Ruin
+  4:  '#2D5A27', // Forest
+  5:  '#6C7280', // Mountain
   unobserved: '#0D0D0D',
 }
 

@@ -1,43 +1,51 @@
 # Astar Island — Strategy
 
-## v1 Results (Round 3)
+## Results History
 
-- Score: 0.26/100, Rank: 100/100
-- Problem: 1 observation per cell per seed = deterministic guess, KL divergence punishes hard
-- 89.7% of cells are deterministic (static terrain) — we get those free
-- The 10.3% uncertain cells (Forest/Empty boundaries, Settlement dynamics) are what matter
-- Biggest errors: predicting 95% for one class when truth is ~64/29 split
+| Round | Strategy | Score | Rank |
+|-------|----------|-------|------|
+| R3    | v1 (1 obs/cell, deterministic) | 0.26 | 100/100 |
+| R5    | v2 (focus seeds + cross-seed avg) | 25.0 | 120/144 |
 
-## v2 Strategy — Repeat Observations
+## v3 Strategy — Conservative Priors + Targeted Observations
 
-### Key Insight
+### Key Lessons
 
-Since each simulate call is stochastic (different random seed each time), observing the
-same viewport multiple times on the same seed gives us different outcomes. Counting
-occurrences gives us empirical probability distributions — exactly what we need.
+1. Each seed has a **different map** — never share observations across seeds
+2. Priors alone score **55-85** — observations only help if we have enough (>=3) to beat the prior
+3. 1-2 observations per cell add **noise that hurts** more than helps
+4. Cross-seed averaging is **catastrophically wrong** (destroyed seeds 2-4 in R5)
+
+### Approach
+
+**Priors are the backbone.** Learned from R1-R4 ground truth, they give a smooth probability distribution per cell based on initial terrain type. They're never wrong by more than ~0.2 KL.
+
+**Observations are surgical.** Only used when we can get >= 3 observations per cell on the same seed, which gives enough signal to improve on the prior. Otherwise, prior is used unchanged.
 
 ### Query Budget Allocation (50 total)
 
-- **2 focus seeds** get heavy observation: ~22 queries each (44 total)
-  - 9 queries for full map tiling (coverage)
-  - 13 queries for repeat observations of dynamic areas
-- **3 remaining seeds** get 2 queries each (6 total) for partial coverage
-- All 5 seeds share the same initial map, so cross-seed observations help
+- Calculate how many seeds we can observe with >= 3 repeats per dynamic viewport
+- With 9 dynamic viewports: 9 × 3 = 27 queries per seed → observe 1 seed (5+ repeats)
+- With 5 dynamic viewports: 5 × 3 = 15 queries per seed → observe 3 seeds (3+ repeats)
+- Unobserved seeds: pure priors (reliable 55-85 baseline)
+- Observed seeds: priors blended with empirical observations (should score higher)
 
-### How to pick repeat observation targets
+### Prediction Pipeline
 
-1. First pass: tile the map (9 queries) to identify which cells are dynamic
-2. Second pass: re-observe viewports that contained settlements/ports/ruins
-3. Dynamic cells near forests/settlements are the most uncertain
+1. Fetch round data → get **per-seed** initial grids
+2. Identify dynamic viewports (containing settlements/ports/ruins)
+3. Allocate budget: maximize seeds observed at >= 3 repeats
+4. For each cell:
+   - **< 3 observations**: pure prior from initial terrain type
+   - **>= 3 observations**: blend empirical counts with prior (pseudo-count=3)
+5. Floor all probabilities at 0.01, renormalize
+6. Submit all 5 seeds
 
-### Prediction improvements
+### Backtest Scores (prior-only floor)
 
-- **Static cells** (ocean, mountain): one-hot prediction (same as v1)
-- **Forest cells from initial state**: mostly static, but can be reclaimed — use a prior
-  like 85% forest / 14% empty / 1% other instead of 100% forest
-- **Observed dynamic cells with N>1 observations**: empirical frequency
-- **Observed dynamic cells with N=1**: blend with a prior based on initial terrain
-  (e.g., if initial state was Settlement, predict ~40% settlement / 30% ruin / 20% empty / 10% port)
-- **Unobserved seeds**: copy probability distribution from observed seeds
-  (all seeds share the same hidden parameters, just different random outcomes)
-- **Floor**: 0.01 minimum per class, renormalize
+| Round | Avg Score |
+|-------|-----------|
+| R2    | 69.5      |
+| R3    | 54.9      |
+| R4    | 85.4      |
+| R5    | 63.8      |
