@@ -1,0 +1,29 @@
+:root {
+  --papaya: #FF8000;
+  --papaya-light: #FF9F40;
+  --papaya-dark: #E06F00;
+  --black: #111111;
+  --dark: #1A1A1A;
+  --dark-card: #222222;
+  --dark-border: #333333;
+  --grey: #888888;
+  --light-grey: #CCCCCC;
+  --white: #F5F5F5;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+  background-color: var(--black);
+  color: var(--white);
+  min-height: 100vh;
+}
+
+#root {
+  min-height: 100vh;
+}
