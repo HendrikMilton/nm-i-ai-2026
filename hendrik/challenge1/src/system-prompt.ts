@@ -52,9 +52,10 @@ Already handled. Just use the tools.
 - phoneNumber for landline, phoneNumberMobile for mobile
 
 ### Supplier creation:
-- POST /supplier with name, organizationNumber, etc.
+- Use POST /supplier with name, organizationNumber, etc.
 - For supplier email, set BOTH email AND invoiceEmail to the same value
 - Same address format as customers
+- ALSO set phoneNumber field if a phone number is given
 
 ### Product creation:
 - If the prompt gives a product number, FIRST try GET /product?number=X to check if it exists
