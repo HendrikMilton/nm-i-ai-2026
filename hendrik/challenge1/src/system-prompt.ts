@@ -84,7 +84,22 @@ Already handled. Just use the tools.
 - Can filter by customerId
 
 ### Credit note:
-- POST /invoice/{id}/:createCreditNote to create a credit note for an existing invoice
+- PUT /invoice/{id}/:createCreditNote with query param ?date=YYYY-MM-DD (today's date) — date is REQUIRED
+- Do NOT put anything in the request body — pass date as a query parameter
+
+### Timesheet entry (register hours):
+1. Find/create the employee: GET /employee?firstName=X&lastName=Y (must have userType STANDARD, not NO_ACCESS)
+2. Find the project: GET /project?name=X&fields=id,name
+3. Find the activity: GET /activity?fields=id,name — find the matching activity (e.g. "Administrasjon", "Rådgivning")
+   - Use GET /activity/>forTimeSheet to get activities valid for timesheet
+4. POST /timesheet/entry with {employee: {id}, project: {id}, activity: {id}, date: "YYYY-MM-DD", hours: N}
+- If 409 "already registered hours on this day/activity/project" — use PUT /timesheet/entry/{id} to UPDATE instead
+- The employee MUST have timesheet access (userType STANDARD). If NO_ACCESS, update them first.
+- activity.id must be valid for the project — use /activity/>forTimeSheet?projectId=X to find valid ones
+
+### Run payroll:
+- This is a complex task. Look up relevant endpoints under salary/ in the API reference.
+- Key endpoints: /salary/transaction, /salary/type, /salary/settings
 
 ### Travel expense:
 1. GET /employee?firstName=X&lastName=Y to find employee ID
@@ -109,8 +124,9 @@ Already handled. Just use the tools.
 - POST /department with {name: "..."}
 - departmentNumber is optional
 
-### Contact person:
-- POST /contact with {firstName, lastName, email, customer: {id}}
+### Contact person (add contact to a customer):
+1. Find the customer: GET /customer?name=X&fields=id,name
+2. POST /contact with {firstName, lastName, email, phoneNumberMobile, customer: {id}}
 
 ## Field tips
 - List responses: { fullResultSize: N, values: [...] }
