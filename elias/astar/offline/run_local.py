@@ -423,7 +423,8 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
             for c in range(map_w):
                 prior_pred[r][c] = get_distance_aware_prior(
                     grid, r, c, map_h, map_w, dist_map, avg_expansion,
-                    dist_multipliers=dist_multipliers)
+                    dist_multipliers=dist_multipliers,
+                    port_ratio=port_ratio, ruin_ratio=ruin_ratio)
         prior_pred = floor_and_normalize(prior_pred)
 
         obs_result = score_prediction(obs_pred, ground_truth)

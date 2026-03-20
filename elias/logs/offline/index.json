@@ -2112,6 +2112,24 @@
         "prior_weight": null,
         "n_sims": 1
       }
+    },
+    {
+      "id": "strategy_v2.24",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:04:23.004246+00:00",
+      "round_score": 55.4392,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.24",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
     }
   ]
 }
