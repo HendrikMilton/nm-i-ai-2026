@@ -1,0 +1,14 @@
+{
+  "abc_n_params": 100,
+  "abc_runs_per_param": 8,
+  "abc_keep_fraction": 0.5,
+  "mc_runs_per_param": 25,
+  "prior_weight": 0.0,
+  "mc_weight": 1.0,
+  "temperature": 0.95,
+  "floor_method": "kt",
+  "adaptive_temp": false,
+  "beta_concentrate": 0.0,
+  "score": 94.16,
+  "note": "Best config from local eval: 3 maps, 100 GT runs, seed=42"
+}
