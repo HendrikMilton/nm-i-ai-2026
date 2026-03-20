@@ -88,6 +88,15 @@ Already handled. Just use the tools.
 - PUT /invoice/{id}/:createCreditNote with query param ?date=YYYY-MM-DD (today's date) — date is REQUIRED
 - Do NOT put anything in the request body — pass date as a query parameter
 
+### Supplier invoice (incoming invoice / leverandørfaktura):
+- Register via POST /ledger/voucher — MUST include vendorInvoiceNumber (the invoice number from the supplier, e.g. "INV-2026-9601")
+- Body: {date, description, vendorInvoiceNumber: "INV-...", postings: [...]}
+- Each posting needs: date, account.id, amountGross, amountGrossCurrency, supplier.id, row (1, 2, ...), description
+- Debit line: expense account with vatType.id=1 (25% input VAT). amountGross = total INCLUDING VAT
+- Credit line: account 2400 (leverandørgjeld) with supplier.id, no vatType. amountGross = negative total INCLUDING VAT
+- MUST include supplier.id on BOTH postings and invoiceNumber on debit posting
+- Do NOT include voucherType or guiRow — they cause errors
+
 ### Timesheet entry (register hours):
 1. Find/create the employee: GET /employee?firstName=X&lastName=Y (must have userType STANDARD, not NO_ACCESS)
 2. Find the project: GET /project?name=X&fields=id,name
@@ -132,6 +141,19 @@ Already handled. Just use the tools.
 ### Contact person (add contact to a customer):
 1. Find the customer: GET /customer?name=X&fields=id,name
 2. POST /contact with {firstName, lastName, email, phoneNumberMobile, customer: {id}}
+
+## VAT type IDs (NEVER look these up — use directly)
+- id=0: No VAT (Ingen avgiftsbehandling, 0%)
+- id=1: Input VAT high rate (Fradrag inngående avgift, 25%) — for purchases/expenses
+- id=3: Output VAT high rate (Utgående avgift, 25%) — for sales
+- id=5: No output VAT, within VAT law (0%)
+- id=6: No output VAT, outside VAT law (0%)
+- id=11: Input VAT medium rate (15%)
+- id=12: Input VAT low rate (12%)
+- id=31: Output VAT medium rate (15%)
+- id=32: Output VAT low rate (12%)
+- id=52: VAT-free export (0%)
+- NEVER call GET /ledger/vatType — use the IDs above directly
 
 ## Field tips
 - List responses: { fullResultSize: N, values: [...] }
