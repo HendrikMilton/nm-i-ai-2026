@@ -87,9 +87,14 @@ Already handled. Just use the tools.
 3. GET /invoice/paymentType?fields=id,description — find "Betalt til bank" payment type ID
 4. PUT /invoice/{id}/:payment with query params: paymentDate, paymentTypeId, paidAmount
 - paidAmount should be the total INCLUDING VAT (typically amount * 1.25 for 25% MVA)
-- To REVERSE a payment (e.g. bank return), use negative paidAmount: paidAmount=-25875
+- To REVERSE a payment (e.g. bank return / retur / devuelto / retourné / returnert):
+  1. Find the customer by org number: GET /customer?organizationNumber=X
+  2. Find the invoice: GET /invoice?customerId=X&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31
+  3. Use NEGATIVE paidAmount: PUT /invoice/{id}/:payment?paidAmount=-<totalInclVat>&paymentDate=...&paymentTypeId=...
+  - The negative amount equals the invoice's total INCLUDING VAT (the "amount" field, not amountExcludingVat)
+  - This is a CUSTOMER INVOICE operation — do NOT use supplier invoice or voucher approaches
 - paymentTypeId: use the ID for "Betalt til bank" from /invoice/paymentType
-- You can fetch /invoice/paymentType in parallel with invoice creation to save time
+- You can fetch /invoice/paymentType in parallel with customer lookup to save time
 
 ### Searching invoices:
 - GET /invoice REQUIRES invoiceDateFrom and invoiceDateTo params — always include them
