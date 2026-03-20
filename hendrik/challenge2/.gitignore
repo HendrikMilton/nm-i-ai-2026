@@ -1,0 +1,10 @@
+# Training data (derived from source dataset)
+data/
+data_full/
+
+# Training runs, weights, submissions
+runs/
+
+# Pretrained model weights
+*.pt
+*.onnx
