@@ -152,12 +152,29 @@ There is **no** `PUT /salary/transaction/{id}/:complete` or `:payment` or `:post
 
 **Either way, setting `bankAccountNumber` is the fix.** It removes the blocker and may allow the transaction to auto-finalize, or at minimum satisfies whatever field-level checks the scorer performs.
 
+#### UI VERIFICATION — FIX CONFIRMED
+
+We manually tested the fix in the Tripletex UI:
+
+1. **Opened employee "Arbeidsforhold" tab** — found `Bankkontonummer` field empty under "Innstillinger for lønnsutbetalinger"
+2. **Entered `12345678903`** in the bank account field and clicked "Lagre"
+3. **Returned to payroll entry** — bank account warning **gone**. Now shows "Til kontonr. 1234.56.78903"
+4. **Clicked "Fullfør lønnsutbetaling"** — **SUCCESS**
+
+**Result:**
+- Dialog: **"Lønnskjøringen er fullført"** (Payroll run completed)
+- Title changed from "Lønnsutbetaling (under bearbeiding)" → **"Lønnsbilag 1-2026"** (posted voucher)
+- Green banner confirms completion
+- Buttons changed to post-completion actions: "Endre betaling", "Reverser lønnsutbetaling"
+
+**This proves that `bankAccountNumber` was the ONLY blocker.** The monthly overview warning ("Månedsoversikten er ikke godkjent") did NOT prevent finalization. Only the missing bank account did.
+
 #### Recommended fix
 
 **One-line change in system prompt** — add `bankAccountNumber` to the employee update that already happens for `dateOfBirth`:
 
 ```
-// Current (system-prompt.ts, payroll section):
+// Current (system-prompt.ts, payroll section, line ~141):
 PUT /employee/{id} with {id, version, dateOfBirth: "1990-01-01"}
 
 // Fixed:
@@ -165,6 +182,12 @@ PUT /employee/{id} with {id, version, dateOfBirth: "1990-01-01", bankAccountNumb
 ```
 
 No extra API calls needed — the agent already does a `PUT /employee/{id}` to set `dateOfBirth`. Just include `bankAccountNumber` in the same request.
+
+Also update the system prompt text at line ~141:
+```diff
+- Employee MUST have dateOfBirth set for employment creation. If null, PUT /employee/{id} with dateOfBirth: "1990-01-01" first
++ Employee MUST have dateOfBirth and bankAccountNumber set. If missing, PUT /employee/{id} with dateOfBirth: "1990-01-01", bankAccountNumber: "12345678903"
+```
 
 ---
 
