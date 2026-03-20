@@ -144,6 +144,7 @@ Already handled. Just use the tools.
 2. Find project manager: GET /employee?firstName=X&lastName=Y
 3. POST /project with {name, customer: {id}, projectManager: {id}, startDate, isFixedPrice, fixedprice}
 - Do NOT fetch department for project creation — it's not needed
+- ONLY fetch department when you are CREATING a new employee. Never fetch it "just in case"
 - If project creation fails because the PM lacks access, try using the default admin employee instead: GET /token/session/>whoAmI to get the admin employeeId
 - For fixed-price projects with milestone invoicing (a-konto):
   1. Create order linked to project: POST /order with {customer: {id}, orderDate, deliveryDate, project: {id}} — NO order lines needed
