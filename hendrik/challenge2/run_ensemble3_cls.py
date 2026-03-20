@@ -178,26 +178,43 @@ def main():
             skip_box_thr=0.001,
         )
 
-        # Classify each detection
-        for box, score, yolo_label in zip(fused_boxes, fused_scores, fused_labels):
+        # Batch classify all detections
+        det_data = []  # (x1, y1, x2, y2, score, yolo_label, crop_tensor_or_None)
+        crop_tensors = []
+        crop_indices = []
+
+        for i, (box, score, yolo_label) in enumerate(zip(fused_boxes, fused_scores, fused_labels)):
             x1_n, y1_n, x2_n, y2_n = box
             x1, y1, x2, y2 = x1_n * w, y1_n * h, x2_n * w, y2_n * h
-
-            # Crop and classify
             cx1, cy1 = max(0, int(x1)), max(0, int(y1))
             cx2, cy2 = min(w, int(x2)), min(h, int(y2))
 
-            cat_id = int(yolo_label)
+            det_data.append((x1, y1, x2, y2, float(score), int(yolo_label)))
+
             if cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
                 crop = img_pil.crop((cx1, cy1, cx2, cy2))
-                inp = cls_transform(crop).unsqueeze(0).to(device)
-                with torch.no_grad():
-                    logits = classifier(inp)
-                    probs = torch.softmax(logits, dim=1)
-                    conf, idx = probs.max(1)
-                if conf.item() > 0.5:
-                    cat_id = idx_to_cat.get(idx.item(), cat_id)
+                crop_tensors.append(cls_transform(crop))
+                crop_indices.append(i)
 
+        # Batch forward pass for all crops
+        cls_results = {}
+        if crop_tensors:
+            batch = torch.stack(crop_tensors).to(device)
+            with torch.no_grad():
+                # Process in chunks to avoid OOM
+                for start in range(0, len(batch), 128):
+                    chunk = batch[start:start + 128]
+                    logits = classifier(chunk)
+                    probs = torch.softmax(logits, dim=1)
+                    confs, idxs = probs.max(1)
+                    for j in range(len(chunk)):
+                        det_idx = crop_indices[start + j]
+                        if confs[j].item() > 0.5:
+                            cls_results[det_idx] = idx_to_cat.get(idxs[j].item(), det_data[det_idx][5])
+
+        # Build predictions
+        for i, (x1, y1, x2, y2, score, yolo_label) in enumerate(det_data):
+            cat_id = cls_results.get(i, yolo_label)
             predictions.append({
                 "image_id": image_id,
                 "category_id": cat_id,
