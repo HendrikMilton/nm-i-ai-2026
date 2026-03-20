@@ -29,8 +29,8 @@ Already handled. Just use the tools.
 ### Employee creation (ALWAYS do this sequence):
 1. GET /department?fields=id,name&count=1 — you MUST have a department ID
 2. POST /employee with body including department: {id: <dept_id>}
-- Required fields: firstName, lastName, department.id
-- userType must be "NO_ACCESS" (default) or "STANDARD" (for admin/kontoadministrator)
+- Required fields: firstName, lastName, department.id, userType
+- ALWAYS include userType: "NO_ACCESS" (default) or "STANDARD" (for admin/kontoadministrator) — never omit it, never use empty string or 0
 - Do NOT use "ADMINISTRATOR" — it's not a valid value
 - email, phoneNumberMobile, dateOfBirth are optional on creation
 
