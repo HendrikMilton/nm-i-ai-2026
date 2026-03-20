@@ -1,0 +1,83 @@
+# Invoice/order – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/faq/invoice-order
+
+Invoice/order
+Why is POST /order/ or POST /invoice/ giving the error “Enhetspris må være med mva siden enhetspris på ordre er med mva.” / “Enhetspris må være uten mva siden enhetspris på ordre er uten mva.”?
+How do I set the income account that order lines are posted to?
+How is the invoice send method determined?
+How do I check if an invoice has been paid?
+Is it possible to stop Tripletex from sending the invoice I create?
+How can I correct the validation message “The unit price must be exclusive VAT since the unit price on the order is exclusive VAT.”
+How can I find payment information for specific invoices via the API?
+How and when do you update currency values in Tripletex?
+Why is POST /order/ or POST /invoice/ giving the error “Enhetspris må være med mva siden enhetspris på ordre er med mva.” / “Enhetspris må være uten mva siden enhetspris på ordre er uten mva.”?
+
+This error usually means that you have defined unitPriceExcludingVatCurrency on the order lines where the order is set to show price including VAT, or unitPriceIncludingVatCurrency on the order lines where the order has been set to show prices excluding VAT. It may also happen if you define both unitPrice attributes on the order lines.
+
+The default setting is determined by the invoice settings of the account. You need to override the default in the order-object if you post values that do not match the Tripletex account configuration.
+
+To solve this you can use the attribute "isPrioritizeAmountsIncludingVat" to TRUE or FALSE.
+
+If “isPrioritizeAmountsIncludingVat"=TRUE then you define "unitPriceIncludingVatCurrency" on the orderlines.
+
+If "isPrioritizeAmountsIncludingVat"=FALSE then you define "unitPriceExcludingVatCurrency" on the orderlines.
+
+How do I set the income account that order lines are posted to?
+
+The income account for order lines is determined in one of two ways:
+
+Using a Product:
+If you specify a product for the order line, the product’s income account will be used, provided that the VAT type on the product matches the VAT type on the order line and the income account to which it is assigned.
+If any of these conditions are not met, the system will use the default income account.
+Using a Description Only:
+If you only use a description and do not define a product, the order lines will be posted to the default income account associated with the VAT type.
+You can also use a combination of a description and a product to add specific details to the order line without affecting the posting.
+
+The default settings can be managed in Tripletex by navigating to Accounts -> Settings -> Accounting Settings -> Posting Rules. Users have the option to change the default account settings according to their preferences.
+
+Please note that you cannot directly set or override an income account on the order line.
+
+Example:
+
+If a product has an income account specified, and this income account is set to VAT Type 3 ((25%) Output VAT, high rate), then:
+
+When you create an order line with this product and VAT Type 3, the income posting will use the account specified on the product once the order is invoiced.
+
+If you create another order line with the same product but set VAT Type 33 ((12%) Output VAT, low rate) for the order line, the posting will be assigned to the default income account for VAT Type 33.
+The default account for VAT Type 33 is 3002 and can be adjusted in the posting settings mentioned above.
+
+How is the invoice send method determined?
+
+The customer object of the order/invoice determines the send method for invoices. This value can be fetched via GET customer (invoiceSendMethod)
+
+How do I check if an invoice has been paid?
+
+GET invoice(/id) returns a value for amountOutstanding, if this is 0 then the invoice is paid/credited. If you need more details see “How can I find payment information for specific invoices via the API?” below.
+
+Is it possible to stop Tripletex from sending the invoice I create?
+
+Yes. Set sendToCustomer=FALSE (default TRUE) in both PUT order/id/:invoice and POST /invoice/ to create an invoice without Tripletex sending it to the customer automatically.
+
+How can I correct the validation message “The unit price must be exclusive VAT since the unit price on the order is exclusive VAT.”
+
+The order object can be set to either accept orderlines including VAT or excluding VAT with the optional boolean value isPrioritizeAmountsIncludingVat. If you encounter this issue it would be a good idea to provide the value directly when creating an order and then using the appropriate price value on orderlines for the order.
+
+Example: if order is set to isPrioritizeAmountsIncludingVat = true then you should provide orderlines with only unitPriceIncludingVatCurrency.
+
+How can I find payment information for specific invoices via the API?
+
+You can always check the value of amountOutstanding on any given invoice object (anything above 0 means there is an amount outstanding). If you need more details this method should work:
+
+find Invoice.customerId and invoice.number
+get all postings where customerId = Invoice.customerId
+locally find where invoiceNumber = invoice.number
+if any has closegroupId, then everything is paid or credited in full
+but you can sum all posts where invoiceNumber = invoice.number (betalinger)
+and if you have a closegroupId, you will have to get other postings with closegroupId to find related credit notes
+How and when do you update currency values in Tripletex?
+
+We fetch currency data at 06:10 and 18:10 every day from https://data.norges-bank.no/api/data/EXR/B..NOK.SP?format=csv&lastNObservations=14&locale=en
+
+Doc navigation
+← General
+Customer →
