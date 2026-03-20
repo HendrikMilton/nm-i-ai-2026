@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import { ChevronLeft, ChevronRight, ZoomIn, ZoomOut, Eye, EyeOff, Tag } from 'lucide-react';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 
 const API = 'http://localhost:3003';
 
@@ -156,6 +157,10 @@ export function DatasetPage() {
 
     return (
         <div className="flex flex-col gap-4">
+            <Breadcrumbs crumbs={[
+                { label: '2 - NorgesGruppen Data', to: '/challenges/2' },
+                { label: 'Dataset' },
+            ]} />
             {/* Top bar */}
             <div className="flex items-center gap-4 flex-wrap">
                 <h1 className="text-xl font-semibold text-foreground">Dataset Explorer</h1>

@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { Table, type Column } from '../components/ui/Table';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 import { Badge } from '../components/ui/Badge';
 
 const API = 'http://localhost:3003';
@@ -238,6 +239,10 @@ export function TrainingPage() {
 
     return (
         <div className="flex flex-col gap-4">
+            <Breadcrumbs crumbs={[
+                { label: '2 - NorgesGruppen Data', to: '/challenges/2' },
+                { label: 'Training Runs' },
+            ]} />
             <div className="flex items-center gap-4">
                 <h1 className="text-xl font-semibold text-foreground">Training Runs</h1>
                 <div className="flex-1" />

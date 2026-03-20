@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { Package, Search, ArrowUpDown, Image as ImageIcon } from 'lucide-react';
+import { Breadcrumbs } from '../components/Breadcrumbs';
 
 const API = 'http://localhost:3003';
 
@@ -84,6 +85,10 @@ export function ProductsPage() {
 
     return (
         <div className="flex flex-col gap-4">
+            <Breadcrumbs crumbs={[
+                { label: '2 - NorgesGruppen Data', to: '/challenges/2' },
+                { label: 'Products' },
+            ]} />
             {/* Header */}
             <div className="flex items-center gap-4 flex-wrap">
                 <h1 className="text-xl font-semibold text-foreground">Product Reference Images</h1>
