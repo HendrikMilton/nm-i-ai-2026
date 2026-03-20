@@ -1,196 +1,318 @@
-# Challenge 1 — Log Analysis & Scoring Assessment
+# Challenge 1 — Full Log Analysis & Scoring Assessment
 
 **Date:** 2026-03-20
-**Logs analyzed:** 18:11 – 18:55 UTC (13 real submissions + 8 empty logs from wrong-server routing)
+**Total logs:** 121 | **Scored tasks:** 19 | **Leaderboard:** rank #9, score 37.85, 18/30 tasks
+**Leader:** "hackers" at 46.02 | **Gap:** 8.17 points
 
 ---
 
-## Summary
+## Overall Results
 
-| Log timestamp | Task type | Score | Max | Status |
-|---|---|---|---|---|
-| 18:11 | Order→Invoice→Payment (Portuguese) | 8/8 | 8 | ALL PASSED |
-| 18:13 – 18:22 | (6 empty logs) | — | — | Hit wrong server (routing issue) |
-| 18:23 | Reverse payment (Spanish) | 8/8 | 8 | ALL PASSED |
-| 18:25 | Fixed-price project + milestone invoice (Spanish) | **6/8** | 8 | **Check 2 FAILED** |
-| 18:27 | Create supplier (English) | **6/7** | 7 | **Check 5 FAILED** |
-| 18:45 | Test ping | — | — | N/A |
-| 18:46–18:47 | (2 empty logs) | — | — | Hit wrong server |
-| 18:48 | Create product (Spanish) | 7/7 | 7 | ALL PASSED |
-| 18:49 | Create employee with employment (Nynorsk) | 8/8 | 8 | ALL PASSED |
-| 18:50 | Timesheet + project invoice (Norwegian) | 8/8 | 8 | ALL PASSED |
-| 18:52 | Create project (French) | 7/7 | 7 | ALL PASSED |
-| 18:54 | Create+send invoice (Nynorsk) | 7/7 | 7 | ALL PASSED |
-| 18:55 | **Run payroll** (Nynorsk) | **0/8** | 8 | **ALL 4 FAILED** |
+| Metric | Value |
+|--------|-------|
+| Scored tasks | 19 |
+| Perfect score (8/8 or 7/7) | 13 (68%) |
+| Partial score (6/7 or 6/8) | 2 (11%) |
+| Zero score (0/8) | 4 (21%) |
+| Total points | 111 / 152 (73%) |
+| Avg duration | 33.5s |
+| Avg API calls | 6.5 |
+| Token expiry incidents | 4 |
 
-**Pass rate (real tasks):** 8/11 perfect, 2 partial, 1 total failure
+### Score Distribution
 
----
-
-## Issue 1: PAYROLL — 0/8 (CRITICAL)
-
-**Task:** "Køyr løn for Brita Stølsvik — grunnløn 36000 kr + eingongsbonus 15400 kr"
-
-**What the agent did:**
-Created a manual journal voucher (`POST /ledger/voucher`) with debit 5000 / credit 1920 for 51400 NOK.
-
-**Why this fails:**
-The competition checks for a **salary transaction** (`POST /salary/transaction`), NOT a manual voucher. The system prompt already has the correct instructions for salary/transaction, but the agent ignored them and used a simpler voucher approach.
-
-**Root cause confirmed on sandbox:**
-- `POST /salary/transaction?generateTaxDeduction=true` works correctly
-- Salary types available: `2000` (Fastlønn, id varies), `2002` (Bonus, id varies)
-- Requires: employee with employment + division, salary type lookup, proper payslip structure
-
-**The agent needs to:**
-1. Find employee
-2. Look up salary types (GET /salary/type?number=2000, GET /salary/type?number=2002)
-3. Ensure employee has employment with division
-4. POST /salary/transaction with payslips array containing specifications for each pay component
-
-**Fix:** The system prompt already describes this correctly under "### Run payroll (salary transaction)". The agent simply chose the wrong approach. Need stronger language in the prompt to enforce using `/salary/transaction` and **explicitly forbid** using `/ledger/voucher` for payroll.
-
----
-
-## Issue 2: FIXED-PRICE PROJECT + MILESTONE — 6/8 (Check 2 failed)
-
-**Task:** "Set fixed price 457650 NOK on project 'Implementación ERP', invoice 25% as milestone"
-
-**What the agent did:**
-1. Found customer + employee ✓
-2. Created project with isFixedPrice=true, fixedprice=457650 ✓
-3. Created order linked to project with invoiceOnAccountVatHigh=true ✓
-4. Added order line: 114412.50 NOK (25% of 457650) ✓
-5. Created invoice ✓
-
-**What Check 2 might be checking:**
-- The order line description was "Pago parcial - 25% del precio fijo" — the system prompt example says `"Milestone payment - X%"` as the description format. The competition may check for specific keywords.
-- Alternatively, Check 2 could verify the project's `fixedprice` field or the milestone percentage calculation.
-- Another possibility: The department GET was unnecessary (wasted call, but shouldn't cause check failure).
-
-**Potential fix:** Use the exact description format from system prompt: `"Milestone payment - 25%"` instead of translating to the task language. Or investigate if there's a specific Tripletex "akonto" mechanism that should be used differently.
-
----
-
-## Issue 3: SUPPLIER CREATION — 6/7 (Check 5 failed)
-
-**Task:** "Register supplier Silveroak Ltd, org 889586605, email faktura@silveroakltd.no"
-
-**What the agent did:**
-- POST /supplier with: name, organizationNumber, email, invoiceEmail (both set to same value), showProducts: true
-
-**What Check 5 might be checking:**
-- The prompt doesn't mention a phone number, and the system prompt says "ALSO set phoneNumber field if a phone number is given" — no phone was given, so this seems fine.
-- `showProducts: true` was set but never asked for — the sandbox default is `false`. This extra field might cause a mismatch.
-- Possibly the check verifies `isCustomer: false` explicitly, or `language`, or some other default field.
-
-**Potential fix:** Don't set `showProducts` unless asked. Keep supplier creation minimal: only name, organizationNumber, email, invoiceEmail.
-
----
-
-## Issue 4: EMPTY LOGS (8 logs, routing problem)
-
-**Cause:** Two servers sharing the same port (4001) on the remote VPS via SSH tunnels. Requests were load-balanced randomly — ~50% hit the wrong server which had no agent running.
-
-**Status:** FIXED — now using separate port 4002 with /gabriel/solve path prefix and dedicated k8s ingress rule.
-
----
-
-## Efficiency Observations
-
-| Task | API calls | Unnecessary calls | Notes |
-|---|---|---|---|
-| Order+Invoice+Payment | 10 | 0 | Clean execution |
-| Reverse payment | 4 | 0 | Clean |
-| Fixed-price project | 9 | 1 | GET /department unnecessary |
-| Create supplier | 1 | 0 | Clean, but missing field? |
-| Create product | 2 | 0 | Clean |
-| Create employee | 3 | 0 | Clean |
-| Timesheet+invoice | 12 | 0 | Complex task, reasonable |
-| Create project | 3 | 0 | Clean |
-| Create+send invoice | 8 | 0 | Clean |
-| Payroll (WRONG) | 4 | 4 | ALL wrong — used voucher |
-
----
-
-## Recommended System Prompt Changes
-
-### Priority 1: Fix payroll (0/8 → potential 8/8)
-- Add explicit rule: **"NEVER use /ledger/voucher for payroll. ALWAYS use /salary/transaction."**
-- Ensure the payroll section is prominent and clear
-
-### Priority 2: Fix supplier creation
-- Remove `showProducts` from default supplier creation
-- Keep creation minimal: name, organizationNumber, email, invoiceEmail
-
-### Priority 3: Fix fixed-price project milestone
-- Standardize milestone description to exactly: `"Milestone payment - X%"`
-- Remove unnecessary GET /department for project creation (already noted in prompt but agent still did it)
-
-### Priority 4: Efficiency
-- The agent fetches GET /department even for project creation (prompt says not to)
-- Could save 1 API call per project task
-
----
-
-## UI Verification: Payroll (Lønn) Flow
-
-Verified the correct payroll flow in the Tripletex sandbox UI:
-
-### Steps in UI (Lønn → Ny lønnsutbetaling):
-1. **Setup wizard** (one-time): Lønnsutbetalinger (etterskudd), Pensjonsavtale (Ingen), Feriepenger (5 uker, 12%)
-2. **Ny lønnsutbetaling**: Select period (Mars 2026), select employee, click "Opprett lønnsutbetaling"
-3. **Lønnsdetaljer**: Add salary lines via "Ny rad +"
-
-### Payslip structure confirmed in UI:
-
-| Lønnsrader | Antall | Sats | Beløp | Til utbetaling |
-|---|---|---|---|---|
-| 2000 Fastlønn | 1 | 36,000.00 | 36,000.00 | 36,000.00 |
-| 2002 Bonus | 1 | 15,400.00 | 15,400.00 | 15,400.00 |
-| 6000 Skattetrekk (auto) | — | — | -20,560.00 | -20,560.00 |
-| **Total** | | | | **30,840.00** |
-
-- Tax deduction auto-generated at 40% of gross (51,400) = 20,560
-- This matches `generateTaxDeduction=true` in the API
-- The 6000 Skattetrekk line is system-generated, not manually added
-
-### Correct API call (confirmed working on sandbox):
-```json
-POST /salary/transaction?generateTaxDeduction=true
-{
-  "date": "2026-03-20",
-  "year": 2026,
-  "month": 3,
-  "isHistorical": false,
-  "payslips": [{
-    "employee": {"id": <employee_id>},
-    "date": "2026-03-20",
-    "year": 2026,
-    "month": 3,
-    "specifications": [
-      {
-        "salaryType": {"id": <2000_fastlonn_id>},
-        "rate": 36000,
-        "count": 1,
-        "amount": 36000,
-        "year": 2026,
-        "month": 3,
-        "employee": {"id": <employee_id>}
-      },
-      {
-        "salaryType": {"id": <2002_bonus_id>},
-        "rate": 15400,
-        "count": 1,
-        "amount": 15400,
-        "year": 2026,
-        "month": 3,
-        "employee": {"id": <employee_id>}
-      }
-    ]
-  }]
-}
+```
+8/8  ████████████████  8 tasks  — invoice, timesheet, order+payment
+7/7  ██████████        5 tasks  — project, customer, supplier, product
+6/8  ████              2 tasks  — milestone invoice, supplier creation
+0/8  ████████          4 tasks  — payroll(3), supplier invoice(1)
 ```
 
-### Key takeaway:
-The agent MUST use `POST /salary/transaction` — NOT `POST /ledger/voucher`. The voucher approach creates a journal entry on account 5000, but the competition checks for an actual salary transaction with payslips and specifications. These are fundamentally different objects in Tripletex.
+---
+
+## Scored Task Log
+
+| Timestamp | Task | Score | Checks | Duration | API calls | Errors |
+|-----------|------|-------|--------|----------|-----------|--------|
+| 18:03:20 | Project "Migrasjon Vestfjord" | 7/7 | 4/4 | 18.2s | 3 | 0 |
+| 18:04:46 | Multi-VAT invoice (3 products, 25/15/0%) | 8/8 | all | 49.5s | 11 | 0 |
+| 18:07:14 | Supplier invoice Sierra SL | **0/8** | 0/4 | 22.2s | 5 | 1 |
+| 18:10:35 | Order→Invoice→Payment (Portuguese) | 8/8 | all | 46.7s | 10 | 0 |
+| 18:11:55 | Order→Invoice→Payment | 8/8 | all | ~45s | 10 | 0 |
+| 18:23:51 | Reverse payment (Spanish) | 8/8 | all | 27.8s | 4 | 0 |
+| 18:25:15 | Fixed-price project + milestone | **6/8** | 3/4 | 44.1s | 9 | 0 |
+| 18:27:15 | Supplier Silveroak Ltd | **6/7** | 4/5 | 7.0s | 1 | 0 |
+| 18:48:28 | Create product (Spanish) | 7/7 | all | ~10s | 2 | 0 |
+| 18:49:35 | Employee + employment (Nynorsk) | 8/8 | all | ~20s | 3 | 0 |
+| 18:50:56 | Timesheet + project invoice | 8/8 | all | 54.4s | 12 | 0 |
+| 18:52:51 | Project creation (French) | 7/7 | all | ~15s | 3 | 0 |
+| 18:54:01 | Create+send invoice (Nynorsk) | 7/7 | all | ~30s | 8 | 0 |
+| 18:55:28 | **Payroll Brita Stølsvik** | **0/8** | 0/4 | ~25s | 4 | 0 |
+| 18:57:54 | Project "Intégration Montagne" | 7/7 | 4/4 | 17.3s | 3 | 0 |
+| 18:59:13 | Order+invoice+payment Étoile SARL | 8/8 | 5/5 | 45.8s | 10 | 0 |
+| 19:00:53 | Supplier invoice Montaña SL | **0/8** | 0/4 | 31.8s | 5 | 1 |
+| 19:05:53 | Timesheet+invoice Leonor Almeida | 8/8 | 4/4 | 62.5s | 13 | 0 |
+| 19:07:53 | **Payroll Raphaël Bernard** | **0/8** | 0/4 | 55.4s | 11 | 0 |
+| 19:09:48 | **Payroll Sarah Moreau** | **0/8** | 0/4 | 64.6s | 11 | 0 |
+
+---
+
+## Failure Analysis
+
+### FAILURE #1: Payroll — 0% pass rate (3 scored, all 0/8)
+
+This is the **highest-impact issue**. Fixing payroll alone could add ~9.6 normalized points, enough to overtake #1.
+
+#### Two approaches tried, both failed:
+
+**Approach A — Voucher (18:55:28Z, Brita Stølsvik):**
+```
+POST /ledger/voucher with debit 5000 / credit 1920 for 51,400 NOK
+```
+Wrong endpoint entirely. Scorer expects `POST /salary/transaction`.
+
+**Approach B — Salary transaction (19:07:53Z Raphaël, 19:09:48Z Sarah):**
+```
+POST /salary/transaction with payslips + specifications
+  → 201 Created, transaction ID assigned, payslip generated
+  → Still 0/8 on all checks
+```
+
+This is the puzzling one. The agent used the correct endpoint, created division + employment + salary transaction with proper specifications, got 201 back, yet all checks failed.
+
+#### Detailed trace (19:09:48Z — Sarah Moreau):
+
+| Step | Action | Result |
+|------|--------|--------|
+| 1 | GET employee, GET salary/type 2000, GET salary/type 2002 | Found all three |
+| 2 | GET employment, GET employee details | No employment, dateOfBirth null |
+| 3 | PUT employee (set dateOfBirth), GET division | Updated, no divisions |
+| 4 | GET municipality | Got ID 1 (Agdenes) |
+| 5 | POST division | Created "Hovedvirksomhet" (ID 108262889) |
+| 6 | POST employment | Created (ID 2801601) |
+| 7 | POST /salary/transaction | **Created** (ID 6956734, payslip 32627752) |
+| 8 | Response text (success summary) | — |
+
+**Score: 0/8, all 4 checks failed.**
+
+#### UI Investigation (Tripletex Dashboard)
+
+We opened the Tripletex UI and verified the payroll state directly:
+
+**Lønnsoversikt:** All salary transactions show as **"Lønnsutbetaling (under bearbeiding)"** — draft status. None are finalized.
+
+**Inside a payroll entry (51,400 NOK — Brita Stølsvik):**
+- 2000 Fastlønn: 1 × 36,000 = 36,000 ✓
+- 2002 Bonus: 1 × 15,400 = 15,400 ✓
+- 6000 Skattetrekk: -20,560 (40% of 51,400) ✓ — **tax deduction IS generated**
+- Til utbetaling: 30,840 ✓
+- **"Fullfør lønnsutbetaling"** button visible at top right (not clicked by agent)
+
+**Two warnings blocking finalization:**
+1. ⚠️ **"Bankkontonummer mangler. Gå til arbeidsforholdet"** — employee has no bank account number
+2. ℹ️ **"Månedsoversikten er ikke godkjent. Gå til månedsoversikten"** — monthly overview not approved
+
+#### Hypotheses ruled out by UI investigation:
+
+| Hypothesis | Status | Evidence |
+|-----------|--------|----------|
+| `generateTaxDeduction` not sent as query param | ❌ **RULED OUT** | Tax line (6000 Skattetrekk) is present in UI. Also confirmed in code: `tools.ts` passes `params` to `client.post()`, and `tripletex.ts` sets them as `url.searchParams` |
+| Payroll wizard not configured | ❌ **RULED OUT** | "Kom i gang med Lønn" is checked off in the dashboard onboarding checklist |
+| Salary type IDs wrong | ❌ **RULED OUT** | Correct types (Fastlønn, Bonus, Skattetrekk) visible in UI with correct amounts |
+| Wrong endpoint used | ❌ **RULED OUT** (for Approach B) | Transactions appear in Lønnsoversikt, not as manual vouchers |
+
+#### ROOT CAUSE CONFIRMED: Missing employee `bankAccountNumber`
+
+**Evidence from logs:** In all 3 failed payroll tasks, the employee's `bankAccountNumber` is `""` (empty string):
+
+```json
+// 19:09:48Z — Sarah Moreau (Step 2, GET employee details)
+"bankAccountNumber": ""    ← EMPTY
+
+// 19:07:53Z — Raphaël Bernard (Step 3, GET employee details)
+"bankAccountNumber": ""    ← EMPTY
+
+// 18:55:28Z — Brita Stølsvik (used voucher approach, but same issue)
+```
+
+The agent updates `dateOfBirth` (required for employment) but **never sets `bankAccountNumber`**. Without it:
+- The UI shows "Bankkontonummer mangler" warning
+- The "Fullfør lønnsutbetaling" button cannot complete
+- The transaction stays in draft ("under bearbeiding")
+- The scorer checks for a completed payroll → all checks fail
+
+#### No finalization endpoint in the API
+
+We checked the full API reference (`api-compact.json`). Under `salary/transaction`, the only mutating endpoints are:
+- `POST /salary/transaction` — Create
+- `DELETE /salary/transaction/{id}` — Delete
+- `POST /salary/transaction/{id}/attachment` — Upload attachment
+
+There is **no** `PUT /salary/transaction/{id}/:complete` or `:payment` or `:post` endpoint. The "Fullfør lønnsutbetaling" button in the UI does not map to a documented API call. This means the transaction likely auto-completes when all prerequisites are met (valid employee with bank account, etc.), or the scorer simply checks the transaction data regardless of draft state.
+
+**Either way, setting `bankAccountNumber` is the fix.** It removes the blocker and may allow the transaction to auto-finalize, or at minimum satisfies whatever field-level checks the scorer performs.
+
+#### UI VERIFICATION — FIX CONFIRMED
+
+We manually tested the fix in the Tripletex UI:
+
+1. **Opened employee "Arbeidsforhold" tab** — found `Bankkontonummer` field empty under "Innstillinger for lønnsutbetalinger"
+2. **Entered `12345678903`** in the bank account field and clicked "Lagre"
+3. **Returned to payroll entry** — bank account warning **gone**. Now shows "Til kontonr. 1234.56.78903"
+4. **Clicked "Fullfør lønnsutbetaling"** — **SUCCESS**
+
+**Result:**
+- Dialog: **"Lønnskjøringen er fullført"** (Payroll run completed)
+- Title changed from "Lønnsutbetaling (under bearbeiding)" → **"Lønnsbilag 1-2026"** (posted voucher)
+- Green banner confirms completion
+- Buttons changed to post-completion actions: "Endre betaling", "Reverser lønnsutbetaling"
+
+**This proves that `bankAccountNumber` was the ONLY blocker.** The monthly overview warning ("Månedsoversikten er ikke godkjent") did NOT prevent finalization. Only the missing bank account did.
+
+#### Recommended fix
+
+**One-line change in system prompt** — add `bankAccountNumber` to the employee update that already happens for `dateOfBirth`:
+
+```
+// Current (system-prompt.ts, payroll section, line ~141):
+PUT /employee/{id} with {id, version, dateOfBirth: "1990-01-01"}
+
+// Fixed:
+PUT /employee/{id} with {id, version, dateOfBirth: "1990-01-01", bankAccountNumber: "12345678903"}
+```
+
+No extra API calls needed — the agent already does a `PUT /employee/{id}` to set `dateOfBirth`. Just include `bankAccountNumber` in the same request.
+
+Also update the system prompt text at line ~141:
+```diff
+- Employee MUST have dateOfBirth set for employment creation. If null, PUT /employee/{id} with dateOfBirth: "1990-01-01" first
++ Employee MUST have dateOfBirth and bankAccountNumber set. If missing, PUT /employee/{id} with dateOfBirth: "1990-01-01", bankAccountNumber: "12345678903"
+```
+
+---
+
+### FAILURE #2: Supplier Invoice — 0% pass rate (2 scored, both 0/8)
+
+#### 18:07:14Z — Sierra SL (INV-2026-8702, 6,850 NOK incl. VAT)
+
+- Used `GET /supplier` to find supplier → correct
+- Created voucher with VAT postings → API returned 201
+- All 4 checks failed
+
+#### 19:00:53Z — Montaña SL (INV-2026-1443, 50,050 NOK incl. VAT)
+
+- First attempt included `supplierVoucherType: "SUPPLIER_INVOICE"` → **422 validation error**
+- Retry without field → 201 success
+- All 4 checks failed
+
+#### System prompt contradiction:
+```
+Line 117: "Do NOT include voucherType or guiRow — they cause errors"
+Line 118: "DO include supplierVoucherType: 'SUPPLIER_INVOICE' for supplier invoices"
+```
+
+The agent follows line 118, gets a 422, removes the field, and succeeds at API level but fails scoring. The scorer likely requires `supplierVoucherType` to be set — but the API rejects it as an invalid enum value.
+
+**Possible root cause:** The `supplierVoucherType` field may need a different value, or it may need to be set via a different mechanism (e.g., a separate PUT after creation, or a specific voucher type endpoint).
+
+**Alternative hypothesis:** The supplier invoice voucher is created correctly, but the scorer checks for a specific accounting structure (e.g., debit on a different expense account, or specific row ordering) that doesn't match.
+
+---
+
+### FAILURE #3: Payment Reversal — Token Expiry
+
+**19:00:53Z (Étoile SARL):** This log contains TWO tasks back-to-back:
+1. Supplier invoice for Montaña SL → completed (scored 0/8)
+2. Payment reversal for Étoile SARL → **19 consecutive "Invalid or expired token" errors**
+
+The auth token expired between task 1 and task 2 in the same session. The agent retried 10 times over 11 steps before giving up.
+
+This is a **session management issue**, not a logic issue. The reversal logic described by the agent was correct (negative `paidAmount` on `PUT /invoice/{id}/:payment`).
+
+---
+
+### Partial Failures
+
+#### 18:25:15Z — Fixed-price project + milestone (6/8, Check 2 failed)
+- Created project with `isFixedPrice=true, fixedprice=457650` ✓
+- Created order + order line for 25% (114,412.50 NOK) ✓
+- Description used: `"Pago parcial - 25% del precio fijo"` instead of `"Milestone payment - 25%"`
+- **Fix:** Use exact description format from system prompt
+
+#### 18:27:15Z — Supplier Silveroak Ltd (6/7, Check 5 failed)
+- Created supplier with `showProducts: true` (not requested)
+- **Fix:** Don't set `showProducts` unless asked. Keep creation minimal.
+
+---
+
+## Token Expiry Analysis
+
+4 incidents across 121 logs. Pattern:
+
+| Log | Trigger | Calls before expiry |
+|-----|---------|---------------------|
+| 13:30:47Z | 9 validation errors on employment tax codes | 18 |
+| 14:10:05Z | Repeated 422s on employment creation | ~15 |
+| 14:29:37Z | Same pattern | ~15 |
+| 19:00:53Z | Previous task consumed session | 0 |
+
+**Root cause:** Agent retries validation errors aggressively with no backoff. High error rate burns through the session token.
+
+**Fix:** Add to system prompt: *"After 3 consecutive 4xx errors on the same endpoint, STOP. Do not retry. Report the error and move on."*
+
+---
+
+## Success Patterns
+
+Tasks that consistently score 8/8:
+
+1. **Parallel lookups in step 1** — customer, employee, products, payment types fetched simultaneously
+2. **No redundant GETs** — IDs from POST responses reused directly
+3. **Hardcoded VAT IDs** — 3 (25% output), 1 (25% input), 31 (15%), 6 (0% exempt)
+4. **Bank account checked proactively** — `GET /ledger/account?number=1920` in parallel with setup
+5. **Sequential order lines** — never parallel (avoids 409 conflicts)
+6. **Clean error rate** — 0 errors = no score penalty
+
+---
+
+## Impact-Prioritized Recommendations
+
+### P0: Fix payroll (potential +9.6 points → overtake #1)
+
+**Root cause confirmed:** Employee `bankAccountNumber` is empty. Transaction stays in draft.
+
+1. **Add `bankAccountNumber: "12345678903"` to employee PUT** — same call that sets `dateOfBirth`, zero extra API calls
+2. Add explicit system prompt rule: *"NEVER use /ledger/voucher for payroll. ALWAYS use /salary/transaction."*
+3. Add rule: *"When updating employee for payroll, ALWAYS set both `dateOfBirth` and `bankAccountNumber`"*
+
+### P1: Fix supplier invoice (potential +3.2 points)
+
+5. Resolve `supplierVoucherType` contradiction in system prompt
+6. Test correct field value and delivery mechanism
+7. Verify supplier lookup uses correct endpoint for voucher context
+
+### P2: Fix partial failures (+1.5 points)
+
+8. Milestone description: use `"Milestone payment - X%"` exactly
+9. Supplier creation: remove `showProducts: true` default
+
+### P3: Prevent token expiry (saves ~1 task per session)
+
+10. Add retry limit (max 3 consecutive 4xx on same endpoint)
+11. Distinguish retryable (429, 500) vs non-retryable (400, 422) errors
+
+---
+
+## Path to #1
+
+Current: 37.85 points (rank #9)
+Target: 46.02 points (rank #1 "hackers")
+Gap: 8.17 points
+
+| Fix | Estimated gain | Running total |
+|-----|---------------|---------------|
+| Payroll (3 tasks × ~3.2) | +9.6 | 47.45 |
+| Supplier invoice (1 task × ~3.2) | +3.2 | 50.65 |
+| Partial failures (2 tasks × ~0.75) | +1.5 | 52.15 |
+
+**Fixing payroll alone closes the gap.** The remaining 12 unscored tasks (of 30 total) would add further points.
