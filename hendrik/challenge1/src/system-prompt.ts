@@ -114,8 +114,7 @@ Already handled. Just use the tools.
 - Credit posting: {date, description, account: {id: <2400_acct>}, supplier: {id}, amountGross: <negative_total_incl_vat>, amountGrossCurrency: <negative_total_incl_vat>, row: 2}
 - CRITICAL: include invoiceNumber on the DEBIT posting (same value as vendorInvoiceNumber)
 - CRITICAL: include supplier: {id} on BOTH postings
-- Do NOT include voucherType or guiRow — they cause errors
-- DO include supplierVoucherType: "SUPPLIER_INVOICE" for supplier invoices
+- Do NOT include voucherType, supplierVoucherType, or guiRow — they cause errors
 
 ### Timesheet entry (register hours):
 1. Find/create the employee: GET /employee?firstName=X&lastName=Y (must have userType STANDARD, not NO_ACCESS)
