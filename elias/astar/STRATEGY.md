@@ -1,16 +1,43 @@
-# Astar Island — Strategy (v1)
+# Astar Island — Strategy
 
-## Query Budget Allocation (50 total)
+## v1 Results (Round 3)
 
-- 9 viewports tile the full 40x40 map with 15x15 windows (3x3 grid)
-- 9 queries × 5 seeds = **45 queries** for one full observation pass per seed
-- Remaining **5 queries** used for extra observations on seed 0 (center, corners) to get better probability estimates on dynamic cells
+- Score: 0.26/100, Rank: 100/100
+- Problem: 1 observation per cell per seed = deterministic guess, KL divergence punishes hard
+- 89.7% of cells are deterministic (static terrain) — we get those free
+- The 10.3% uncertain cells (Forest/Empty boundaries, Settlement dynamics) are what matter
+- Biggest errors: predicting 95% for one class when truth is ~64/29 split
 
-## Prediction Pipeline
+## v2 Strategy — Repeat Observations
 
-1. Fetch active round + initial state to identify **static cells** (mountains, forests, ocean) — these get one-hot predictions for free
-2. Tile each seed's map with viewports, counting terrain class occurrences per cell
-3. Convert counts to empirical probability distributions
-4. Unobserved dynamic cells fall back to uniform
-5. Apply `floor_and_normalize` (min 0.01 per class) to avoid KL divergence going to infinity
-6. Submit all 5 seeds
+### Key Insight
+
+Since each simulate call is stochastic (different random seed each time), observing the
+same viewport multiple times on the same seed gives us different outcomes. Counting
+occurrences gives us empirical probability distributions — exactly what we need.
+
+### Query Budget Allocation (50 total)
+
+- **2 focus seeds** get heavy observation: ~22 queries each (44 total)
+  - 9 queries for full map tiling (coverage)
+  - 13 queries for repeat observations of dynamic areas
+- **3 remaining seeds** get 2 queries each (6 total) for partial coverage
+- All 5 seeds share the same initial map, so cross-seed observations help
+
+### How to pick repeat observation targets
+
+1. First pass: tile the map (9 queries) to identify which cells are dynamic
+2. Second pass: re-observe viewports that contained settlements/ports/ruins
+3. Dynamic cells near forests/settlements are the most uncertain
+
+### Prediction improvements
+
+- **Static cells** (ocean, mountain): one-hot prediction (same as v1)
+- **Forest cells from initial state**: mostly static, but can be reclaimed — use a prior
+  like 85% forest / 14% empty / 1% other instead of 100% forest
+- **Observed dynamic cells with N>1 observations**: empirical frequency
+- **Observed dynamic cells with N=1**: blend with a prior based on initial terrain
+  (e.g., if initial state was Settlement, predict ~40% settlement / 30% ruin / 20% empty / 10% port)
+- **Unobserved seeds**: copy probability distribution from observed seeds
+  (all seeds share the same hidden parameters, just different random outcomes)
+- **Floor**: 0.01 minimum per class, renormalize

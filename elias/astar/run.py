@@ -1,5 +1,5 @@
 """
-Astar Island — basic observation + prediction pipeline (v1).
+Astar Island — observation + prediction pipeline (v2).
 See STRATEGY.md for the full approach.
 """
 
@@ -37,17 +37,29 @@ TERRAIN_TO_CLASS = {
     5: 5,   # Mountain
 }
 
+# Priors learned from Rounds 1-4 ground truth analysis (averaged across all seeds).
+# Maps initial terrain code → expected class distribution [empty, settlement, port, ruin, forest, mountain]
+TERRAIN_PRIORS = {
+    10: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],             # Ocean → 100% empty
+    11: [0.8384, 0.1099, 0.009, 0.0102, 0.0325, 0.0], # Plains → 84% empty, 11% settlement
+    5:  [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],               # Mountain → 100% mountain
+    4:  [0.0694, 0.1116, 0.0084, 0.0102, 0.8005, 0.0], # Forest → 80% forest, 11% settlement
+    1:  [0.4794, 0.27, 0.0042, 0.0227, 0.2237, 0.0],  # Settlement → 48% empty, 27% settlement
+    2:  [0.4911, 0.0757, 0.1821, 0.0214, 0.2296, 0.0], # Port → 49% empty, 18% port
+    0:  [0.8384, 0.1099, 0.009, 0.0102, 0.0325, 0.0],  # Empty → like plains
+    3:  [0.4794, 0.27, 0.0042, 0.0227, 0.2237, 0.0],  # Ruin → like settlement
+}
+
+# How many focus seeds to observe heavily
+N_FOCUS_SEEDS = 2
+
 
 # --- Logging ---
-# Logs are split: one index file (logs/index.json) listing round IDs,
-# and one file per round (logs/rounds/<round_id>.json) with all data.
-
 LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
 INDEX_FILE = os.path.join(LOG_DIR, "index.json")
 
 
 def _load_index():
-    """Load the round index, or create empty."""
     if os.path.exists(INDEX_FILE):
         with open(INDEX_FILE) as f:
             try:
@@ -86,7 +98,6 @@ def _save_round(round_id, round_data):
 
 
 def _ensure_round(round_id, map_width=DEFAULT_MAP_W, map_height=DEFAULT_MAP_H):
-    """Ensure a round entry exists on disk and in the index."""
     index = _load_index()
     if round_id not in [r["id"] for r in index["rounds"]]:
         index["rounds"].append({
@@ -94,7 +105,6 @@ def _ensure_round(round_id, map_width=DEFAULT_MAP_W, map_height=DEFAULT_MAP_H):
             "started_at": datetime.now(timezone.utc).isoformat(),
         })
         _save_index(index)
-
     round_data = _load_round(round_id)
     if round_data is None:
         round_data = {
@@ -110,7 +120,6 @@ def _ensure_round(round_id, map_width=DEFAULT_MAP_W, map_height=DEFAULT_MAP_H):
 
 
 def log_action(round_id, action, details=None):
-    """Log a general action for a round."""
     round_data = _ensure_round(round_id)
     round_data["actions"].append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -121,7 +130,6 @@ def log_action(round_id, action, details=None):
 
 
 def log_query(round_id, seed_index, viewport, grid, budget_remaining):
-    """Log a simulate query with its grid result."""
     round_data = _ensure_round(round_id)
     round_data["queries"].append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -134,7 +142,6 @@ def log_query(round_id, seed_index, viewport, grid, budget_remaining):
 
 
 def log_submission(round_id, seed_index, result):
-    """Log a prediction submission."""
     round_data = _ensure_round(round_id)
     round_data["submissions"].append({
         "timestamp": datetime.now(timezone.utc).isoformat(),
@@ -147,7 +154,6 @@ def log_submission(round_id, seed_index, result):
 # --- Map helpers ---
 
 def tile_positions(map_size, vp_size):
-    """Generate viewport start positions to tile a map axis with minimal overlap."""
     positions = []
     pos = 0
     while pos < map_size:
@@ -159,39 +165,46 @@ def tile_positions(map_size, vp_size):
 
 
 def build_tiling(map_w, map_h):
-    """Return list of (x, y) viewport origins that cover the full map."""
     xs = tile_positions(map_w, VIEWPORT)
     ys = tile_positions(map_h, VIEWPORT)
     return [(x, y) for y in ys for x in xs]
 
 
 def extract_map_dimensions(round_data):
-    """Read map width/height from round data, falling back to defaults."""
     w = round_data.get("map_width") or round_data.get("width") or DEFAULT_MAP_W
     h = round_data.get("map_height") or round_data.get("height") or DEFAULT_MAP_H
     return int(w), int(h)
 
 
-def parse_initial_state(round_data, map_w, map_h):
-    """Extract static terrain from round initial states.
-
-    Returns a map_h x map_w grid where each cell is either:
-      - a known static class (4=forest, 5=mountain, 0=ocean/plains), or
-      - None if the cell is dynamic (settlement/port area).
-    """
-    static_grid = [[None] * map_w for _ in range(map_h)]
-
+def parse_initial_grid(round_data, map_w, map_h):
+    """Get the full initial terrain grid (raw terrain codes)."""
     initial_states = round_data.get("initial_states") or []
     for state in initial_states:
-        terrain = state.get("terrain") or state.get("grid") or []
-        for r, row in enumerate(terrain):
-            for c, val in enumerate(row):
-                cls = TERRAIN_TO_CLASS.get(val, 0)
-                if cls in (5, 4):
-                    static_grid[r][c] = cls
-                elif val == 10:
-                    static_grid[r][c] = 0
-    return static_grid
+        grid = state.get("grid") or state.get("terrain") or []
+        if grid and len(grid) == map_h and len(grid[0]) == map_w:
+            return grid
+    # Fallback: return None grid
+    return [[11] * map_w for _ in range(map_h)]
+
+
+def find_dynamic_viewports(initial_grid, map_w, map_h):
+    """Find viewports that contain settlements, ports, or other dynamic cells."""
+    dynamic_vps = []
+    tiling = build_tiling(map_w, map_h)
+
+    for vx, vy in tiling:
+        has_dynamic = False
+        for r in range(vy, min(vy + VIEWPORT, map_h)):
+            for c in range(vx, min(vx + VIEWPORT, map_w)):
+                if initial_grid[r][c] in (1, 2, 3):  # Settlement, Port, Ruin
+                    has_dynamic = True
+                    break
+            if has_dynamic:
+                break
+        if has_dynamic:
+            dynamic_vps.append((vx, vy))
+
+    return dynamic_vps
 
 
 def observe_seed(round_id, seed_index, viewports, map_w, map_h):
@@ -214,13 +227,12 @@ def observe_seed(round_id, seed_index, viewports, map_w, map_h):
         queries_used = result.get("queries_used")
         queries_max = result.get("queries_max")
         budget = queries_max - queries_used if queries_used is not None and queries_max is not None else None
-        grid = result.get("grid") or result.get("terrain") or []
-        settlements = result.get("settlements") or result.get("settlement_details") or []
+        grid = result.get("grid") or []
+        settlements = result.get("settlements") or []
 
         log_query(round_id, seed_index,
                   {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
                   grid, budget)
-        # Log the full simulate response (settlements, any extra fields)
         log_action(round_id, "simulate_response", {
             "seed_index": seed_index,
             "viewport": {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
@@ -242,29 +254,38 @@ def observe_seed(round_id, seed_index, viewports, map_w, map_h):
     return counts
 
 
-def counts_to_prediction(counts, static_grid, map_w, map_h):
-    """Convert observation counts into a probability prediction tensor."""
+def counts_to_prediction_v2(counts, initial_grid, map_w, map_h):
+    """Build predictions using observations + learned priors.
+
+    - Cells with multiple observations: blend empirical counts with prior
+    - Cells with 1 observation: heavy prior weight
+    - Cells with 0 observations: pure prior from initial terrain
+    """
     prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
 
     for r in range(map_h):
         for c in range(map_w):
-            if static_grid[r][c] is not None:
-                cls = static_grid[r][c]
-                prediction[r][c] = [0.0] * N_CLASSES
-                prediction[r][c][cls] = 1.0
-                continue
+            init_terrain = initial_grid[r][c]
+            prior = TERRAIN_PRIORS.get(init_terrain, [1/N_CLASSES] * N_CLASSES)
+            obs_total = sum(counts[r][c])
 
-            total = sum(counts[r][c])
-            if total > 0:
-                prediction[r][c] = [n / total for n in counts[r][c]]
+            if obs_total == 0:
+                # No observations — use pure prior
+                prediction[r][c] = list(prior)
             else:
-                prediction[r][c] = [1.0 / N_CLASSES] * N_CLASSES
+                # Blend observations with prior using pseudo-count
+                # More observations → trust observations more
+                # prior_weight acts like a pseudo-count of "prior observations"
+                prior_weight = 2.0  # equivalent to 2 prior observations
+                blended = [0.0] * N_CLASSES
+                for k in range(N_CLASSES):
+                    blended[k] = (counts[r][c][k] + prior_weight * prior[k]) / (obs_total + prior_weight)
+                prediction[r][c] = blended
 
     return prediction
 
 
 def merge_counts(a, b, map_w, map_h):
-    """Element-wise add two count grids."""
     for r in range(map_h):
         for c in range(map_w):
             for k in range(N_CLASSES):
@@ -283,88 +304,132 @@ def main():
 
     round_id = active["id"]
     print(f"Active round: {round_id}")
-    log_action(round_id, "fetch_active_round", {
-        "round": active,
-    })
+    log_action(round_id, "fetch_active_round", {"round": active})
 
-    # 2. Get round details for initial state
+    # 2. Get round details
     round_data = get_round(round_id)
     map_w, map_h = extract_map_dimensions(round_data)
     _ensure_round(round_id, map_w, map_h)
-    log_action(round_id, "fetch_round_details", {
-        "raw_response": round_data,
-    })
+    log_action(round_id, "fetch_round_details", {"raw_response": round_data})
     print(f"Map: {map_w}x{map_h}")
 
-    static_grid = parse_initial_state(round_data, map_w, map_h)
-    static_count = sum(
+    initial_grid = parse_initial_grid(round_data, map_w, map_h)
+    dynamic_count = sum(
         1 for r in range(map_h) for c in range(map_w)
-        if static_grid[r][c] is not None
+        if initial_grid[r][c] in (1, 2, 3)
     )
     log_action(round_id, "parse_initial_state", {
-        "static_cells": static_count,
-        "dynamic_cells": map_w * map_h - static_count,
+        "dynamic_cells": dynamic_count,
+        "total_cells": map_w * map_h,
     })
-    print(f"Static cells: {static_count}, Dynamic: {map_w * map_h - static_count}")
+    print(f"Dynamic cells (settlements/ports/ruins): {dynamic_count}")
 
     # 3. Check budget
     budget_info = get_budget()
-    log_action(round_id, "check_budget", {
-        "raw_response": budget_info,
-    })
-    print(f"Budget: {budget_info}")
+    log_action(round_id, "check_budget", {"raw_response": budget_info})
+    used = budget_info.get("queries_used", 0)
+    max_q = budget_info.get("queries_max", 50)
+    total_budget = int(max_q) - int(used)
+    print(f"Budget: {total_budget} remaining ({used} used / {max_q} max)")
 
-    # 4. Plan queries
+    # 4. Plan query allocation
     full_tiling = build_tiling(map_w, map_h)
-    queries_per_seed = len(full_tiling)
-    total_planned = queries_per_seed * N_SEEDS
-    log_action(round_id, "plan_tiling", {
-        "viewports_per_seed": queries_per_seed,
-        "total_planned": total_planned,
-        "tiling": full_tiling,
-    })
-    print(f"Full tiling: {queries_per_seed} viewports/seed, {total_planned} total")
+    dynamic_vps = find_dynamic_viewports(initial_grid, map_w, map_h)
 
-    # 5. Observe each seed with one full tiling pass
+    # Focus seeds get: 1 full tiling + repeat observations of dynamic areas
+    # Other seeds get: only dynamic area observations
+    queries_for_tiling = len(full_tiling)  # 9
+    queries_per_focus_seed = queries_for_tiling + len(dynamic_vps)  # 9 + dynamic repeats
+    focus_total = queries_per_focus_seed * N_FOCUS_SEEDS
+    remaining_for_others = total_budget - focus_total
+
+    # If not enough budget, reduce repeat observations
+    if focus_total > total_budget:
+        # Cut repeats to fit
+        repeats_per_focus = (total_budget // N_FOCUS_SEEDS) - queries_for_tiling
+        repeats_per_focus = max(0, repeats_per_focus)
+        dynamic_vps_trimmed = dynamic_vps[:repeats_per_focus]
+        remaining_for_others = total_budget - (queries_for_tiling + len(dynamic_vps_trimmed)) * N_FOCUS_SEEDS
+    else:
+        dynamic_vps_trimmed = dynamic_vps
+
+    # Distribute remaining budget to other seeds
+    other_seeds = list(range(N_FOCUS_SEEDS, N_SEEDS))
+    queries_per_other = max(0, remaining_for_others // len(other_seeds)) if other_seeds else 0
+    other_vps = dynamic_vps[:queries_per_other]
+
+    log_action(round_id, "plan_v2", {
+        "total_budget": total_budget,
+        "focus_seeds": list(range(N_FOCUS_SEEDS)),
+        "queries_per_focus": queries_for_tiling + len(dynamic_vps_trimmed),
+        "dynamic_viewports": len(dynamic_vps),
+        "dynamic_viewports_trimmed": len(dynamic_vps_trimmed),
+        "other_seeds": other_seeds,
+        "queries_per_other": len(other_vps),
+    })
+    print(f"Focus seeds 0-{N_FOCUS_SEEDS-1}: {queries_for_tiling} tiling + {len(dynamic_vps_trimmed)} repeats each")
+    print(f"Other seeds {N_FOCUS_SEEDS}-4: {len(other_vps)} queries each")
+    print(f"Dynamic viewports found: {len(dynamic_vps)}")
+
+    # 5. Observe focus seeds (full tiling + repeat dynamic areas)
     seed_counts = {}
-    for seed_idx in range(N_SEEDS):
-        print(f"\n--- Seed {seed_idx} ---")
-        log_action(round_id, "start_seed_observation",
-                   {"seed_index": seed_idx})
+    for seed_idx in range(N_FOCUS_SEEDS):
+        print(f"\n--- Focus Seed {seed_idx} (tiling) ---")
+        log_action(round_id, "start_seed_observation", {
+            "seed_index": seed_idx, "phase": "tiling"})
         seed_counts[seed_idx] = observe_seed(
             round_id, seed_idx, full_tiling, map_w, map_h)
 
-    # 6. Use remaining budget for extra observations on seed 0
-    extra_viewports = [
-        (map_w // 3, map_h // 3),
-        (0, 0),
-        (max(0, map_w - VIEWPORT), max(0, map_h - VIEWPORT)),
-        (0, max(0, map_h - VIEWPORT)),
-        (max(0, map_w - VIEWPORT), 0),
-    ]
-    print("\n--- Extra observations on seed 0 ---")
-    budget_check = get_budget()
-    log_action(round_id, "check_budget_for_extras", {
-        "raw_response": budget_check,
-    })
-    used = budget_check.get("queries_used", 0)
-    max_q = budget_check.get("queries_max", 50)
-    remaining = int(max_q) - int(used)
-    extra_to_run = extra_viewports[:remaining]
-    log_action(round_id, "plan_extra_observations", {
-        "budget_remaining": remaining,
-        "extra_queries_planned": len(extra_to_run),
-    })
-    if extra_to_run:
-        extra_counts = observe_seed(
-            round_id, 0, extra_to_run, map_w, map_h)
-        seed_counts[0] = merge_counts(seed_counts[0], extra_counts, map_w, map_h)
+        if dynamic_vps_trimmed:
+            print(f"--- Focus Seed {seed_idx} (repeats) ---")
+            log_action(round_id, "start_seed_observation", {
+                "seed_index": seed_idx, "phase": "repeats"})
+            repeat_counts = observe_seed(
+                round_id, seed_idx, dynamic_vps_trimmed, map_w, map_h)
+            seed_counts[seed_idx] = merge_counts(
+                seed_counts[seed_idx], repeat_counts, map_w, map_h)
 
-    # 7. Build predictions and submit for each seed
+    # 6. Observe other seeds (dynamic areas only)
+    for seed_idx in other_seeds:
+        if not other_vps:
+            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+            continue
+        print(f"\n--- Other Seed {seed_idx} ---")
+        log_action(round_id, "start_seed_observation", {
+            "seed_index": seed_idx, "phase": "dynamic_only"})
+        seed_counts[seed_idx] = observe_seed(
+            round_id, seed_idx, other_vps, map_w, map_h)
+
+    # 7. Build predictions and submit
+    # For focus seeds: use their own observations + priors
+    # For other seeds: average the focus seed counts as a proxy + priors
+    avg_focus_counts = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+    for r in range(map_h):
+        for c in range(map_w):
+            for k in range(N_CLASSES):
+                total = sum(seed_counts[s][r][c][k] for s in range(N_FOCUS_SEEDS))
+                avg_focus_counts[r][c][k] = total
+
     for seed_idx in range(N_SEEDS):
         print(f"\nBuilding prediction for seed {seed_idx}...")
-        prediction = counts_to_prediction(
-            seed_counts[seed_idx], static_grid, map_w, map_h)
+
+        if seed_idx < N_FOCUS_SEEDS:
+            # Focus seed: use own observations
+            counts = seed_counts[seed_idx]
+        else:
+            # Other seed: blend own sparse observations with focus seed average
+            counts = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+            for r in range(map_h):
+                for c in range(map_w):
+                    own_total = sum(seed_counts[seed_idx][r][c])
+                    if own_total > 0:
+                        # Has own observation — use it
+                        counts[r][c] = list(seed_counts[seed_idx][r][c])
+                    else:
+                        # No own observation — use focus seed average
+                        counts[r][c] = list(avg_focus_counts[r][c])
+
+        prediction = counts_to_prediction_v2(counts, initial_grid, map_w, map_h)
         prediction = floor_and_normalize(prediction)
         log_action(round_id, "build_prediction", {
             "seed_index": seed_idx,
@@ -384,8 +449,7 @@ def main():
             })
         time.sleep(0.6)
 
-    log_action(round_id, "run_complete",
-               {"seeds_submitted": N_SEEDS})
+    log_action(round_id, "run_complete", {"seeds_submitted": N_SEEDS})
     print("\nDone! All 5 seeds submitted.")
 
 

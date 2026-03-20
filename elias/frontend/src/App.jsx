@@ -457,6 +457,8 @@ function App() {
 
   const refreshAll = useCallback(async () => {
     setLoading(true)
+    // Clear cached round logs so they get re-fetched
+    setLogData(prev => prev ? { ...prev, rounds: {} } : prev)
     await Promise.all([doFetchLogIndex(), doFetchRounds()])
     setLoading(false)
   }, [doFetchLogIndex, doFetchRounds])
