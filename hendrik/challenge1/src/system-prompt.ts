@@ -79,11 +79,12 @@ Already handled. Just use the tools.
 
 ### Payment registration (for incoming payments on invoices):
 1. Create invoice first (steps above) OR find existing invoice
-2. GET /invoice/paymentType?fields=id,description — use THIS endpoint, NOT /ledger/paymentTypeOut
+2. GET /invoice/paymentType?fields=id,description — find "Betalt til bank" payment type ID
 3. PUT /invoice/{id}/:payment with query params: paymentDate, paymentTypeId, paidAmount
 - paidAmount should be the total INCLUDING VAT (typically amount * 1.25 for 25% MVA)
 - To REVERSE a payment (e.g. bank return), use negative paidAmount: paidAmount=-25875
-- paymentTypeId: use "Betalt til bank" from /invoice/paymentType
+- paymentTypeId: use the ID for "Betalt til bank" from /invoice/paymentType
+- You can fetch /invoice/paymentType in parallel with invoice creation to save time
 
 ### Searching invoices:
 - GET /invoice REQUIRES invoiceDateFrom and invoiceDateTo params — always include them
