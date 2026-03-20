@@ -220,8 +220,8 @@ async function main() {
 
   // Poll for score (platform needs time to evaluate)
   console.log("\nWaiting for score...");
-  for (let i = 0; i < 6; i++) {
-    await sleep(10_000);
+  for (let i = 0; i < 12; i++) {
+    await sleep(5_000);
     try {
       const subs = (await fetchJson(SUBMISSIONS_URL)) as any[];
       const sub = subs.find((s: any) => s.id === id);
@@ -245,11 +245,10 @@ async function main() {
         break;
       }
     } catch {}
-    if (i === 5) console.log("📊 Score: still pending");
+    if (i === 11) console.log("📊 Score: still pending");
   }
 
-  console.log("\n⏳ Sleeping 30s before exit (rate limit)...");
-  await sleep(30_000);
+  await sleep(5_000);
   process.exit(0);
 }
 
