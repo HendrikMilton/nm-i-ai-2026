@@ -229,6 +229,7 @@ async function main() {
         const failed = checks.filter((c: string) => c.includes("failed"));
         console.log(`📊 Score: ${sub.score_raw}/${sub.score_max} (normalized: ${sub.normalized_score}) | ${sub.feedback?.comment ?? ""}`);
         if (failed.length > 0) console.log(`   Failed: ${failed.join(", ")}`);
+        console.log(`📋 Full feedback: ${JSON.stringify(sub.feedback, null, 2)}`);
         break;
       }
     } catch {}
