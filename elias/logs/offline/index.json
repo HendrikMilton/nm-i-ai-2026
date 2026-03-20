@@ -1,13 +1,6 @@
 {
   "backtests": [
     {
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T08:20:46.636831+00:00",
-      "round_score": 71.5436,
-      "n_sims": 100
-    },
-    {
       "id": "R1_iter4_sw0.5_pw4",
       "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
       "round_number": 1,
@@ -155,6 +148,22 @@
         "prior_weight": 4.0,
         "n_sims": 100,
         "iteration": 3
+      }
+    },
+    {
+      "id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T17:52:56.816946+00:00",
+      "round_score": 80.8444,
+      "n_sims": 25,
+      "config": {
+        "label": "full_pipeline_b50",
+        "budget": 50,
+        "mode": "full_pipeline",
+        "obs_weight": 0.5,
+        "sim_weight": 0.3,
+        "prior_weight": 4.0
       }
     },
     {
@@ -3190,7 +3199,7 @@
       "id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
       "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
       "round_number": 7,
-      "timestamp": "2026-03-20T17:47:54.219156+00:00",
+      "timestamp": "2026-03-20T17:52:29.144065+00:00",
       "round_score": 65.256,
       "n_sims": 25,
       "config": {

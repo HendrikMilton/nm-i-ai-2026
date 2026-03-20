@@ -321,13 +321,13 @@ def estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w):
 
     # Compute ratios with fallback defaults
     port_ratio = port_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
-    ruin_ratio = ruin_obs / max(settle_obs, 1) if settle_obs > 10 else 0.08
+    ruin_ratio = ruin_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
 
     return port_ratio, ruin_ratio
 
 
 def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansion_rate,
-                              dist_multipliers=None, port_ratio=0.10, ruin_ratio=0.08,
+                              dist_multipliers=None, port_ratio=0.75, ruin_ratio=0.10,
                               prior_table=None):
     """Get prior adjusted for distance to nearest settlement and round's expansion rate.
 
@@ -352,25 +352,8 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
 
     dist = dist_map[r][c]
 
-    # For existing settlements, ensure a minimum settlement/port probability.
-    # Cold priors (trained from R3) can underestimate survival to ~1.5%.
-    # Even on cold rounds, initial settlements have ~5-10% survival rate.
+    # For existing settlements, don't adjust — they have their own dynamics
     if terrain in (1, 2):
-        min_settle = 0.05
-        min_port = 0.03 if terrain == 2 else 0.0
-        if prior[1] < min_settle:
-            deficit = min_settle - prior[1]
-            prior[1] = min_settle
-            prior[0] -= deficit  # take from empty
-            prior[0] = max(prior[0], 0.01)
-        if terrain == 2 and prior[2] < min_port:
-            deficit = min_port - prior[2]
-            prior[2] = min_port
-            prior[0] -= deficit
-            prior[0] = max(prior[0], 0.01)
-        # Renormalize
-        total = sum(prior)
-        prior = [p / total for p in prior]
         return prior
 
     # Compute target settlement probability based on distance and expansion rate
@@ -681,7 +664,7 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
                         sim_weight=SIM_WEIGHT, prior_weight=PRIOR_WEIGHT,
                         obs_counts=None, obs_weight=OBS_WEIGHT,
                         expansion_rate=None, dist_multipliers=None,
-                        port_ratio=0.10, ruin_ratio=0.08,
+                        port_ratio=0.75, ruin_ratio=0.10,
                         prior_table=None):
     """Generate prediction by blending observations + simulator + distance-aware priors.
 
