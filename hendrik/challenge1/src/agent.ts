@@ -57,7 +57,7 @@ export const solve = async (body: SolveRequest) => {
 
     const today = new Date().toISOString().split('T')[0];
 
-    log(`[AGENT] model=${MODEL} prompt="${prompt.slice(0, 100)}..."`);
+    log(`[AGENT] model=${MODEL} prompt="${prompt}"`);
 
     // Build user message content
     const userContent: Array<
