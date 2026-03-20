@@ -65,10 +65,10 @@ def build_full_coverage_tiling(map_w=40, map_h=40):
     return [(x, y) for y in origins for x in origins]
 ```
 
-- [ ] Implement `build_full_coverage_tiling()` in `run.py`
-- [ ] Replace `find_dynamic_viewports()` usage in `main()` with full-coverage tiling
-- [ ] Update `run_observation_phases()` to use tiling viewports per seed
-- [ ] Backtest `--backtest-full` across all rounds comparing set-cover vs full-coverage
+- [x] Implement full-coverage tiling via `build_tiling()` with evenly-spaced origins `{0, 13, 25}`
+- [x] Replace `find_dynamic_viewports()` with `build_tiling()` in `main()` and `backtest_full_pipeline()`
+- [x] Update `run_observation_phases()` to use tiling viewports per seed
+- [ ] Backtest `--backtest-full` across all rounds to measure improvement
 - [ ] Decide Phase 2 strategy for the 5 leftover queries (highest-entropy seed? frontier cells?)
 
 ### 4. Simulator safety net (~+5-8 pts on bad rounds)

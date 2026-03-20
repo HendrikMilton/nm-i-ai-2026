@@ -106,6 +106,36 @@
       }
     },
     {
+      "id": "R1_iter1_prior_only",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T10:51:45.901129+00:00",
+      "round_score": 73.4756,
+      "n_sims": 10,
+      "config": {
+        "label": "prior_only",
+        "sim_weight": 0.0,
+        "prior_weight": 1.0,
+        "n_sims": 10,
+        "iteration": 1
+      }
+    },
+    {
+      "id": "R1_iter2_sw0.1_pw4",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T10:52:51.027094+00:00",
+      "round_score": 74.4396,
+      "n_sims": 100,
+      "config": {
+        "label": "sw0.1_pw4",
+        "sim_weight": 0.1,
+        "prior_weight": 4.0,
+        "n_sims": 100,
+        "iteration": 2
+      }
+    },
+    {
       "id": "R1_iter3_sw0.25_pw4",
       "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
       "round_number": 1,
@@ -121,432 +151,41 @@
       }
     },
     {
-      "id": "R1_iter1_prior_only",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T11:05:15.917145+00:00",
-      "round_score": 73.4756,
-      "n_sims": 10,
-      "config": {
-        "label": "prior_only",
-        "sim_weight": 0.0,
-        "prior_weight": 1.0,
-        "n_sims": 10,
-        "iteration": 1
-      }
-    },
-    {
-      "id": "R1_iter2_sw0.1_pw4",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T11:06:35.539793+00:00",
-      "round_score": 74.4396,
-      "n_sims": 100,
-      "config": {
-        "label": "sw0.1_pw4",
-        "sim_weight": 0.1,
-        "prior_weight": 4.0,
-        "n_sims": 100,
-        "iteration": 2
-      }
-    },
-    {
-      "id": "R1_distv6_iter1_baseline_dist",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T13:14:46.439841+00:00",
-      "round_score": 83.2865,
-      "n_sims": 20,
-      "config": {
-        "label": "baseline_dist",
-        "sim_weight": 0.5,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 1,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R1_distv6_iter2_low_sim_dist",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T13:18:25.242682+00:00",
-      "round_score": 83.0652,
-      "n_sims": 20,
-      "config": {
-        "label": "low_sim_dist",
-        "sim_weight": 0.1,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 2,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R1_distv6_iter3_no_sim_dist",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T13:20:52.995499+00:00",
-      "round_score": 82.6406,
-      "n_sims": 20,
-      "config": {
-        "label": "no_sim_dist",
-        "sim_weight": 0.0,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 3,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R1_distv6_iter4_high_sim_dist",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T13:23:55.495302+00:00",
-      "round_score": 81.8246,
-      "n_sims": 20,
-      "config": {
-        "label": "high_sim_dist",
-        "sim_weight": 1.0,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 4,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R1_distv6_iter5_med_sim_hi_prior",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T13:26:51.475534+00:00",
-      "round_score": 83.31,
-      "n_sims": 20,
-      "config": {
-        "label": "med_sim_hi_prior",
-        "sim_weight": 0.3,
-        "prior_weight": 6.0,
-        "n_sims": 20,
-        "iteration": 5,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
       "id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
       "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
       "round_number": 1,
-      "timestamp": "2026-03-20T14:28:11.874305+00:00",
-      "round_score": 83.6535,
-      "n_sims": 1,
+      "timestamp": "2026-03-20T17:52:56.816946+00:00",
+      "round_score": 80.8444,
+      "n_sims": 25,
       "config": {
         "label": "full_pipeline_b50",
         "budget": 50,
-        "mode": "full_pipeline"
-      }
-    },
-    {
-      "id": "strategy_v2_r1.19",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:00:48.451532+00:00",
-      "round_score": 83.7009,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.19",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.20",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:00:51.171527+00:00",
-      "round_score": 83.6555,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.20",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.21",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:00:53.319558+00:00",
-      "round_score": 83.7005,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.21",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.37",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:14:30.795851+00:00",
-      "round_score": 84.5129,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.37",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.38",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:14:32.764651+00:00",
-      "round_score": 84.8288,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.38",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.39",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:14:35.897080+00:00",
-      "round_score": 84.7417,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.39",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.57",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:29:34.969652+00:00",
-      "round_score": 85.8888,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.57",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.58",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:29:36.594242+00:00",
-      "round_score": 86.2266,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.58",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.59",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:29:40.705989+00:00",
-      "round_score": 85.9234,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.59",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.60",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:32:48.126553+00:00",
-      "round_score": 86.3016,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r1.60",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
+        "mode": "full_pipeline",
+        "obs_weight": 0.5,
         "sim_weight": 0.3,
-        "prior_weight": null,
-        "n_sims": 100
+        "prior_weight": 4.0
       }
     },
     {
-      "id": "strategy_v2_r1.61",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:34:09.487993+00:00",
-      "round_score": 85.9708,
+      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
+      "round_number": 2,
+      "timestamp": "2026-03-20T08:20:04.717771+00:00",
+      "round_score": 74.162,
+      "n_sims": 100
+    },
+    {
+      "id": "R2_iter3_sw0.25_pw4",
+      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
+      "round_number": 2,
+      "timestamp": "2026-03-20T10:16:24.469550+00:00",
+      "round_score": 77.3059,
       "n_sims": 100,
       "config": {
-        "label": "strategy_v2_r1.61",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": 0.3,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r1.62",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:35:28.501593+00:00",
-      "round_score": 86.199,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r1.62",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": 0.3,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r1.63",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:37:58.252792+00:00",
-      "round_score": 85.9874,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.63",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.64",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:38:02.136436+00:00",
-      "round_score": 86.0354,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.64",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.65",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:38:07.984046+00:00",
-      "round_score": 86.1268,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r1.65",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r1.66",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:40:06.389928+00:00",
-      "round_score": 86.4953,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r1.66",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r1.67",
-      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
-      "round_number": 1,
-      "timestamp": "2026-03-20T16:41:22.425581+00:00",
-      "round_score": 86.4103,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r1.67",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 1,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 100
+        "label": "sw0.25_pw4",
+        "sim_weight": 0.25,
+        "prior_weight": 4.0,
+        "n_sims": 100,
+        "iteration": 3
       }
     },
     {
@@ -655,25 +294,10 @@
       }
     },
     {
-      "id": "R2_iter3_sw0.25_pw4",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T10:59:19.959187+00:00",
-      "round_score": 77.3059,
-      "n_sims": 100,
-      "config": {
-        "label": "sw0.25_pw4",
-        "sim_weight": 0.25,
-        "prior_weight": 4.0,
-        "n_sims": 100,
-        "iteration": 3
-      }
-    },
-    {
       "id": "R2_iter1_prior_only",
       "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
       "round_number": 2,
-      "timestamp": "2026-03-20T11:05:23.804662+00:00",
+      "timestamp": "2026-03-20T10:51:53.307423+00:00",
       "round_score": 75.3541,
       "n_sims": 10,
       "config": {
@@ -688,7 +312,7 @@
       "id": "R2_iter2_sw0.1_pw4",
       "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
       "round_number": 2,
-      "timestamp": "2026-03-20T11:07:22.663028+00:00",
+      "timestamp": "2026-03-20T10:53:42.168304+00:00",
       "round_score": 76.325,
       "n_sims": 100,
       "config": {
@@ -700,96 +324,25 @@
       }
     },
     {
-      "id": "R2_distv6_iter1_baseline_dist",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T13:15:06.996750+00:00",
-      "round_score": 83.3924,
-      "n_sims": 20,
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T08:19:17.691114+00:00",
+      "round_score": 46.7343,
+      "n_sims": 100
+    },
+    {
+      "id": "R3_iter3_sw0.25_pw4",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T10:17:04.289667+00:00",
+      "round_score": 48.656,
+      "n_sims": 100,
       "config": {
-        "label": "baseline_dist",
-        "sim_weight": 0.5,
+        "label": "sw0.25_pw4",
+        "sim_weight": 0.25,
         "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 1,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R2_distv6_iter2_low_sim_dist",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T13:18:44.085973+00:00",
-      "round_score": 83.6461,
-      "n_sims": 20,
-      "config": {
-        "label": "low_sim_dist",
-        "sim_weight": 0.1,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 2,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R2_distv6_iter3_no_sim_dist",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T13:21:22.780420+00:00",
-      "round_score": 83.345,
-      "n_sims": 20,
-      "config": {
-        "label": "no_sim_dist",
-        "sim_weight": 0.0,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 3,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R2_distv6_iter4_high_sim_dist",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T13:24:31.013329+00:00",
-      "round_score": 81.4012,
-      "n_sims": 20,
-      "config": {
-        "label": "high_sim_dist",
-        "sim_weight": 1.0,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 4,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R2_distv6_iter5_med_sim_hi_prior",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T13:27:17.869698+00:00",
-      "round_score": 83.7687,
-      "n_sims": 20,
-      "config": {
-        "label": "med_sim_hi_prior",
-        "sim_weight": 0.3,
-        "prior_weight": 6.0,
-        "n_sims": 20,
-        "iteration": 5,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
-      "round_number": 2,
-      "timestamp": "2026-03-20T14:28:21.045803+00:00",
-      "round_score": 85.21,
-      "n_sims": 1,
-      "config": {
-        "label": "full_pipeline_b50",
-        "budget": 50,
-        "mode": "full_pipeline"
+        "n_sims": 100,
+        "iteration": 3
       }
     },
     {
@@ -898,6 +451,21 @@
       }
     },
     {
+      "id": "R3_iter1_prior_only",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T10:52:00.534697+00:00",
+      "round_score": 52.7696,
+      "n_sims": 10,
+      "config": {
+        "label": "prior_only",
+        "sim_weight": 0.0,
+        "prior_weight": 1.0,
+        "n_sims": 10,
+        "iteration": 1
+      }
+    },
+    {
       "id": "R3_iter2_sw0.1_pw4",
       "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
       "round_number": 3,
@@ -910,21 +478,6 @@
         "prior_weight": 4.0,
         "n_sims": 100,
         "iteration": 2
-      }
-    },
-    {
-      "id": "R3_iter3_sw0.25_pw4",
-      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
-      "round_number": 3,
-      "timestamp": "2026-03-20T11:00:10.877215+00:00",
-      "round_score": 48.656,
-      "n_sims": 100,
-      "config": {
-        "label": "sw0.25_pw4",
-        "sim_weight": 0.25,
-        "prior_weight": 4.0,
-        "n_sims": 100,
-        "iteration": 3
       }
     },
     {
@@ -1020,19 +573,6 @@
         "n_sims": 20,
         "iteration": 5,
         "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
-      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
-      "round_number": 3,
-      "timestamp": "2026-03-20T14:28:28.445917+00:00",
-      "round_score": 68.3993,
-      "n_sims": 1,
-      "config": {
-        "label": "full_pipeline_b50",
-        "budget": 50,
-        "mode": "full_pipeline"
       }
     },
     {
@@ -1504,6 +1044,44 @@
       }
     },
     {
+      "id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T17:29:04.758014+00:00",
+      "round_score": 65.5987,
+      "n_sims": 25,
+      "config": {
+        "label": "full_pipeline_b50",
+        "budget": 50,
+        "mode": "full_pipeline",
+        "obs_weight": 2.0,
+        "sim_weight": 0.3,
+        "prior_weight": 4.0
+      }
+    },
+    {
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T08:18:36.406546+00:00",
+      "round_score": 84.2656,
+      "n_sims": 100
+    },
+    {
+      "id": "R4_iter3_sw0.25_pw4",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T10:17:50.693911+00:00",
+      "round_score": 86.6637,
+      "n_sims": 100,
+      "config": {
+        "label": "sw0.25_pw4",
+        "sim_weight": 0.25,
+        "prior_weight": 4.0,
+        "n_sims": 100,
+        "iteration": 3
+      }
+    },
+    {
       "id": "R4_iter4_sw0.5_pw4",
       "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
       "round_number": 4,
@@ -1609,6 +1187,21 @@
       }
     },
     {
+      "id": "R4_iter1_prior_only",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T10:52:07.119775+00:00",
+      "round_score": 87.5563,
+      "n_sims": 10,
+      "config": {
+        "label": "prior_only",
+        "sim_weight": 0.0,
+        "prior_weight": 1.0,
+        "n_sims": 10,
+        "iteration": 1
+      }
+    },
+    {
       "id": "R4_iter2_sw0.1_pw4",
       "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
       "round_number": 4,
@@ -1624,11 +1217,18 @@
       }
     },
     {
-      "id": "R4_iter3_sw0.25_pw4",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T11:01:04.973974+00:00",
-      "round_score": 86.6637,
+      "round_id": "fd3c92ff-3178-4dc9-8d9b-acf389b3982b",
+      "round_number": 5,
+      "timestamp": "2026-03-20T09:23:58.130164+00:00",
+      "round_score": 67.0598,
+      "n_sims": 100
+    },
+    {
+      "id": "R5_iter3_sw0.25_pw4",
+      "round_id": "fd3c92ff-3178-4dc9-8d9b-acf389b3982b",
+      "round_number": 5,
+      "timestamp": "2026-03-20T10:18:36.638090+00:00",
+      "round_score": 70.3112,
       "n_sims": 100,
       "config": {
         "label": "sw0.25_pw4",
@@ -1636,636 +1236,6 @@
         "prior_weight": 4.0,
         "n_sims": 100,
         "iteration": 3
-      }
-    },
-    {
-      "id": "R4_iter1_prior_only",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T11:05:39.159905+00:00",
-      "round_score": 87.5563,
-      "n_sims": 10,
-      "config": {
-        "label": "prior_only",
-        "sim_weight": 0.0,
-        "prior_weight": 1.0,
-        "n_sims": 10,
-        "iteration": 1
-      }
-    },
-    {
-      "id": "R4_distv6_iter1_baseline_dist",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T13:17:16.054851+00:00",
-      "round_score": 90.3971,
-      "n_sims": 20,
-      "config": {
-        "label": "baseline_dist",
-        "sim_weight": 0.5,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 1,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R4_distv6_iter2_low_sim_dist",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T13:19:41.265161+00:00",
-      "round_score": 91.7861,
-      "n_sims": 20,
-      "config": {
-        "label": "low_sim_dist",
-        "sim_weight": 0.1,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 2,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R4_distv6_iter3_no_sim_dist",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T13:22:09.154057+00:00",
-      "round_score": 91.4555,
-      "n_sims": 20,
-      "config": {
-        "label": "no_sim_dist",
-        "sim_weight": 0.0,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 3,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R4_distv6_iter4_high_sim_dist",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T13:25:19.833905+00:00",
-      "round_score": 86.3926,
-      "n_sims": 20,
-      "config": {
-        "label": "high_sim_dist",
-        "sim_weight": 1.0,
-        "prior_weight": 4.0,
-        "n_sims": 20,
-        "iteration": 4,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "R4_distv6_iter5_med_sim_hi_prior",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T13:28:06.905295+00:00",
-      "round_score": 91.7493,
-      "n_sims": 20,
-      "config": {
-        "label": "med_sim_hi_prior",
-        "sim_weight": 0.3,
-        "prior_weight": 6.0,
-        "n_sims": 20,
-        "iteration": 5,
-        "feature": "distance_aware_priors"
-      }
-    },
-    {
-      "id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T14:28:31.313058+00:00",
-      "round_score": 91.6946,
-      "n_sims": 1,
-      "config": {
-        "label": "full_pipeline_b50",
-        "budget": 50,
-        "mode": "full_pipeline"
-      }
-    },
-    {
-      "id": "strategy_v2_r4.14",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T15:57:12.979593+00:00",
-      "round_score": 82.1575,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.14",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.15",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T15:57:16.149345+00:00",
-      "round_score": 82.9186,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.15",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.16",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T15:57:18.987348+00:00",
-      "round_score": 82.2674,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.16",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.19",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:00:48.336554+00:00",
-      "round_score": 91.7392,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.19",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.20",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:00:53.354352+00:00",
-      "round_score": 91.7514,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.20",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.21",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:00:59.599322+00:00",
-      "round_score": 91.7098,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.21",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.37",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:14:30.925852+00:00",
-      "round_score": 90.5841,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.37",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.38",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:14:36.272038+00:00",
-      "round_score": 90.9162,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.38",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.39",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:14:42.342066+00:00",
-      "round_score": 90.7576,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.39",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.48",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:16:43.253025+00:00",
-      "round_score": 86.7005,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.48",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.49",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:16:53.809922+00:00",
-      "round_score": 86.6451,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.49",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.50",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:16:58.224428+00:00",
-      "round_score": 86.7633,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.50",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.51",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:17:10.391844+00:00",
-      "round_score": 67.8095,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.51",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": 1.0,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.52",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:17:15.705552+00:00",
-      "round_score": 67.9875,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.52",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": 1.0,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.53",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:17:21.956481+00:00",
-      "round_score": 68.2332,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.53",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": 1.0,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.54",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:17:38.811949+00:00",
-      "round_score": 90.2411,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.54",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": 0.5,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.55",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:17:42.187527+00:00",
-      "round_score": 90.21,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.55",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": 0.5,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.56",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:17:49.808118+00:00",
-      "round_score": 90.139,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.56",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": 0.5,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.57",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:29:30.607551+00:00",
-      "round_score": 90.0896,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.57",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.58",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:29:35.733600+00:00",
-      "round_score": 90.1667,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.58",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.59",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:29:40.273459+00:00",
-      "round_score": 90.1045,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.59",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.60",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:33:04.518859+00:00",
-      "round_score": 89.5436,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r4.60",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": 0.3,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r4.61",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:34:36.812325+00:00",
-      "round_score": 89.4595,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r4.61",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": 0.3,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r4.62",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:36:14.109285+00:00",
-      "round_score": 89.7632,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r4.62",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": 0.3,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r4.63",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:37:58.231798+00:00",
-      "round_score": 89.9086,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.63",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.64",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:38:03.699703+00:00",
-      "round_score": 89.9207,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.64",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.65",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:38:09.607772+00:00",
-      "round_score": 89.7425,
-      "n_sims": 1,
-      "config": {
-        "label": "strategy_v2_r4.65",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 1
-      }
-    },
-    {
-      "id": "strategy_v2_r4.66",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:40:24.420690+00:00",
-      "round_score": 89.9518,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r4.66",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 100
-      }
-    },
-    {
-      "id": "strategy_v2_r4.67",
-      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
-      "round_number": 4,
-      "timestamp": "2026-03-20T16:41:57.620904+00:00",
-      "round_score": 89.8521,
-      "n_sims": 100,
-      "config": {
-        "label": "strategy_v2_r4.67",
-        "budget": 50,
-        "mode": "sweep",
-        "round_number": 4,
-        "obs_weight": null,
-        "sim_weight": null,
-        "prior_weight": null,
-        "n_sims": 100
       }
     },
     {
@@ -2371,6 +1341,21 @@
         "prior_weight": 8.0,
         "n_sims": 100,
         "iteration": 10
+      }
+    },
+    {
+      "id": "R5_iter1_prior_only",
+      "round_id": "fd3c92ff-3178-4dc9-8d9b-acf389b3982b",
+      "round_number": 5,
+      "timestamp": "2026-03-20T10:52:13.647256+00:00",
+      "round_score": 69.113,
+      "n_sims": 10,
+      "config": {
+        "label": "prior_only",
+        "sim_weight": 0.0,
+        "prior_weight": 1.0,
+        "n_sims": 10,
+        "iteration": 1
       }
     },
     {
@@ -2818,19 +1803,6 @@
         "sim_weight": null,
         "prior_weight": null,
         "n_sims": 1
-      }
-    },
-    {
-      "id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
-      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
-      "round_number": 7,
-      "timestamp": "2026-03-20T15:22:32.963478+00:00",
-      "round_score": 58.9617,
-      "n_sims": 1,
-      "config": {
-        "label": "full_pipeline_b50",
-        "budget": 50,
-        "mode": "full_pipeline"
       }
     },
     {
@@ -4019,6 +2991,224 @@
         "sim_weight": null,
         "prior_weight": null,
         "n_sims": 100
+      }
+    },
+    {
+      "id": "new_queries_v1.01",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:17:03.084953+00:00",
+      "round_score": 36.7625,
+      "n_sims": 25,
+      "config": {
+        "label": "new_queries_v1.01",
+        "change": "baseline with KT-estimator + full-coverage tiling"
+      }
+    },
+    {
+      "id": "new_queries_v1.02",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:17:49.513862+00:00",
+      "round_score": 37.5237,
+      "n_sims": 25,
+      "config": {
+        "label": "new_queries_v1.02",
+        "change": "KT floor only for observed cells, fixed 0.005 for unobserved"
+      }
+    },
+    {
+      "id": "new_queries_v1.03",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:18:48.557168+00:00",
+      "round_score": 69.7885,
+      "n_sims": 25,
+      "config": {
+        "label": "new_queries_v1.03",
+        "change": "revert to fixed floors, baseline with new tiling"
+      }
+    },
+    {
+      "id": "new_queries_v1.04_ow1.0",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:19:14.262133+00:00",
+      "round_score": 68.4582,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.04_ow1.0",
+        "change": "obs_weight=1.0"
+      }
+    },
+    {
+      "id": "new_queries_v1.04_ow1.5",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:19:33.118141+00:00",
+      "round_score": 65.6915,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.04_ow1.5",
+        "change": "obs_weight=1.5"
+      }
+    },
+    {
+      "id": "new_queries_v1.04_ow2.0",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:19:51.545256+00:00",
+      "round_score": 62.451,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.04_ow2.0",
+        "change": "obs_weight=2.0"
+      }
+    },
+    {
+      "id": "new_queries_v1.04_ow3.0",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:20:11.667575+00:00",
+      "round_score": 55.9386,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.04_ow3.0",
+        "change": "obs_weight=3.0"
+      }
+    },
+    {
+      "id": "new_queries_v1.04_ow5.0",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:20:27.031195+00:00",
+      "round_score": 45.1401,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.04_ow5.0",
+        "change": "obs_weight=5.0"
+      }
+    },
+    {
+      "id": "new_queries_v1.04",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:26:16.989082+00:00",
+      "round_score": 62.4511,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.04",
+        "change": "OBS_WEIGHT=2.0 + settlement floor for cold priors"
+      }
+    },
+    {
+      "id": "v1.05_ow0.3",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:26:40.062918+00:00",
+      "round_score": 69.3939,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.05_ow0.3"
+      }
+    },
+    {
+      "id": "v1.05_ow0.5",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:26:56.618377+00:00",
+      "round_score": 69.7885,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.05_ow0.5"
+      }
+    },
+    {
+      "id": "v1.05_ow0.7",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:27:15.488559+00:00",
+      "round_score": 69.5404,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.05_ow0.7"
+      }
+    },
+    {
+      "id": "v1.05_ow1.0",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:27:35.519069+00:00",
+      "round_score": 68.4582,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.05_ow1.0"
+      }
+    },
+    {
+      "id": "v1.05_ow1.5",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:27:57.042506+00:00",
+      "round_score": 65.6915,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.05_ow1.5"
+      }
+    },
+    {
+      "id": "v1.05_ow2.0",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:28:12.325878+00:00",
+      "round_score": 62.4511,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.05_ow2.0"
+      }
+    },
+    {
+      "id": "new_queries_v1.06",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:38:24.534297+00:00",
+      "round_score": 65.256,
+      "n_sims": 25,
+      "config": {
+        "label": "v1.06",
+        "change": "observation-derived port/ruin ratios, fixed defaults from 0.75->0.10"
+      }
+    },
+    {
+      "id": "debug1",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:41:06.647820+00:00",
+      "round_score": 65.256,
+      "n_sims": 25,
+      "config": {
+        "label": "full_pipeline_b50",
+        "budget": 50,
+        "mode": "full_pipeline",
+        "obs_weight": 0.5,
+        "sim_weight": 0.3,
+        "prior_weight": 4.0
+      }
+    },
+    {
+      "id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T17:52:29.144065+00:00",
+      "round_score": 65.256,
+      "n_sims": 25,
+      "config": {
+        "label": "full_pipeline_b50",
+        "budget": 50,
+        "mode": "full_pipeline",
+        "obs_weight": 0.5,
+        "sim_weight": 0.3,
+        "prior_weight": 4.0
       }
     }
   ]

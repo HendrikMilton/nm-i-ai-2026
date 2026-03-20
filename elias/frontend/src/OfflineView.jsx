@@ -49,8 +49,12 @@ function BacktestSeedView({ seedData, seedIndex }) {
           {seedData.obs_score != null && (
             <ScoreBar score={seedData.obs_score} label="Obs+Sim+Prior" color="var(--green)" />
           )}
-          <ScoreBar score={seedData.sim_score} label="Sim+Prior" color="var(--papaya)" />
-          <ScoreBar score={seedData.prior_score} label="Prior only" color="var(--grey)" />
+          {seedData.sim_score != null && (
+            <ScoreBar score={seedData.sim_score} label="Sim+Prior" color="var(--papaya)" />
+          )}
+          {seedData.prior_score != null && (
+            <ScoreBar score={seedData.prior_score} label="Prior only" color="var(--grey)" />
+          )}
         </div>
         <div className="backtest-seed-meta">
           <span>KL: {seedData.weighted_kl?.toFixed(4)}</span>
@@ -172,12 +176,12 @@ function BacktestDetail({ data }) {
           >
             <div className="backtest-scores-card-seed">Seed {idx}</div>
             <div className="backtest-scores-card-score">
-              {(s.obs_score ?? s.sim_score)?.toFixed(1)}
+              {(s.obs_score ?? s.sim_score ?? s.prior_score)?.toFixed(1)}
             </div>
-            {s.obs_score != null ? (
-              <div className="backtest-scores-card-prior">sim: {s.sim_score?.toFixed(1)}</div>
-            ) : (
+            {s.prior_score != null ? (
               <div className="backtest-scores-card-prior">prior: {s.prior_score?.toFixed(1)}</div>
+            ) : (
+              <div className="backtest-scores-card-prior"></div>
             )}
           </div>
         ))}

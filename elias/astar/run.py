@@ -34,7 +34,7 @@ RATE_LIMIT_DELAY = 0.25  # stay under 5 req/s
 SIM_WEIGHT = 0.3
 PRIOR_WEIGHT = 4.0
 OBS_WEIGHT = 0.5
-N_SIMS = 100
+N_SIMS = 25
 
 # Terrain code → prediction class mapping
 TERRAIN_TO_CLASS = {
@@ -320,8 +320,8 @@ def estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w):
                 total_inland += n_obs
 
     # Compute ratios with fallback defaults
-    port_ratio = port_obs / max(settle_obs, 1) if settle_obs > 10 else 0.35
-    ruin_ratio = ruin_obs / max(settle_obs, 1) if settle_obs > 10 else 0.15
+    port_ratio = port_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
+    ruin_ratio = ruin_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
 
     return port_ratio, ruin_ratio
 
@@ -512,19 +512,20 @@ def log_submission(round_id, seed_index, result):
 # --- Map helpers ---
 
 def tile_positions(map_size, vp_size):
-    positions = []
-    pos = 0
-    while pos < map_size:
-        positions.append(pos)
-        pos += vp_size
-    if positions[-1] + vp_size > map_size:
-        positions[-1] = max(0, map_size - vp_size)
-    return list(dict.fromkeys(positions))
+    """Evenly space viewport origins to cover the full map with uniform overlap."""
+    n_tiles = -(-map_size // vp_size)  # ceil division
+    if n_tiles <= 1:
+        return [0]
+    step = (map_size - vp_size) / (n_tiles - 1)
+    return sorted(set(int(i * step + 0.5) for i in range(n_tiles)))
 
 
 def build_tiling(map_w, map_h):
-    xs = tile_positions(map_w, VIEWPORT)
-    ys = tile_positions(map_h, VIEWPORT)
+    """Build full-coverage tiling that skips the 1-cell ocean border."""
+    interior_w = map_w - 2  # skip col 0 and col map_w-1
+    interior_h = map_h - 2  # skip row 0 and row map_h-1
+    xs = [x + 1 for x in tile_positions(interior_w, VIEWPORT)]
+    ys = [y + 1 for y in tile_positions(interior_h, VIEWPORT)]
     return [(x, y) for y in ys for x in xs]
 
 
@@ -544,61 +545,6 @@ def parse_initial_grid(round_data, map_w, map_h):
     # Fallback: return None grid
     return [[11] * map_w for _ in range(map_h)]
 
-
-def find_dynamic_viewports(initial_grid, map_w, map_h):
-    """Place fewest 15x15 viewports to cover all dynamic cells (greedy set cover).
-
-    Viewport origins are constrained to avoid the ocean border (row/col 0 and
-    map_h-1/map_w-1 are always ocean), so no queries are wasted on guaranteed-static cells.
-    """
-    dynamic_cells = set()
-    for r in range(map_h):
-        for c in range(map_w):
-            if initial_grid[r][c] in (1, 2, 3):
-                dynamic_cells.add((r, c))
-
-    if not dynamic_cells:
-        return []
-
-    # Viewport placement bounds: skip the ocean border (1 cell on each edge)
-    min_vx = 1
-    min_vy = 1
-    max_vx = max(min_vx, map_w - VIEWPORT - 1)  # so viewport ends before last ocean col
-    max_vy = max(min_vy, map_h - VIEWPORT - 1)
-
-    viewports = []
-    uncovered = set(dynamic_cells)
-
-    while uncovered:
-        best_origin = None
-        best_covered = set()
-
-        # Candidate viewport origins that could cover uncovered cells
-        candidate_xs = set()
-        candidate_ys = set()
-        for r, c in uncovered:
-            for vx in range(max(min_vx, c - VIEWPORT + 1), min(max_vx + 1, c + 1)):
-                candidate_xs.add(vx)
-            for vy in range(max(min_vy, r - VIEWPORT + 1), min(max_vy + 1, r + 1)):
-                candidate_ys.add(vy)
-
-        for vx in candidate_xs:
-            for vy in candidate_ys:
-                covered = set()
-                for r, c in uncovered:
-                    if vy <= r < vy + VIEWPORT and vx <= c < vx + VIEWPORT:
-                        covered.add((r, c))
-                if len(covered) > len(best_covered):
-                    best_covered = covered
-                    best_origin = (vx, vy)
-
-        if best_origin is None:
-            break
-
-        viewports.append(best_origin)
-        uncovered -= best_covered
-
-    return viewports
 
 
 def observe_seed(round_id, seed_index, viewports, map_w, map_h):
@@ -797,10 +743,10 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
             else:
                 prediction[r][c] = prior
 
-    return floor_and_normalize(prediction)
+    return floor_and_normalize(prediction, obs_counts=obs_counts)
 
 
-def run_observation_phases(seed_grids, seed_dynamic_vps, total_budget, map_w, map_h,
+def run_observation_phases(seed_grids, seed_viewports, total_budget, map_w, map_h,
                            observe_fn, print_fn=print):
     """Run Phase 1 (coverage) and Phase 2 (surprise-based) observation allocation.
 
@@ -808,7 +754,7 @@ def run_observation_phases(seed_grids, seed_dynamic_vps, total_budget, map_w, ma
 
     Args:
         seed_grids: dict of seed_index → initial grid
-        seed_dynamic_vps: dict of seed_index → list of (vx, vy) viewports
+        seed_viewports: dict of seed_index → list of (vx, vy) viewports
         total_budget: total queries available
         map_w, map_h: map dimensions
         observe_fn: callable(seed_index, viewports) → counts grid
@@ -826,7 +772,7 @@ def run_observation_phases(seed_grids, seed_dynamic_vps, total_budget, map_w, ma
     seed_counts = {}
     budget_spent = 0
     for seed_idx in range(N_SEEDS):
-        dvps = seed_dynamic_vps[seed_idx]
+        dvps = seed_viewports[seed_idx]
         if not dvps or budget_spent >= total_budget:
             seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
             continue
@@ -866,7 +812,7 @@ def run_observation_phases(seed_grids, seed_dynamic_vps, total_budget, map_w, ma
         while remaining > 0:
             allocated = False
             for s in priority:
-                dvps = seed_dynamic_vps[s]
+                dvps = seed_viewports[s]
                 if not dvps:
                     continue
                 can_add = min(len(dvps), remaining)
@@ -926,13 +872,17 @@ def run_observation_phases(seed_grids, seed_dynamic_vps, total_budget, map_w, ma
         else:
             dist_multipliers[d] = _DIST_DECAY_DEFAULT.get(d, 0.0)
 
+    # Estimate port/ruin ratios from observations
+    port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w)
+
     # Classify round warmth and select appropriate prior table
     prior_table, warmth = classify_round_warmth(avg_expansion)
 
     print_fn(f"  Expansion rate: {avg_expansion:.3f} → {warmth} round")
     print_fn(f"  Dist multipliers: " + " ".join(f"d{d}={dist_multipliers.get(d, 0):.2f}" for d in range(1, 8)))
+    print_fn(f"  Port ratio: {port_ratio:.3f}, Ruin ratio: {ruin_ratio:.3f}")
 
-    return seed_counts, avg_expansion, dist_multipliers, prior_table
+    return seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio
 
 
 def main():
@@ -984,25 +934,22 @@ def main():
     total_budget = int(max_q) - int(used)
     print(f"Budget: {total_budget} remaining ({used} used / {max_q} max)")
 
-    # 4. Plan viewports per seed
-    seed_dynamic_vps = {}
-    for s in range(N_SEEDS):
-        grid = seed_grids.get(s, initial_grid)
-        seed_dynamic_vps[s] = find_dynamic_viewports(grid, map_w, map_h)
+    # 4. Plan viewports — full-coverage 3×3 tiling (same for all seeds)
+    tiling = build_tiling(map_w, map_h)
+    seed_viewports = {s: tiling for s in range(N_SEEDS)}
 
-    phase1_total = sum(len(seed_dynamic_vps[s]) for s in range(N_SEEDS))
-    log_action(round_id, "plan_v5", {
-        "strategy": "observations_plus_simulator_plus_priors",
+    phase1_total = len(tiling) * N_SEEDS
+    log_action(round_id, "plan_v6", {
+        "strategy": "full_coverage_tiling",
         "total_budget": total_budget,
-        "per_seed_dynamic_vps": {s: len(v) for s, v in seed_dynamic_vps.items()},
+        "viewports_per_seed": len(tiling),
         "phase1_queries": phase1_total,
         "phase2_budget": max(0, total_budget - phase1_total),
         "n_sims": N_SIMS,
         "sim_weight": SIM_WEIGHT,
         "prior_weight": PRIOR_WEIGHT,
     })
-    print(f"Per-seed viewports (set cover): {[len(seed_dynamic_vps[s]) for s in range(N_SEEDS)]}")
-    print(f"Phase 1: {phase1_total} queries (1 pass all seeds)")
+    print(f"Full-coverage tiling: {len(tiling)} viewports/seed × {N_SEEDS} seeds = {phase1_total} queries")
     print(f"Phase 2: {max(0, total_budget - phase1_total)} queries (extra on hardest)")
 
     # 5-7. Run observations + estimate expansion rate (shared logic)
@@ -1013,8 +960,8 @@ def main():
         })
         return observe_seed(round_id, seed_idx, viewports, map_w, map_h)
 
-    seed_counts, avg_expansion, dist_multipliers, prior_table = run_observation_phases(
-        seed_grids, seed_dynamic_vps, total_budget, map_w, map_h,
+    seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio = run_observation_phases(
+        seed_grids, seed_viewports, total_budget, map_w, map_h,
         observe_fn=live_observe,
     )
 
@@ -1039,6 +986,7 @@ def main():
             obs_counts=seed_counts[seed_idx],
             expansion_rate=avg_expansion,
             dist_multipliers=dist_multipliers,
+            port_ratio=port_ratio, ruin_ratio=ruin_ratio,
             prior_table=prior_table,
         )
         elapsed = time.time() - t0

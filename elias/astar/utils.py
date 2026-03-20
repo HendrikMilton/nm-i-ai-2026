@@ -115,19 +115,19 @@ def uniform_prediction(width=40, height=40, n_classes=6):
     return [[[p] * n_classes for _ in range(width)] for _ in range(height)]
 
 
-def floor_and_normalize(prediction, floor=0.01):
+def floor_and_normalize(prediction, obs_counts=None):
     """Apply per-class probability floor and renormalize to avoid KL infinity.
 
     Uses class-specific floors: rare classes (port, mountain) get smaller floors
     to avoid stealing probability mass from common classes.
     """
     # Per-class floors: [empty, settlement, port, ruin, forest, mountain]
-    class_floors = [floor, floor, 0.001, 0.005, floor, 0.001]
+    class_floors = [0.01, 0.01, 0.001, 0.005, 0.01, 0.001]
 
     for row in prediction:
         for cell in row:
             for i in range(len(cell)):
-                cell[i] = max(cell[i], class_floors[i] if i < len(class_floors) else floor)
+                cell[i] = max(cell[i], class_floors[i] if i < len(class_floors) else 0.01)
             total = sum(cell)
             for i in range(len(cell)):
                 cell[i] /= total
