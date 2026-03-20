@@ -131,6 +131,36 @@ const server = Bun.serve({
             });
         }
 
+        // GET /predictions/list — list available prediction runs
+        if (url.pathname === '/predictions/list') {
+            const runsDir = join(CHALLENGES_DIR, 'challenge2', 'runs');
+            if (!existsSync(runsDir)) {
+                return Response.json({ runs: [] }, { headers });
+            }
+            const { readdirSync } = await import('fs');
+            const dirs = readdirSync(runsDir, { withFileTypes: true })
+                .filter((d) => d.isDirectory())
+                .map((d) => d.name)
+                .filter((name) => existsSync(join(runsDir, name, 'all_predictions.json')));
+            return Response.json({ runs: dirs }, { headers });
+        }
+
+        // GET /predictions/:run — serve predictions for a run
+        const predMatch = url.pathname.match(/^\/predictions\/([^/]+)$/);
+        if (predMatch) {
+            const runName = predMatch[1];
+            if (runName.includes('..')) {
+                return Response.json({ error: 'Invalid run name' }, { status: 400, headers });
+            }
+            const path = join(CHALLENGES_DIR, 'challenge2', 'runs', runName, 'all_predictions.json');
+            if (!existsSync(path)) {
+                return Response.json({ error: 'Predictions not found' }, { status: 404, headers });
+            }
+            return new Response(readFileSync(path), {
+                headers: { ...headers, 'Content-Type': 'application/json' },
+            });
+        }
+
         // GET /training/logs — read training_logs.jsonl
         if (url.pathname === '/training/logs') {
             const path = join(CHALLENGES_DIR, 'challenge2', 'training_logs.jsonl');
