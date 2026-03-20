@@ -34,7 +34,7 @@ RATE_LIMIT_DELAY = 0.25  # stay under 5 req/s
 SIM_WEIGHT = 0.3
 PRIOR_WEIGHT = 4.0
 OBS_WEIGHT = 0.5
-N_SIMS = 25
+N_SIMS = 200
 
 # Terrain code → prediction class mapping
 TERRAIN_TO_CLASS = {
@@ -379,6 +379,17 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
 
     # Ruin probability scales with expansion (more activity = more collapses)
     target_ruin = target_settle * ruin_ratio
+
+    # Total probability allocated to settlement-related classes
+    target_dynamic = target_settle + target_port + target_ruin
+
+    # Forest cells adjacent to settlements are attractive expansion targets
+    # (settlements need adjacent forest for food production). Boost settlement
+    # probability for forest cells at close range.
+    if terrain == 4 and dist <= 2:  # forest cell near settlements
+        terrain_boost = 1.5 if dist == 1 else 1.2
+        target_settle *= terrain_boost
+        target_ruin *= terrain_boost
 
     # Total probability allocated to settlement-related classes
     target_dynamic = target_settle + target_port + target_ruin
@@ -742,6 +753,101 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
                     prediction[r][c][k] = val / total_w
             else:
                 prediction[r][c] = prior
+
+    return floor_and_normalize(prediction, obs_counts=obs_counts)
+
+
+# --- ABC-based prediction ---
+
+ABC_PRIOR_WEIGHT = 0.85
+ABC_MC_WEIGHT = 0.15
+MC_EQUIV_SAMPLES = 60
+MC_TOTAL_RUNS = 500
+
+
+def generate_prediction_abc(grid, mc_pred, map_w, map_h,
+                             obs_counts=None, expansion_rate=None,
+                             dist_multipliers=None, port_ratio=0.75,
+                             ruin_ratio=0.10, prior_table=None):
+    """Generate prediction using three-layer blending: prior + MC + observations.
+
+    Layer 1: Distance-aware contextual prior
+    Layer 2: Blend MC prediction into prior
+    Layer 3: Bayesian Dirichlet update with observations
+    """
+    # Precompute distance map
+    dist_map = None
+    if expansion_rate is not None:
+        dist_map = compute_settlement_distances(grid, map_h, map_w)
+
+    # Compute MC-observation agreement to set adaptive mc_equiv_samples
+    mc_agree = 0
+    mc_total = 0
+    if mc_pred is not None and obs_counts is not None:
+        for r in range(map_h):
+            for c in range(map_w):
+                n_obs = sum(obs_counts[r][c])
+                if n_obs < 1:
+                    continue
+                obs_argmax = max(range(N_CLASSES), key=lambda k: obs_counts[r][c][k])
+                mc_argmax = max(range(N_CLASSES), key=lambda k: mc_pred[r][c][k])
+                mc_total += 1
+                if obs_argmax == mc_argmax:
+                    mc_agree += 1
+
+    if mc_total > 0:
+        agreement = mc_agree / mc_total
+        # Safety net: disable MC if agreement < 40%
+        if agreement < 0.40:
+            mc_pred = None
+        # Adaptive equiv samples: high agreement → trust model more
+        if agreement > 0.80:
+            equiv_samples = 100
+        elif agreement < 0.60:
+            equiv_samples = 20
+        else:
+            equiv_samples = 20 + (agreement - 0.60) / 0.20 * 80
+    else:
+        equiv_samples = MC_EQUIV_SAMPLES
+
+    # Determine effective MC weight
+    mc_w = ABC_MC_WEIGHT if mc_pred is not None else 0.0
+    prior_w = 1.0 - mc_w
+
+    prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+    for r in range(map_h):
+        for c in range(map_w):
+            # Layer 1: Distance-aware prior
+            if dist_map is not None:
+                prior = get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map,
+                                                  expansion_rate,
+                                                  dist_multipliers=dist_multipliers,
+                                                  port_ratio=port_ratio,
+                                                  ruin_ratio=ruin_ratio,
+                                                  prior_table=prior_table)
+            else:
+                prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
+
+            # Layer 2: Blend MC into prior
+            blended = [0.0] * N_CLASSES
+            for k in range(N_CLASSES):
+                blended[k] = prior_w * prior[k]
+                if mc_pred is not None:
+                    blended[k] += mc_w * mc_pred[r][c][k]
+            # Normalize
+            total = sum(blended)
+            if total > 0:
+                blended = [v / total for v in blended]
+
+            # Layer 3: Bayesian Dirichlet update with observations
+            n_obs = sum(obs_counts[r][c]) if obs_counts else 0
+            if n_obs > 0:
+                alpha = [blended[k] * equiv_samples for k in range(N_CLASSES)]
+                posterior = [alpha[k] + obs_counts[r][c][k] for k in range(N_CLASSES)]
+                total = sum(posterior)
+                prediction[r][c] = [p / total for p in posterior]
+            else:
+                prediction[r][c] = blended
 
     return floor_and_normalize(prediction, obs_counts=obs_counts)
 

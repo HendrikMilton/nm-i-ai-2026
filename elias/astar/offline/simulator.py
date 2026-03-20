@@ -408,28 +408,49 @@ class Simulator:
         ]
 
 
+def _run_single_sim(args):
+    """Worker function for parallel Monte Carlo. Returns flattened class grid."""
+    grid, settlements_data, params, seed = args
+    sim = Simulator(grid, settlements_data, params=params, seed=seed)
+    sim.run()
+    cg = sim.get_class_grid()
+    # Flatten to 1D for efficient transfer
+    return [cg[r][c] for r in range(len(cg)) for c in range(len(cg[0]))]
+
+
 def run_monte_carlo(grid, settlements_data, n_sims=200, params=None, base_seed=None):
     """
     Run many stochastic simulations and return per-cell probability distributions.
 
+    Uses multiprocessing to parallelize across CPU cores for ~5-10x speedup.
+
     Returns: H x W x 6 probability tensor
     """
+    from concurrent.futures import ProcessPoolExecutor
+    import os
+
     h = len(grid)
     w = len(grid[0]) if h > 0 else 0
-    counts = [[[0] * 6 for _ in range(w)] for _ in range(h)]
 
+    # Build task args
+    tasks = []
     for i in range(n_sims):
         seed = (base_seed or 0) + i if base_seed is not None else None
-        sim = Simulator(grid, settlements_data, params=params, seed=seed)
-        sim.run()
-        class_grid = sim.get_class_grid()
+        tasks.append((grid, settlements_data, params, seed))
 
-        for r in range(h):
-            for c in range(w):
-                counts[r][c][class_grid[r][c]] += 1
+    # Run in parallel (use n-1 cores to leave room for main process)
+    n_workers = min(n_sims, max(1, os.cpu_count() - 1))
+    counts = [[[0] * 6 for _ in range(w)] for _ in range(h)]
+
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        for flat_grid in pool.map(_run_single_sim, tasks):
+            idx = 0
+            for r in range(h):
+                for c in range(w):
+                    counts[r][c][flat_grid[idx]] += 1
+                    idx += 1
 
     # Convert counts to probabilities with minimal smoothing
-    # Uses per-class floors matching floor_and_normalize to avoid double-inflation
     class_floors = [0.005, 0.005, 0.001, 0.002, 0.005, 0.001]
     prediction = [[[0.0] * 6 for _ in range(w)] for _ in range(h)]
     for r in range(h):

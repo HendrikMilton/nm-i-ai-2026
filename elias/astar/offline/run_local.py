@@ -32,14 +32,16 @@ from offline.simulator import run_monte_carlo, DEFAULT_PARAMS
 from offline.score import score_prediction
 from run import (
     N_CLASSES, N_SIMS, SIM_WEIGHT, PRIOR_WEIGHT, OBS_WEIGHT,
-    TERRAIN_TO_CLASS, VIEWPORT,
+    TERRAIN_TO_CLASS, VIEWPORT, WARM_COLD_THRESHOLD,
     parse_initial_grid, extract_map_dimensions,
     get_distance_aware_prior, compute_settlement_distances,
     extract_grid_and_settlements, generate_prediction,
+    generate_prediction_abc, MC_TOTAL_RUNS,
     build_tiling, merge_counts,
     run_observation_phases,
     log_action, log_submission, _ensure_round, N_SEEDS,
 )
+from offline.abc import run_abc_fit, weighted_mc_from_fitted
 
 
 # --- Offline log storage ---
@@ -188,7 +190,7 @@ def observe_seed_local(ground_truth, seed_index, viewports, map_w, map_h, rng):
 def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
                            quiet=False, iteration_id=None, config=None,
                            obs_weight=None, sim_weight=None, prior_weight=None,
-                           rng_seed=None):
+                           rng_seed=None, use_abc=True):
     """Full pipeline backtest: replays the live main() flow with GT-sampled queries.
 
     Mirrors run.py main() steps:
@@ -196,8 +198,9 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
       2. Phase 1: observe every seed once
       3. Phase 2: surprise-based allocation of remaining budget
       4. Estimate expansion rate from observations
-      5. generate_prediction() with obs + sim + prior
-      6. Score against real ground truth
+      5. ABC parameter fitting (if use_abc=True)
+      6. generate_prediction_abc() with prior + MC + obs blend
+      7. Score against real ground truth
     """
     # Resolve effective weights (allow per-call overrides)
     eff_obs_w = obs_weight if obs_weight is not None else OBS_WEIGHT
@@ -253,6 +256,21 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
         observe_fn=local_observe, print_fn=print_fn,
     )
 
+    # ABC parameter fitting (pooled across all seeds)
+    fitted_params = None
+    if use_abc:
+        seed_settlements = {}
+        for s in range(N_SEEDS):
+            _, sett = extract_grid_and_settlements(rd, s)
+            seed_settlements[s] = sett
+
+        is_cold = avg_expansion < WARM_COLD_THRESHOLD
+        fitted_params = run_abc_fit(
+            seed_grids, seed_settlements, seed_counts,
+            map_h, map_w, is_cold=is_cold, rng_seed=round_num * 7919,
+            print_fn=print_fn,
+        )
+
     # Generate predictions and score
     seed_results = {}
     for seed in range(N_SEEDS):
@@ -263,15 +281,31 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
         ground_truth = seed_gt[seed]
 
         t0 = time.time()
-        # Full pipeline prediction: obs + sim + prior
-        obs_pred = generate_prediction(
-            grid, settlements, n_sims, params, seed * 10000,
-            map_w, map_h,
-            sim_weight=eff_sim_w, prior_weight=eff_prior_w,
-            obs_counts=seed_counts[seed], obs_weight=eff_obs_w,
-            expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
-            port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-            prior_table=prior_table)
+
+        if use_abc and fitted_params:
+            # ABC pipeline: weighted MC + three-layer blend
+            mc_pred = weighted_mc_from_fitted(
+                fitted_params, grid, settlements,
+                total_runs=MC_TOTAL_RUNS, base_seed=seed * 10000,
+                map_h=map_h, map_w=map_w)
+
+            obs_pred = generate_prediction_abc(
+                grid, mc_pred, map_w, map_h,
+                obs_counts=seed_counts[seed],
+                expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
+                port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+                prior_table=prior_table)
+        else:
+            # Legacy pipeline: obs + sim + prior
+            obs_pred = generate_prediction(
+                grid, settlements, n_sims, params, seed * 10000,
+                map_w, map_h,
+                sim_weight=eff_sim_w, prior_weight=eff_prior_w,
+                obs_counts=seed_counts[seed], obs_weight=eff_obs_w,
+                expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
+                port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+                prior_table=prior_table)
+
         elapsed = time.time() - t0
 
         # Prior-only for comparison (cheap — no sim)

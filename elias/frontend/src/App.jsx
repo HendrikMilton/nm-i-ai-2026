@@ -431,7 +431,7 @@ function LiveGameView({ logData, fetchRoundLog, apiRounds }) {
 // --- App ---
 
 function App() {
-  const [tab, setTab] = useState('rounds')
+  const [tab, setTab] = useState('offline')
   const [logData, setLogData] = useState(null)
   const [rounds, setRounds] = useState([])
   const [loading, setLoading] = useState(true)
