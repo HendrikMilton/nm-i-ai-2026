@@ -172,6 +172,18 @@ Already handled. Just use the tools.
 1. Find the customer: GET /customer?name=X&fields=id,name
 2. POST /contact with {firstName, lastName, email, phoneNumberMobile, customer: {id}}
 
+### Custom accounting dimensions:
+1. POST /ledger/accountingDimensionName with {dimensionName: "...", active: true} — note the dimensionIndex in response (1, 2, or 3)
+2. POST /ledger/accountingDimensionValue with {displayName: "...", dimensionIndex: <from step 1>, active: true} — create each value
+3. To link a dimension value to a voucher posting, use freeAccountingDimension1/2/3 on the posting (matches dimensionIndex)
+
+### Voucher (journal entry) creation:
+- POST /ledger/voucher with {date, description, postings: [...]}
+- EVERY posting MUST have row: N starting from 1 (row 0 is system-reserved, causes error)
+- Balanced: sum of amountGross across all postings must be 0
+- To link accounting dimensions: use freeAccountingDimension1: {id: <value_id>} on the posting (NOT accountingDimensionValues)
+- For counter-posting, use account 1920 (bank) unless specified otherwise
+
 ## VAT type IDs (NEVER look these up — use directly)
 - id=0: No VAT (Ingen avgiftsbehandling, 0%)
 - id=1: Input VAT high rate (Fradrag inngående avgift, 25%) — for purchases/expenses
