@@ -96,12 +96,14 @@ Already handled. Just use the tools.
 - Do NOT put anything in the request body — pass date as a query parameter
 
 ### Supplier invoice (incoming invoice / leverandørfaktura):
-- Register via POST /ledger/voucher — MUST include vendorInvoiceNumber (the invoice number from the supplier, e.g. "INV-2026-9601")
+- Register via POST /ledger/voucher
 - Body: {date, description, vendorInvoiceNumber: "INV-...", postings: [...]}
-- Each posting needs: date, account.id, amountGross, amountGrossCurrency, supplier.id, row (1, 2, ...), description
-- Debit line: expense account with vatType.id=1 (25% input VAT). amountGross = total INCLUDING VAT
-- Credit line: account 2400 (leverandørgjeld) with supplier.id, no vatType. amountGross = negative total INCLUDING VAT
-- MUST include supplier.id on BOTH postings and invoiceNumber on debit posting
+- Look up supplier: GET /supplier?organizationNumber=X&fields=id,name
+- Look up accounts in parallel: GET /ledger/account?number=XXXX (expense account) and GET /ledger/account?number=2400 (leverandørgjeld)
+- Debit posting: {date, description, account: {id: <expense_acct>}, supplier: {id}, amountGross: <total_incl_vat>, amountGrossCurrency: <total_incl_vat>, vatType: {id: 1}, invoiceNumber: "INV-...", row: 1}
+- Credit posting: {date, description, account: {id: <2400_acct>}, supplier: {id}, amountGross: <negative_total_incl_vat>, amountGrossCurrency: <negative_total_incl_vat>, row: 2}
+- CRITICAL: include invoiceNumber on the DEBIT posting (same value as vendorInvoiceNumber)
+- CRITICAL: include supplier: {id} on BOTH postings
 - Do NOT include voucherType or guiRow — they cause errors
 
 ### Timesheet entry (register hours):
