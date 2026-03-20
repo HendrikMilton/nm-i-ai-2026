@@ -107,7 +107,8 @@ Already handled. Just use the tools.
 2. POST /travelExpense with {employee: {id}, title: "...", date: "YYYY-MM-DD"}
 3. GET /travelExpense/costCategory?fields=id,description — find cost category IDs
 4. GET /travelExpense/paymentType?fields=id,description — find payment type ID (need this for cost creation)
-5. For each cost: POST /travelExpense/cost with {travelExpense: {id}, costCategory: {id}, paymentType: {id}, date, amountCurrencyIncVat, comments}
+5. For each cost ONE AT A TIME sequentially (NOT in parallel — parallel causes 409/500 conflicts):
+   POST /travelExpense/cost with {travelExpense: {id}, costCategory: {id}, paymentType: {id}, date, amountCurrencyIncVat, comments}
 - ALWAYS include paymentType in cost creation — it's required, not optional
 - isPaidByEmployee: true if the employee paid out of pocket
 
