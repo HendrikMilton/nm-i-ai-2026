@@ -148,8 +148,8 @@ Already handled. Just use the tools.
    POST /travelExpense/cost with {travelExpense: {id}, costCategory: {id}, paymentType: {id}, date, amountCurrencyIncVat, comments, isPaidByEmployee: true}
 - ALWAYS include paymentType in cost creation — it's required, not optional
 - ALWAYS set isPaidByEmployee: true (employee paid out of pocket) unless told otherwise
-- For per diem / daily allowance (diett): use costCategory "Mat" — do NOT use /travelExpense/perDiemCompensation or /travelExpense/rateCategory
-- Do NOT make exploratory calls to /travelExpense/rateCategory or /travelExpense/perDiemCompensation — just use cost categories directly
+- For per diem / daily allowance (diett): create ONE cost entry with costCategory "Mat", set rate=<daily_rate> (e.g. 800), and amountCurrencyIncVat=<total> (e.g. 4000 for 5 days x 800). Include the number of days and rate in comments (e.g. "Diett 5 dager x 800 NOK")
+- Do NOT use /travelExpense/perDiemCompensation or /travelExpense/rateCategory endpoints
 - Common cost categories: Fly, Taxi, Hotell, Mat, Tog, Buss, Parkering, Drivstoff
 
 ### Delete travel expense:
