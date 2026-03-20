@@ -25,7 +25,9 @@ import json
 import os
 from datetime import datetime, timezone
 
-LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+# Write to elias/logs/ — that's where the active dashboard at localhost:5174 reads from
+_THIS_DIR = os.path.dirname(os.path.abspath(__file__))
+LOG_DIR = os.path.join(_THIS_DIR, "..", "elias", "logs")
 INDEX_FILE = os.path.join(LOG_DIR, "index.json")
 OFFLINE_DIR = os.path.join(LOG_DIR, "offline")
 OFFLINE_INDEX = os.path.join(OFFLINE_DIR, "index.json")
