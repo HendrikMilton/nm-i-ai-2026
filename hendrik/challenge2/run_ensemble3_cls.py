@@ -115,8 +115,8 @@ def load_classifier(device):
     model.eval()
 
     transform = transforms.Compose([
-        transforms.Resize(256),
-        transforms.CenterCrop(224),
+        transforms.Resize(160),
+        transforms.CenterCrop(160),
         transforms.ToTensor(),
         transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
     ])
@@ -191,7 +191,8 @@ def main():
 
             det_data.append((x1, y1, x2, y2, float(score), int(yolo_label)))
 
-            if cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
+            # Only classify if YOLO is uncertain (score < 0.8)
+            if float(score) < 0.8 and cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
                 crop = img_pil.crop((cx1, cy1, cx2, cy2))
                 crop_tensors.append(cls_transform(crop))
                 crop_indices.append(i)
