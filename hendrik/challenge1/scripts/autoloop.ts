@@ -11,7 +11,7 @@
  */
 
 import { spawn, execSync } from "child_process";
-import { readdirSync, readFileSync, existsSync } from "fs";
+import { readdirSync, readFileSync, existsSync, appendFileSync } from "fs";
 import { join } from "path";
 
 const ROOT = join(import.meta.dir, "..");
@@ -229,7 +229,9 @@ async function main() {
         const failed = checks.filter((c: string) => c.includes("failed"));
         console.log(`📊 Score: ${sub.score_raw}/${sub.score_max} (normalized: ${sub.normalized_score}) | ${sub.feedback?.comment ?? ""}`);
         if (failed.length > 0) console.log(`   Failed: ${failed.join(", ")}`);
-        console.log(`📋 Full feedback: ${JSON.stringify(sub.feedback, null, 2)}`);
+        // Append full scoring feedback to the log file
+        appendFileSync(logPath, `\n[SCORING] ${JSON.stringify(sub, null, 2)}\n`);
+        console.log(`📋 Scoring appended to ${logPath}`);
         break;
       }
     } catch {}
