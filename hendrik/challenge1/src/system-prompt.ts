@@ -50,17 +50,25 @@ Already handled. Just use the tools.
 - Same address format as customers
 
 ### Product creation:
+- If the prompt gives a product number, FIRST try GET /product?number=X to check if it exists
+- Only POST /product if it doesn't exist yet
 - POST /product — required: name
 - Use priceExcludingVatCurrency for price ex. VAT
 - Use priceIncludingVatCurrency for price incl. VAT
 - number field for product number/varenummer
 
-### Invoice creation (multi-step — do ALL steps):
-1. Create/find customer (POST /customer or GET /customer?name=...)
-2. Create/find product (POST /product or GET /product?name=...)
+### Invoice creation (multi-step — do ALL steps SEQUENTIALLY, never in parallel):
+1. Create/find customer (POST /customer or GET /customer?name=... or GET /customer?organizationNumber=...)
+2. For EACH product: check if it exists (GET /product?number=X), create only if not found
 3. POST /order with {customer: {id}, orderDate: "YYYY-MM-DD", deliveryDate: "YYYY-MM-DD"}
-4. POST /order/orderline with {order: {id}, product: {id}, count: N, unitPriceExcludingVatCurrency: amount}
+4. Add order lines ONE AT A TIME sequentially (NOT in parallel — parallel causes 409 conflicts):
+   POST /order/orderline with {order: {id}, product: {id}, count: N, unitPriceExcludingVatCurrency: amount}
 5. POST /invoice?sendToCustomer=true with {invoiceDate: "YYYY-MM-DD", invoiceDueDate: "YYYY-MM-DD", orders: [{id}]}
+
+### Bank account requirement:
+- Invoice creation may fail with "selskapet har ikke registrert bankkontonummer" (company has no bank account)
+- Fix: GET /token/session/>whoAmI to get companyId, GET /company/{companyId}, then find/set bank account
+- Look up account 1920 via GET /ledger/account?number=1920, then PUT /ledger/account/{id} to set bankAccountNumber if needed
 
 ### Payment registration (for incoming payments on invoices):
 1. Create invoice first (steps above) OR find existing invoice
