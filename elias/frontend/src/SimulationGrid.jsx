@@ -64,8 +64,8 @@ export function GridCanvas({ grid, title, viewportOverlays }) {
         height={vp.h * cellSize}
         fill="none"
         stroke="var(--papaya)"
-        strokeWidth="1"
-        strokeOpacity="0.5"
+        strokeWidth="2"
+        strokeOpacity="0.9"
       />
     ))
   }, [viewportOverlays, cellSize])
@@ -203,7 +203,7 @@ export function predictionToGrids(prediction) {
  * Render a prediction tensor as a grid — terrain color from argmax,
  * opacity from confidence.
  */
-export function PredictionGridCanvas({ prediction, title }) {
+export function PredictionGridCanvas({ prediction, title, viewportOverlays }) {
   const grids = useMemo(() => predictionToGrids(prediction), [prediction])
   if (!grids) return null
 
@@ -237,6 +237,23 @@ export function PredictionGridCanvas({ prediction, title }) {
     return result
   }, [argmaxGrid, confidenceGrid, cellSize, width, height])
 
+  const overlays = useMemo(() => {
+    if (!viewportOverlays) return null
+    return viewportOverlays.map((vp, i) => (
+      <rect
+        key={`vp-${i}`}
+        x={vp.x * cellSize}
+        y={vp.y * cellSize}
+        width={vp.w * cellSize}
+        height={vp.h * cellSize}
+        fill="none"
+        stroke="var(--papaya)"
+        strokeWidth="2.5"
+        strokeOpacity="0.95"
+      />
+    ))
+  }, [viewportOverlays, cellSize])
+
   return (
     <div className="grid-panel">
       {title && <h3 className="grid-title">{title}</h3>}
@@ -246,6 +263,7 @@ export function PredictionGridCanvas({ prediction, title }) {
         className="grid-svg"
       >
         {cells}
+        {overlays}
       </svg>
     </div>
   )

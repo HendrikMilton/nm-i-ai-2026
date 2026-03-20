@@ -2,7 +2,7 @@
   "id": "R3_iter3_sw0.25_pw4",
   "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
   "round_number": 3,
-  "timestamp": "2026-03-20T10:17:04.289667+00:00",
+  "timestamp": "2026-03-20T11:00:10.877215+00:00",
   "n_sims": 100,
   "round_score": 48.656,
   "config": {
@@ -18,7 +18,7 @@
       "prior_score": 52.2181,
       "weighted_kl": 0.242544,
       "scored_cells": 372,
-      "elapsed_s": 6.4,
+      "elapsed_s": 6.8,
       "prediction": [
         [
           [
@@ -25789,7 +25789,7 @@
       "prior_score": 53.6399,
       "weighted_kl": 0.238567,
       "scored_cells": 541,
-      "elapsed_s": 12.3,
+      "elapsed_s": 14.4,
       "prediction": [
         [
           [
@@ -51560,7 +51560,7 @@
       "prior_score": 52.665,
       "weighted_kl": 0.240872,
       "scored_cells": 407,
-      "elapsed_s": 6.8,
+      "elapsed_s": 7.6,
       "prediction": [
         [
           [
@@ -77331,7 +77331,7 @@
       "prior_score": 54.4942,
       "weighted_kl": 0.229089,
       "scored_cells": 378,
-      "elapsed_s": 5.8,
+      "elapsed_s": 6.7,
       "prediction": [
         [
           [
@@ -103102,7 +103102,7 @@
       "prior_score": 50.8307,
       "weighted_kl": 0.249927,
       "scored_cells": 400,
-      "elapsed_s": 5.9,
+      "elapsed_s": 6.7,
       "prediction": [
         [
           [
