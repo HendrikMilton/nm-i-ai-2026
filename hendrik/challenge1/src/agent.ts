@@ -13,20 +13,14 @@ const MODEL = process.env.MODEL ?? 'claude-opus-4-6';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOGS_DIR = join(__dirname, '..', 'logs');
 
-let currentLogFile = '';
-
-const startLog = () => {
+const createLogger = () => {
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
-    currentLogFile = join(LOGS_DIR, `${ts}.log`);
-    return currentLogFile;
-};
-
-const log = (msg: string) => {
-    const line = `[${new Date().toISOString()}] ${msg}`;
-    console.log(line);
-    if (currentLogFile) {
-        appendFileSync(currentLogFile, line + '\n');
-    }
+    const logFile = join(LOGS_DIR, `${ts}.log`);
+    return (msg: string) => {
+        const line = `[${new Date().toISOString()}] ${msg}`;
+        console.log(line);
+        appendFileSync(logFile, line + '\n');
+    };
 };
 
 const vertex = createVertex({ project: GCP_PROJECT, location: GCP_LOCATION });
@@ -49,7 +43,7 @@ interface SolveRequest {
 }
 
 export const solve = async (body: SolveRequest) => {
-    startLog();
+    const log = createLogger();
     const start = Date.now();
     const { prompt, files, tripletex_credentials } = body;
     const client = new TripletexClient(tripletex_credentials.base_url, tripletex_credentials.session_token);
