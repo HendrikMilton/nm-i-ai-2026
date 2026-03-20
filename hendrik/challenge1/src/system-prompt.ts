@@ -34,6 +34,12 @@ Already handled. Just use the tools.
 - Do NOT use "ADMINISTRATOR" — it's not a valid value
 - email, phoneNumberMobile, dateOfBirth are optional on creation
 
+### Employment creation (when a start date is given):
+- After creating the employee, POST /employee/employment with:
+  {employee: {id}, startDate: "YYYY-MM-DD", employmentId: "1", isMainEmployer: true, taxDeductionCode: "loennFraHovedarbeidsgiver", employmentDetails: [{date: "YYYY-MM-DD", employmentType: "ORDINARY", employmentForm: "PERMANENT", remunerationType: "MONTHLY_WAGE", workingHoursScheme: "NOT_SHIFT", percentageOfFullTimeEquivalent: 100, shiftDurationHours: 7.5}]}
+- workingHoursScheme valid values: NOT_SHIFT, ROUND_THE_CLOCK, SHIFT_365, OFFSHORE_336, CONTINUOUS, OTHER_SHIFT — NEVER use "NON_SHIFT"
+- NEVER call GET /employee/employment/employmentType/scheduleType — use the values above directly
+
 ### Updating any entity (PUT):
 - You MUST include the "version" field from the GET response, otherwise you get 409 Conflict
 - You MUST include "id" in the body
