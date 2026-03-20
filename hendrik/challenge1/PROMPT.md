@@ -13,6 +13,10 @@ You are running the autoresearch loop for Challenge 1 (Tripletex AI agent).
 4. Only after fixing issues (or confirming perfect run), run autoloop.ts again
 5. Never stop. Assume I'm asleep.
 
+## IMPORTANT
+- Do NOT read or analyze existing logs in the logs/ folder. They are old and from before fixes were applied.
+- Only analyze logs from YOUR submissions (the ones autoloop.ts prints).
+
 ## CRITICAL RULES
 - Server is already running with hot reload (bun --watch). SSH tunnel is up. Endpoint is https://tripletex.hycapital.io/solve
 - NEVER restart cloudflared or the SSH tunnel
