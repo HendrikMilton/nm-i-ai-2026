@@ -212,8 +212,7 @@ async function main() {
   const doneMatch = content.match(/DONE elapsed=(\S+) steps=(\d+) apiCalls=(\d+) errors=(\d+)/);
   if (doneMatch) {
     const [, elapsed, , apiCalls, errors] = doneMatch;
-    const status = errors === "0" ? "PERFECT ✅" : `${errors} ERRORS ⚠️`;
-    console.log(`\n📊 Summary: ${elapsed} | ${apiCalls} API calls | ${status}`);
+    console.log(`\n⏱  ${elapsed} | ${apiCalls} API calls | ${errors} errors`);
   }
 
   console.log(`📁 Log: ${logPath}`);
