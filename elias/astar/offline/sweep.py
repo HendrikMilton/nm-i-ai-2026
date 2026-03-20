@@ -33,7 +33,8 @@ def run_sweep(round_num, iterations, label, start_iter=1, budget=50,
         return
 
     round_id = target["id"]
-    eff_sims = n_sims if n_sims is not None else 1
+    from run import N_SIMS as DEFAULT_N_SIMS
+    eff_sims = n_sims if n_sims is not None else DEFAULT_N_SIMS
 
     print(f"Sweep: {label} on Round {round_num}")
     print(f"  Weights: obs={obs_weight} sim={sim_weight} prior={prior_weight} n_sims={eff_sims}")

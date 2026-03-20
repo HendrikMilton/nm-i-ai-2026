@@ -383,7 +383,7 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
 
     print_fn = (lambda *a: None) if quiet else print
 
-    seed_counts, avg_expansion, dist_multipliers, port_ratio, ruin_ratio = run_observation_phases(
+    seed_counts, avg_expansion, dist_multipliers, prior_table = run_observation_phases(
         seed_grids, seed_dynamic_vps, budget, map_w, map_h,
         observe_fn=local_observe, print_fn=print_fn,
     )
@@ -405,7 +405,7 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
             sim_weight=eff_sim_w, prior_weight=eff_prior_w,
             obs_counts=seed_counts[seed], obs_weight=eff_obs_w,
             expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
-            port_ratio=port_ratio, ruin_ratio=ruin_ratio)
+            prior_table=prior_table)
         elapsed = time.time() - t0
 
         # Sim+prior only (no observations) for comparison
@@ -414,7 +414,7 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
             map_w, map_h,
             sim_weight=eff_sim_w, prior_weight=eff_prior_w,
             expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
-            port_ratio=port_ratio, ruin_ratio=ruin_ratio)
+            prior_table=prior_table)
 
         # Prior-only for comparison
         dist_map = compute_settlement_distances(grid, map_h, map_w)
@@ -424,7 +424,7 @@ def backtest_full_pipeline(round_id, round_num, n_sims, params, budget=50,
                 prior_pred[r][c] = get_distance_aware_prior(
                     grid, r, c, map_h, map_w, dist_map, avg_expansion,
                     dist_multipliers=dist_multipliers,
-                    port_ratio=port_ratio, ruin_ratio=ruin_ratio)
+                    prior_table=prior_table)
         prior_pred = floor_and_normalize(prior_pred)
 
         obs_result = score_prediction(obs_pred, ground_truth)

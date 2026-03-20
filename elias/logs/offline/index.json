@@ -298,6 +298,258 @@
       }
     },
     {
+      "id": "strategy_v2_r1.37",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:14:30.795851+00:00",
+      "round_score": 84.5129,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.37",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.38",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:14:32.764651+00:00",
+      "round_score": 84.8288,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.38",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.39",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:14:35.897080+00:00",
+      "round_score": 84.7417,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.39",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.57",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:29:34.969652+00:00",
+      "round_score": 85.8888,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.57",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.58",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:29:36.594242+00:00",
+      "round_score": 86.2266,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.58",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.59",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:29:40.705989+00:00",
+      "round_score": 85.9234,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.59",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.60",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:32:48.126553+00:00",
+      "round_score": 86.3016,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r1.60",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r1.61",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:34:09.487993+00:00",
+      "round_score": 85.9708,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r1.61",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r1.62",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:35:28.501593+00:00",
+      "round_score": 86.199,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r1.62",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r1.63",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:37:58.252792+00:00",
+      "round_score": 85.9874,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.63",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.64",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:38:02.136436+00:00",
+      "round_score": 86.0354,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.64",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.65",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:38:07.984046+00:00",
+      "round_score": 86.1268,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r1.65",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r1.66",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:40:06.389928+00:00",
+      "round_score": 86.4953,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r1.66",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r1.67",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-20T16:41:22.425581+00:00",
+      "round_score": 86.4103,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r1.67",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 1,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
       "id": "R2_iter4_sw0.5_pw4",
       "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
       "round_number": 2,
@@ -892,6 +1144,366 @@
       }
     },
     {
+      "id": "strategy_v2_r3.37",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:14:31.447804+00:00",
+      "round_score": 69.7163,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.37",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.38",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:14:36.957170+00:00",
+      "round_score": 69.8386,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.38",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.39",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:14:39.774816+00:00",
+      "round_score": 70.1431,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.39",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.48",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:16:42.690274+00:00",
+      "round_score": 72.2412,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.48",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.49",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:16:47.617377+00:00",
+      "round_score": 71.4985,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.49",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.50",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:16:55.285220+00:00",
+      "round_score": 71.923,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.50",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.54",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:18:09.010499+00:00",
+      "round_score": 72.0691,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.54",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.55",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:18:14.101780+00:00",
+      "round_score": 71.6426,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.55",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.56",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:18:18.066573+00:00",
+      "round_score": 72.1137,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.56",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.57",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:29:14.966618+00:00",
+      "round_score": 76.1288,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.57",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.58",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:29:20.151546+00:00",
+      "round_score": 74.6691,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.58",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.59",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:29:23.033359+00:00",
+      "round_score": 74.2989,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.59",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.60",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:32:46.760127+00:00",
+      "round_score": 70.9735,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r3.60",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r3.61",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:34:05.740711+00:00",
+      "round_score": 72.0422,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r3.61",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r3.62",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:35:28.003102+00:00",
+      "round_score": 70.7889,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r3.62",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r3.63",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:37:58.116228+00:00",
+      "round_score": 72.6187,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.63",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.64",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:38:03.253597+00:00",
+      "round_score": 72.5913,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.64",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.65",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:38:10.502069+00:00",
+      "round_score": 72.4049,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r3.65",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r3.66",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:40:04.256045+00:00",
+      "round_score": 71.2575,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r3.66",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r3.67",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-20T16:41:24.511826+00:00",
+      "round_score": 72.3631,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r3.67",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 3,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
       "id": "R4_iter4_sw0.5_pw4",
       "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
       "round_number": 4,
@@ -1240,6 +1852,420 @@
         "sim_weight": null,
         "prior_weight": null,
         "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.37",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:14:30.925852+00:00",
+      "round_score": 90.5841,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.37",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.38",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:14:36.272038+00:00",
+      "round_score": 90.9162,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.38",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.39",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:14:42.342066+00:00",
+      "round_score": 90.7576,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.39",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.48",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:16:43.253025+00:00",
+      "round_score": 86.7005,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.48",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.49",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:16:53.809922+00:00",
+      "round_score": 86.6451,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.49",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.50",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:16:58.224428+00:00",
+      "round_score": 86.7633,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.50",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.51",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:17:10.391844+00:00",
+      "round_score": 67.8095,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.51",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": 1.0,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.52",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:17:15.705552+00:00",
+      "round_score": 67.9875,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.52",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": 1.0,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.53",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:17:21.956481+00:00",
+      "round_score": 68.2332,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.53",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": 1.0,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.54",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:17:38.811949+00:00",
+      "round_score": 90.2411,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.54",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.55",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:17:42.187527+00:00",
+      "round_score": 90.21,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.55",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.56",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:17:49.808118+00:00",
+      "round_score": 90.139,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.56",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.57",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:29:30.607551+00:00",
+      "round_score": 90.0896,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.57",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.58",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:29:35.733600+00:00",
+      "round_score": 90.1667,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.58",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.59",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:29:40.273459+00:00",
+      "round_score": 90.1045,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.59",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.60",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:33:04.518859+00:00",
+      "round_score": 89.5436,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r4.60",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r4.61",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:34:36.812325+00:00",
+      "round_score": 89.4595,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r4.61",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r4.62",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:36:14.109285+00:00",
+      "round_score": 89.7632,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r4.62",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r4.63",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:37:58.231798+00:00",
+      "round_score": 89.9086,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.63",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.64",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:38:03.699703+00:00",
+      "round_score": 89.9207,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.64",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.65",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:38:09.607772+00:00",
+      "round_score": 89.7425,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r4.65",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r4.66",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:40:24.420690+00:00",
+      "round_score": 89.9518,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r4.66",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2_r4.67",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-20T16:41:57.620904+00:00",
+      "round_score": 89.8521,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2_r4.67",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 4,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
       }
     },
     {
@@ -1677,6 +2703,114 @@
       "n_sims": 1,
       "config": {
         "label": "strategy_v2_r6.21",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 6,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r6.37",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-20T16:14:27.518455+00:00",
+      "round_score": 77.5895,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r6.37",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 6,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r6.38",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-20T16:14:33.967714+00:00",
+      "round_score": 77.5661,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r6.38",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 6,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r6.39",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-20T16:14:38.300171+00:00",
+      "round_score": 77.5551,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r6.39",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 6,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r6.57",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-20T16:29:33.023039+00:00",
+      "round_score": 81.3574,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r6.57",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 6,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r6.58",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-20T16:29:35.923690+00:00",
+      "round_score": 81.4609,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r6.58",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 6,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2_r6.59",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-20T16:29:40.127065+00:00",
+      "round_score": 81.4474,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2_r6.59",
         "budget": 50,
         "mode": "sweep",
         "round_number": 6,
@@ -2201,6 +3335,690 @@
         "sim_weight": null,
         "prior_weight": null,
         "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.29",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:10:15.254886+00:00",
+      "round_score": 57.9596,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.29",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.30",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:10:19.378934+00:00",
+      "round_score": 57.9754,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.30",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.31",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:10:26.189171+00:00",
+      "round_score": 58.0894,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.31",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.32",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:10:29.724352+00:00",
+      "round_score": 57.0108,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.32",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.33",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:10:38.598420+00:00",
+      "round_score": 58.4142,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.33",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.34",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:12:54.426821+00:00",
+      "round_score": 63.6379,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.34",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.35",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:12:58.394726+00:00",
+      "round_score": 63.8527,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.35",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.36",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:13:00.661169+00:00",
+      "round_score": 63.3089,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.36",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.37",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:13:50.195409+00:00",
+      "round_score": 64.6154,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.37",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.38",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:13:55.145808+00:00",
+      "round_score": 64.4233,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.38",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.39",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:13:59.987573+00:00",
+      "round_score": 64.4015,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.39",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.40",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:14:08.348189+00:00",
+      "round_score": 64.7027,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.40",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.41",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:14:16.994741+00:00",
+      "round_score": 64.7201,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.41",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.42",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:15:22.349168+00:00",
+      "round_score": 63.8203,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.42",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": 0.0,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.43",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:15:29.081772+00:00",
+      "round_score": 64.1735,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.43",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": 0.0,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.44",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:15:34.082515+00:00",
+      "round_score": 63.1561,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.44",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": 0.0,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.45",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:15:53.649554+00:00",
+      "round_score": 65.9964,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.45",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.46",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:15:56.430937+00:00",
+      "round_score": 65.3882,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.46",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.47",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:16:04.636822+00:00",
+      "round_score": 66.2171,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.47",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.48",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:16:21.001400+00:00",
+      "round_score": 66.1727,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.48",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.49",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:16:23.614281+00:00",
+      "round_score": 66.5953,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.49",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.50",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:16:25.430983+00:00",
+      "round_score": 66.4974,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.50",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.51",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:18:10.334445+00:00",
+      "round_score": 66.9624,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.51",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.52",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:18:15.648740+00:00",
+      "round_score": 66.6883,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.52",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.53",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:18:21.130746+00:00",
+      "round_score": 66.1264,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.53",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": 0.5,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.54",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:23:48.233591+00:00",
+      "round_score": 59.078,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.54",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.55",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:24:03.493509+00:00",
+      "round_score": 60.1288,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.55",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.56",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:25:04.112010+00:00",
+      "round_score": 67.3761,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.56",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.57",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:29:31.789719+00:00",
+      "round_score": 69.1597,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.57",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.58",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:29:35.108095+00:00",
+      "round_score": 68.9274,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.58",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.59",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:29:38.658491+00:00",
+      "round_score": 69.0491,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.59",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.60",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:33:22.096720+00:00",
+      "round_score": 69.6813,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2.60",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2.61",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:35:17.798851+00:00",
+      "round_score": 69.7039,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2.61",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2.62",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:37:19.588115+00:00",
+      "round_score": 69.2509,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2.62",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": 0.3,
+        "prior_weight": null,
+        "n_sims": 100
+      }
+    },
+    {
+      "id": "strategy_v2.63",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:37:59.057959+00:00",
+      "round_score": 69.0299,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.63",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.64",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:38:05.106418+00:00",
+      "round_score": 69.0345,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.64",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.65",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:38:13.537696+00:00",
+      "round_score": 68.9656,
+      "n_sims": 1,
+      "config": {
+        "label": "strategy_v2.65",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 1
+      }
+    },
+    {
+      "id": "strategy_v2.66",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-20T16:40:43.269925+00:00",
+      "round_score": 69.5309,
+      "n_sims": 100,
+      "config": {
+        "label": "strategy_v2.66",
+        "budget": 50,
+        "mode": "sweep",
+        "round_number": 7,
+        "obs_weight": null,
+        "sim_weight": null,
+        "prior_weight": null,
+        "n_sims": 100
       }
     }
   ]

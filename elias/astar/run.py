@@ -28,12 +28,13 @@ VIEWPORT = 15
 RATE_LIMIT_DELAY = 0.25  # stay under 5 req/s
 
 # Blending parameters
-# Observations and simulator currently hurt scores — pure distance-aware priors
-# perform best. Queries are still used to estimate expansion rate.
-SIM_WEIGHT = 0.0
-PRIOR_WEIGHT = 1.0
-OBS_WEIGHT = 0.0
-N_SIMS = 1  # minimal since sim_weight=0
+# Observations are blended with distance-aware priors when enough samples exist.
+# obs_weight is per-observation; total obs influence = obs_weight * sqrt(n_obs).
+# Simulator is enabled with safety net: auto-disabled when it disagrees with observations.
+SIM_WEIGHT = 0.3
+PRIOR_WEIGHT = 4.0
+OBS_WEIGHT = 0.5
+N_SIMS = 100
 
 # Terrain code → prediction class mapping
 TERRAIN_TO_CLASS = {
@@ -60,16 +61,43 @@ TERRAIN_PRIORS = {
 }
 
 # Context-aware priors: (terrain, n_forest_neighbors, is_coastal) → [6] probs
-# Learned from R1-R5 ground truth. Falls back to TERRAIN_PRIORS if no match.
-_CONTEXTUAL_PRIORS_PATH = os.path.join(os.path.dirname(__file__), "contextual_priors.json")
-_CONTEXTUAL_PRIORS = {}
-if os.path.exists(_CONTEXTUAL_PRIORS_PATH):
-    with open(_CONTEXTUAL_PRIORS_PATH) as _f:
-        _CONTEXTUAL_PRIORS = json.load(_f)
+# Three prior tables: average (all rounds), warm (R1-R7 excl R3), cold (R3 only).
+# The appropriate table is selected based on observed expansion rate.
+_PRIORS_DIR = os.path.dirname(__file__)
+
+def _load_priors(filename):
+    path = os.path.join(_PRIORS_DIR, filename)
+    if os.path.exists(path):
+        with open(path) as f:
+            return json.load(f)
+    return {}
+
+_CONTEXTUAL_PRIORS = _load_priors("contextual_priors.json")
+_CONTEXTUAL_PRIORS_WARM = _load_priors("contextual_priors_warm.json")
+_CONTEXTUAL_PRIORS_COLD = _load_priors("contextual_priors_cold.json")
+
+# Expansion rate threshold for warm/cold classification.
+# Below this → cold priors. Above → warm priors.
+# R3 had expansion rate ~0.003. All other rounds >= 0.10.
+WARM_COLD_THRESHOLD = 0.05
 
 
-def get_contextual_prior(initial_grid, r, c, map_h, map_w):
-    """Get the best prior for a cell based on its terrain and neighborhood."""
+def classify_round_warmth(expansion_rate):
+    """Classify a round as 'warm' or 'cold' based on observed expansion rate.
+
+    Returns the appropriate contextual prior table.
+    """
+    if expansion_rate < WARM_COLD_THRESHOLD:
+        return _CONTEXTUAL_PRIORS_COLD, "cold"
+    else:
+        return _CONTEXTUAL_PRIORS_WARM, "warm"
+
+
+def get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=None):
+    """Get the best prior for a cell based on its terrain and neighborhood.
+
+    If prior_table is provided, uses it instead of the default (all-rounds) table.
+    """
     terrain = initial_grid[r][c]
 
     # Static terrain — no context needed
@@ -77,6 +105,8 @@ def get_contextual_prior(initial_grid, r, c, map_h, map_w):
         return [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     if terrain == 5:
         return [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
+
+    table = prior_table or _CONTEXTUAL_PRIORS
 
     # Count neighbors
     n_forest = 0
@@ -96,20 +126,28 @@ def get_contextual_prior(initial_grid, r, c, map_h, map_w):
 
     # Try exact match, then relax features
     key = f"{terrain}_{n_forest}_{1 if is_coastal else 0}"
-    if key in _CONTEXTUAL_PRIORS:
-        return list(_CONTEXTUAL_PRIORS[key])
+    if key in table:
+        return list(table[key])
 
     # Relax: ignore coastal
     key = f"{terrain}_{n_forest}_0"
-    if key in _CONTEXTUAL_PRIORS:
-        return list(_CONTEXTUAL_PRIORS[key])
+    if key in table:
+        return list(table[key])
 
     # Relax: ignore forest count
     key = f"{terrain}_0_{1 if is_coastal else 0}"
-    if key in _CONTEXTUAL_PRIORS:
-        return list(_CONTEXTUAL_PRIORS[key])
+    if key in table:
+        return list(table[key])
 
-    # Fallback to global prior
+    # Fallback to default table, then global prior
+    if prior_table is not None and key not in prior_table:
+        # Try the all-rounds table as fallback
+        for fallback_key in [f"{terrain}_{n_forest}_{1 if is_coastal else 0}",
+                             f"{terrain}_{n_forest}_0",
+                             f"{terrain}_0_{1 if is_coastal else 0}"]:
+            if fallback_key in _CONTEXTUAL_PRIORS:
+                return list(_CONTEXTUAL_PRIORS[fallback_key])
+
     return list(TERRAIN_PRIORS.get(terrain, [1/N_CLASSES] * N_CLASSES))
 
 
@@ -289,7 +327,8 @@ def estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w):
 
 
 def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansion_rate,
-                              dist_multipliers=None, port_ratio=0.35, ruin_ratio=0.15):
+                              dist_multipliers=None, port_ratio=0.75, ruin_ratio=0.10,
+                              prior_table=None):
     """Get prior adjusted for distance to nearest settlement and round's expansion rate.
 
     Directly sets settlement+port probability to the distance-based target,
@@ -298,7 +337,7 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
 
     If dist_multipliers is provided (from estimate_dist_decay), uses the
     observation-derived per-distance multipliers instead of the fixed curve.
-    port_ratio and ruin_ratio can be observation-derived instead of fixed.
+    If prior_table is provided, uses warm/cold-specific contextual priors.
     """
     terrain = initial_grid[r][c]
 
@@ -308,8 +347,8 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
     if terrain == 5:
         return [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
 
-    # Start from contextual prior
-    prior = get_contextual_prior(initial_grid, r, c, map_h, map_w)
+    # Start from contextual prior (warm/cold-aware if table provided)
+    prior = get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=prior_table)
 
     dist = dist_map[r][c]
 
@@ -370,7 +409,7 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
 
 
 # Minimum observations before we trust data over priors
-MIN_OBS_TO_BLEND = 3
+MIN_OBS_TO_BLEND = 1
 
 
 # --- Logging ---
@@ -679,7 +718,8 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
                         sim_weight=SIM_WEIGHT, prior_weight=PRIOR_WEIGHT,
                         obs_counts=None, obs_weight=OBS_WEIGHT,
                         expansion_rate=None, dist_multipliers=None,
-                        port_ratio=0.35, ruin_ratio=0.15):
+                        port_ratio=0.75, ruin_ratio=0.10,
+                        prior_table=None):
     """Generate prediction by blending observations + simulator + distance-aware priors.
 
     Three signal sources, blended per-cell:
@@ -697,6 +737,31 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
     if sim_weight > 0:
         sim_pred = run_monte_carlo(grid, settlements, n_sims=n_sims, params=params, base_seed=base_seed)
 
+        # Simulator safety net: compare sim output to observations.
+        # If the sim's most-likely class disagrees with observations on too many
+        # cells, the sim's hidden params are wrong for this round — disable it.
+        if sim_pred is not None and obs_counts is not None:
+            agree = 0
+            total = 0
+            for r in range(map_h):
+                for c in range(map_w):
+                    n_obs = sum(obs_counts[r][c])
+                    if n_obs < 1:
+                        continue
+                    # Observed most-common class
+                    obs_argmax = max(range(N_CLASSES), key=lambda k: obs_counts[r][c][k])
+                    # Sim's most-likely class
+                    sim_argmax = max(range(N_CLASSES), key=lambda k: sim_pred[r][c][k])
+                    total += 1
+                    if obs_argmax == sim_argmax:
+                        agree += 1
+            if total > 0:
+                agreement = agree / total
+                # If sim agrees on fewer than 60% of observed cells, disable it
+                if agreement < 0.60:
+                    sim_pred = None
+                    sim_weight = 0.0
+
     # Precompute distance map if we have an expansion rate
     dist_map = None
     if expansion_rate is not None:
@@ -708,12 +773,17 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
             if dist_map is not None:
                 prior = get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map, expansion_rate,
                                                  dist_multipliers=dist_multipliers,
-                                                 port_ratio=port_ratio, ruin_ratio=ruin_ratio)
+                                                 port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+                                                 prior_table=prior_table)
             else:
-                prior = get_contextual_prior(grid, r, c, map_h, map_w)
+                prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
 
             n_obs = sum(obs_counts[r][c]) if obs_counts else 0
-            ow = obs_weight * n_obs if n_obs > 0 else 0
+            # Only blend observations when we have enough samples
+            use_obs = n_obs >= MIN_OBS_TO_BLEND and obs_weight > 0
+            # Sub-linear scaling: sqrt(n_obs) prevents many observations from
+            # completely drowning out the prior
+            ow = obs_weight * (n_obs ** 0.5) if use_obs else 0
 
             if ow > 0 or sim_weight > 0:
                 total_w = ow + sim_weight + prior_weight
@@ -856,14 +926,13 @@ def run_observation_phases(seed_grids, seed_dynamic_vps, total_budget, map_w, ma
         else:
             dist_multipliers[d] = _DIST_DECAY_DEFAULT.get(d, 0.0)
 
-    # Estimate port and ruin ratios from observations
-    port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w)
+    # Classify round warmth and select appropriate prior table
+    prior_table, warmth = classify_round_warmth(avg_expansion)
 
-    print_fn(f"  Expansion rate: {avg_expansion:.3f}")
+    print_fn(f"  Expansion rate: {avg_expansion:.3f} → {warmth} round")
     print_fn(f"  Dist multipliers: " + " ".join(f"d{d}={dist_multipliers.get(d, 0):.2f}" for d in range(1, 8)))
-    print_fn(f"  Port ratio: {port_ratio:.3f}, Ruin ratio: {ruin_ratio:.3f}")
 
-    return seed_counts, avg_expansion, dist_multipliers, port_ratio, ruin_ratio
+    return seed_counts, avg_expansion, dist_multipliers, prior_table
 
 
 def main():
@@ -944,7 +1013,7 @@ def main():
         })
         return observe_seed(round_id, seed_idx, viewports, map_w, map_h)
 
-    seed_counts, avg_expansion, dist_multipliers, port_ratio, ruin_ratio = run_observation_phases(
+    seed_counts, avg_expansion, dist_multipliers, prior_table = run_observation_phases(
         seed_grids, seed_dynamic_vps, total_budget, map_w, map_h,
         observe_fn=live_observe,
     )
@@ -952,8 +1021,6 @@ def main():
     log_action(round_id, "expansion_rate_estimate", {
         "pooled_rate": round(avg_expansion, 4),
         "dist_multipliers": {str(k): round(v, 3) for k, v in dist_multipliers.items()},
-        "port_ratio": round(port_ratio, 3),
-        "ruin_ratio": round(ruin_ratio, 3),
     })
     print(f"\nExpansion rate estimate: {avg_expansion:.3f}")
 
@@ -972,7 +1039,7 @@ def main():
             obs_counts=seed_counts[seed_idx],
             expansion_rate=avg_expansion,
             dist_multipliers=dist_multipliers,
-            port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+            prior_table=prior_table,
         )
         elapsed = time.time() - t0
         print(f"  Prediction built in {elapsed:.1f}s")
