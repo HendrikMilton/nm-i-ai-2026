@@ -6,6 +6,7 @@
 
 import { readdirSync, readFileSync, existsSync, appendFileSync } from "fs";
 import { join } from "path";
+import { execSync } from "child_process";
 
 const ROOT = join(import.meta.dir, "..");
 const LOGS_DIR = join(ROOT, "logs");
@@ -159,6 +160,20 @@ async function main() {
     // 4. Leaderboard
     const lb = await getLeaderboard();
     console.log(`  [${ts()}] ${lb}`);
+
+    // 5. Git commit
+    try {
+      const repoRoot = join(ROOT, "..", "..");
+      execSync("git add -A", { cwd: repoRoot, stdio: "pipe" });
+      const hasChanges = execSync("git diff --cached --quiet || echo changes", { cwd: repoRoot, encoding: "utf-8" }).trim();
+      if (hasChanges) {
+        execSync(`git commit -m "auto submit round ${round}"`, { cwd: repoRoot, stdio: "pipe" });
+        execSync("git pull --rebase && git push", { cwd: repoRoot, stdio: "pipe", timeout: 30_000 });
+        console.log(`  [${ts()}] git: committed + pushed`);
+      }
+    } catch (e: any) {
+      console.log(`  [${ts()}] git: ${e.message?.slice(0, 80)}`);
+    }
 
     // Brief pause before next round
     await sleep(5_000);

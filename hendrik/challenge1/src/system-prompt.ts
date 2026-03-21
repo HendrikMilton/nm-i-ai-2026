@@ -7,30 +7,24 @@ const apiRef = readFileSync(join(__dirname, '..', 'api-compact.json'), 'utf-8');
 const dummyNorwegianBankNumber = '12345678903';
 const dummyEmail = 'post@example.org';
 
-// Task 22 experiment log:
-// Attempt 1: POST /ledger/voucher (no supplierVoucherType) → 0/5
-// Attempt 2: travelExpense + convert to ansattutlegg + cost + deliver → 0/5
-// Attempt 3: travelExpense WITHOUT convert + cost + deliver → 0/5
-// Attempt 4: POST /ledger/voucher WITH supplierVoucherType:"TYPE_SUPPLIER_INVOICE_SIMPLE" → ???
-// A competitor scored 4.50 on task 22 (6th place team, 11 tries)
-
 const workflows = `
 ## Workflow: Create invoice
 1. Find/create customer: GET /customer?organizationNumber=X or POST /customer
 2. For each product: GET /product?number=X, create only if not found
 3. Ensure bank account: GET /ledger/account?number=1920&fields=id,bankAccountNumber,version → if empty, PUT with bankAccountNumber="${dummyNorwegianBankNumber}"
-4. POST /order with {customer:{id}, orderDate, deliveryDate}
-5. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}
-6. POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
+4. POST /invoice?sendToCustomer=true with INLINE order+orderlines (saves 2+ write calls):
+   {invoiceDate, invoiceDueDate, orders:[{customer:{id}, orderDate:<invoiceDate>, deliveryDate:<invoiceDate>,
+     orderLines:[{product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}, ...]}]}
+   This creates order, orderlines, and invoice in ONE call.
 
 ## Workflow: Create order + invoice + payment (Task 10)
 Complete flow: order → invoice → payment in one task.
 1. In parallel: GET customer, GET each product, GET /invoice/paymentType, GET /ledger/account?number=1920 (bank account check)
    - If bank account has bankAccountNumber, no update needed
-2. POST /order with {customer:{id}, orderDate, deliveryDate}
-3. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}
-4. POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
-5. PUT /invoice/{id}/:payment with QUERY PARAMS: paymentDate, paymentTypeId ("Betalt til bank" id), paidAmount (use the invoice "amount" field — total incl VAT)
+2. POST /invoice?sendToCustomer=true with INLINE order+orderlines:
+   {invoiceDate, invoiceDueDate, orders:[{customer:{id}, orderDate:<invoiceDate>, deliveryDate:<invoiceDate>,
+     orderLines:[{product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}]}]}
+3. PUT /invoice/{id}/:payment with QUERY PARAMS: paymentDate, paymentTypeId ("Betalt til bank" id), paidAmount (use the invoice "amount" field — total incl VAT)
    The invoice amount is in the POST /invoice response — use it directly.
 
 ## Workflow: Register payment on existing invoice
@@ -58,16 +52,16 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
 Same as Task 20 but data comes from prompt text instead of PDF. Follow same steps.
 
 ## Workflow: Receipt/expense registration (Task 22)
-Register receipt expense as a supplier invoice voucher with supplierVoucherType.
-1. In parallel: GET /supplier?organizationNumber=<from_receipt>, GET /department?name=<dept>&fields=id,name,
-   GET /ledger/account for expense account (match expense type: 6540 Inventar for equipment, 7140 Reisekostnad for travel, 7350 Representasjon for dinners),
-   GET /ledger/account?number=2400&fields=id
-2. If supplier not found: POST /supplier with {name, organizationNumber, email:"post@example.org", invoiceEmail:"post@example.org"}
-3. POST /ledger/voucher with supplierVoucherType:"TYPE_SUPPLIER_INVOICE_SIMPLE" and postings:
-   {date:<receipt_date>, description:"<item> - <supplier_name>", supplierVoucherType:"TYPE_SUPPLIER_INVOICE_SIMPLE", postings: [
-     {date, description, account:{id:<expense_account>}, supplier:{id}, department:{id}, amountGross:<item_amount_incl_vat>, amountGrossCurrency:<same>, vatType:{id:1}, invoiceNumber:<receipt_date_or_number>, row:1},
-     {date, description, account:{id:<2400>}, supplier:{id}, department:{id}, amountGross:<-item_amount>, amountGrossCurrency:<same>, vatType:{id:0}, row:2}
-   ]}
+Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a ledger voucher or supplier invoice.
+1. In parallel: GET /employee?fields=id&count=1, GET /department?name=<dept>&fields=id,name,
+   GET /travelExpense/costCategory?fields=id,description (find "Representasjon - fradragsb." for dinners, or match expense type),
+   GET /travelExpense/paymentType?fields=id,description (find "Privat utlegg")
+2. POST /travelExpense with {employee:{id}, title:"<expense_description>"}
+3. PUT /travelExpense/{id}/convert — converts type 1 (travel) to type 0 (employee expense/ansattutlegg). Empty body.
+4. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date:<receipt_date>, amountCurrencyIncVat:<amount_incl_vat>, comments:"<description>"}
+   VAT treatment: use vatType 0 (no VAT) for representation expenses. The costCategory handles VAT automatically.
+5. PUT /travelExpense/{id} with {id, version, department:{id}, travelDetails:{departureDate:<receipt_date>, returnDate:<receipt_date>, isDayTrip:true, departureFrom:"Oslo", destination:"Oslo", departureTime:"12:00", returnTime:"14:00", purpose:"<description>"}}
+6. PUT /travelExpense/:deliver?id={id} — submits the expense. MUST deliver or it won't be scored.
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
@@ -246,7 +240,7 @@ Reconcile bank statement CSV against open invoices. MUST create a bank reconcili
 3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<amount>
    CRITICAL: use date from CSV, NOT today.
 4. Register supplier payments ONE AT A TIME: POST /supplierInvoice/{id}/:addPayment with params paymentDate=<DATE_FROM_CSV>, amount=<amount>, useDefaultPaymentType=true
-5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<matching_period>}, bankAccountClosingBalanceCurrency:<CSV_final_saldo>, isClosed:false}
+5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<matching_period>}, bankAccountClosingBalanceCurrency:<CSV_final_saldo>, isClosed:false, type:"MANUAL"}
 6. If bank fees exist: PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:"Bankgebyr", amount:<positive_amount>, paymentType:{id:<bankgebyr_type>}}]
 7. Close: PUT /bank/reconciliation/{id} with {id, version, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
    Only succeeds when accounting balance = bank statement balance (avvik = 0).

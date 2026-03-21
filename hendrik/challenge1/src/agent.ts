@@ -84,9 +84,11 @@ export const solve = async (body: SolveRequest) => {
                     mimeType: f.mime_type,
                 } as any);
             } else {
+                // Decode text-based files (CSV, etc.) and include content directly
+                const decoded = Buffer.from(f.content_base64, 'base64').toString('utf-8');
                 userContent.push({
                     type: 'text',
-                    text: `[Attached file: ${f.filename} (${f.mime_type}), base64 length: ${f.content_base64.length}]`,
+                    text: `[File: ${f.filename}]\n${decoded}`,
                 });
             }
         }
