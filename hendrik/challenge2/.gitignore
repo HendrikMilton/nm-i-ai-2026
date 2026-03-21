@@ -1,6 +1,7 @@
 # Training data (derived from source dataset)
 data/
 data_full/
+classifier_data/
 
 # Training runs, weights, submissions
 runs/
