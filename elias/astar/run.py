@@ -48,8 +48,8 @@ SIM_WEIGHT_COLD = 0.0
 SIM_SAFETY_THRESHOLD = 0.55  # disable sim below this agreement rate
 
 # ABC-based blending
-ABC_PRIOR_WEIGHT = 0.85
-ABC_MC_WEIGHT = 0.15
+ABC_PRIOR_WEIGHT = 0.70
+ABC_MC_WEIGHT = 0.30
 MC_EQUIV_SAMPLES = 18
 MC_TOTAL_RUNS = 500
 
