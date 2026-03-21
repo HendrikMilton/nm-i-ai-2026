@@ -149,7 +149,7 @@ class Simulator:
     def _is_buildable(self, x, y):
         """Check if a cell can have a new settlement."""
         t = self.grid[y][x]
-        return t in (PLAINS, EMPTY, RUIN)
+        return t in (PLAINS, EMPTY, RUIN, FOREST)
 
     # --- Phase 1: Growth ---
     def _phase_growth(self):
@@ -321,7 +321,11 @@ class Simulator:
     # --- Phase 5: Environment ---
     def _phase_environment(self):
         p = self.params
-        ruins = [(s.x, s.y) for s in self.settlements if not s.alive]
+        ruins = []
+        for r in range(self.height):
+            for c in range(self.width):
+                if self.grid[r][c] == RUIN:
+                    ruins.append((c, r))
 
         for rx, ry in ruins:
             if self.grid[ry][rx] != RUIN:

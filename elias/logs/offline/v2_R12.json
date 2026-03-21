@@ -2,7 +2,7 @@
   "id": "v2_R12",
   "round_id": "795bfb1f-54bd-4f39-a526-9868b36f7ebd",
   "round_number": 12,
-  "timestamp": "2026-03-21T08:19:37.472278+00:00",
+  "timestamp": "2026-03-21T08:46:28.416291+00:00",
   "n_sims": 500,
   "round_score": 51.3127,
   "config": {
@@ -17,7 +17,7 @@
       "prior_score": 45.1081,
       "weighted_kl": 0.223176,
       "scored_cells": 649,
-      "elapsed_s": 1.0,
+      "elapsed_s": 1.9,
       "n_queries": 10,
       "queries": [
         {
@@ -30123,7 +30123,7 @@
       "prior_score": 47.711,
       "weighted_kl": 0.20794,
       "scored_cells": 592,
-      "elapsed_s": 0.8,
+      "elapsed_s": 1.3,
       "n_queries": 10,
       "queries": [
         {
@@ -60229,7 +60229,7 @@
       "prior_score": 40.2959,
       "weighted_kl": 0.250362,
       "scored_cells": 725,
-      "elapsed_s": 1.4,
+      "elapsed_s": 2.7,
       "n_queries": 10,
       "queries": [
         {
@@ -90335,7 +90335,7 @@
       "prior_score": 45.6926,
       "weighted_kl": 0.218115,
       "scored_cells": 789,
-      "elapsed_s": 1.3,
+      "elapsed_s": 2.7,
       "n_queries": 10,
       "queries": [
         {
@@ -120441,7 +120441,7 @@
       "prior_score": 47.5501,
       "weighted_kl": 0.214053,
       "scored_cells": 654,
-      "elapsed_s": 1.0,
+      "elapsed_s": 2.1,
       "n_queries": 10,
       "queries": [
         {

@@ -19,66 +19,63 @@ sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 from offline.simulator import Simulator, DEFAULT_PARAMS, TERRAIN_TO_CLASS
 from run import CLASS_FLOORS
 
-# --- ABC parameter ranges ---
+# --- ABC parameter ranges (direct 1:1 mapping to simulator params) ---
 
 ABC_PARAM_RANGES = {
-    "expansion_rate":      (0.03, 0.65),
-    "conflict_prob":       (0.05, 0.55),
-    "winter_severity":     (0.08, 0.75),
-    "trade_range":         (3, 14),
-    "ruin_reclaim_rate":   (0.08, 0.65),
-    "forest_reclaim_rate": (0.01, 0.30),
-    "longship_prob":       (0.04, 0.45),
-    "longship_range":      (4, 17),
+    # Growth
+    "expansion_chance":        (0.01, 0.20),
+    "expansion_threshold":     (0.5, 2.5),
+    "base_food_production":    (0.1, 0.6),
+    "population_growth_rate":  (0.03, 0.25),
+    # Conflict
+    "raid_chance":             (0.05, 0.55),
+    "conquest_chance":         (0.02, 0.20),
+    # Winter
+    "winter_severity_mean":    (0.08, 1.5),
+    "winter_food_loss_base":   (0.1, 0.8),
+    "collapse_chance_base":    (0.1, 0.7),
+    # Trade
+    "trade_range":             (3, 14),
+    # Environment
+    "settlement_reclaim_chance": (0.03, 0.65),
+    "ruin_forest_reclaim_chance": (0.01, 0.30),
+    # Longships
+    "longship_build_chance":   (0.04, 0.45),
+    "longship_raid_range":     (4, 17),
 }
 
-# Comprehensive cold overrides — ALL parameters adjusted for cold rounds
 COLD_OVERRIDES = {
-    "expansion_rate":      (0.005, 0.12),    # v1 had (0.01, 0.15) — R3 was 0.003
-    "conflict_prob":       (0.10, 0.55),     # cold = more conflict (settlements fight over scarce resources)
-    "winter_severity":     (0.40, 0.80),     # cold = harsher winters
-    "trade_range":         (3, 10),          # cold = less trade
-    "ruin_reclaim_rate":   (0.03, 0.30),     # cold = fewer reclaims
-    "forest_reclaim_rate": (0.02, 0.35),     # cold = more forest overtake of ruins
-    "longship_prob":       (0.02, 0.25),     # cold = fewer longships
-    "longship_range":      (4, 12),          # cold = shorter range
+    "expansion_chance":        (0.002, 0.05),
+    "expansion_threshold":     (1.0, 3.0),
+    "base_food_production":    (0.05, 0.35),
+    "population_growth_rate":  (0.02, 0.15),
+    "raid_chance":             (0.10, 0.55),
+    "conquest_chance":         (0.02, 0.20),
+    "winter_severity_mean":    (0.40, 1.5),
+    "winter_food_loss_base":   (0.3, 0.8),
+    "collapse_chance_base":    (0.3, 0.7),
+    "trade_range":             (3, 10),
+    "settlement_reclaim_chance": (0.03, 0.30),
+    "ruin_forest_reclaim_chance": (0.02, 0.35),
+    "longship_build_chance":   (0.02, 0.25),
+    "longship_raid_range":     (4, 12),
 }
 
-INTEGER_PARAMS = {"trade_range", "longship_range"}
+INTEGER_PARAMS = {"trade_range", "longship_raid_range"}
 
 
 def abc_params_to_sim_params(abc_vec):
-    """Map 8 ABC parameters to full simulator params dict."""
+    """Direct 1:1 mapping — ABC params ARE simulator params."""
     p = DEFAULT_PARAMS.copy()
-
-    er = abc_vec["expansion_rate"]
-    p["expansion_chance"] = er * 0.15
-    p["expansion_threshold"] = max(0.5, 2.0 - er)
-
-    cp = abc_vec["conflict_prob"]
-    p["raid_chance"] = cp
-    p["conquest_chance"] = cp * 0.25
-
-    ws = abc_vec["winter_severity"]
-    p["winter_severity_mean"] = ws
-    p["collapse_chance_base"] = ws * 0.5
-
-    p["trade_range"] = int(abc_vec["trade_range"])
-
-    rr = abc_vec["ruin_reclaim_rate"]
-    p["settlement_reclaim_chance"] = rr
-    p["reclaim_resource_fraction"] = min(0.5, rr * 0.5)
-
-    fr = abc_vec["forest_reclaim_rate"]
-    p["ruin_forest_reclaim_chance"] = fr
-    p["ruin_plains_reclaim_chance"] = fr * 1.5
-
-    lp = abc_vec["longship_prob"]
-    p["longship_build_chance"] = lp
-    p["longship_build_threshold"] = max(0.2, 1.0 - lp)
-
-    p["longship_raid_range"] = int(abc_vec["longship_range"])
-
+    for key, val in abc_vec.items():
+        if key in INTEGER_PARAMS:
+            p[key] = int(val)
+        else:
+            p[key] = val
+    # Derived params that aren't directly fitted
+    p["ruin_plains_reclaim_chance"] = p.get("ruin_forest_reclaim_chance", 0.05) * 1.5
+    p["reclaim_resource_fraction"] = min(0.5, p.get("settlement_reclaim_chance", 0.1) * 0.5)
+    p["longship_build_threshold"] = max(0.2, 1.0 - p.get("longship_build_chance", 0.1))
     return p
 
 

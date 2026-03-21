@@ -753,13 +753,9 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
 
     is_cold = warmth == "cold"
 
-    # MC predictions from ABC fitting are currently disabled — they consistently
-    # hurt scores across all tested rounds. The prior+obs Bayesian blend alone
-    # outperforms the three-layer approach. Keeping the parameter for future use.
     equiv_samples = EQUIV_COLD_POOLED if is_cold else EQUIV_WARM_PER_SEED
-    mc_pred = None  # disabled: MC hurts on both warm and cold rounds
-    mc_w = 0.0
-    prior_w = 1.0
+    mc_w = ABC_MC_WEIGHT if mc_pred is not None else 0.0
+    prior_w = ABC_PRIOR_WEIGHT
 
     prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
     for r in range(map_h):
