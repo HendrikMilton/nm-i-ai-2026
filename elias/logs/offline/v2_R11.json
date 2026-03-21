@@ -2,7 +2,7 @@
   "id": "v2_R11",
   "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
   "round_number": 11,
-  "timestamp": "2026-03-21T08:12:43.098495+00:00",
+  "timestamp": "2026-03-21T08:17:51.473064+00:00",
   "n_sims": 500,
   "round_score": 79.4925,
   "config": {
@@ -60229,7 +60229,7 @@
       "prior_score": 73.1706,
       "weighted_kl": 0.096206,
       "scored_cells": 1351,
-      "elapsed_s": 2.3,
+      "elapsed_s": 2.2,
       "n_queries": 10,
       "queries": [
         {

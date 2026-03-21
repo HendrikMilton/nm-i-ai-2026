@@ -116,7 +116,7 @@ class Simulator:
                 self.grid[s.y][s.x] = PORT if s.has_port else SETTLEMENT
 
     def _dist(self, x1, y1, x2, y2):
-        return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        return max(abs(x1 - x2), abs(y1 - y2))
 
     def _adjacent_cells(self, x, y):
         for dx in (-1, 0, 1):
