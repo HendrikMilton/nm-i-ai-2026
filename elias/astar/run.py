@@ -45,7 +45,7 @@ PRIOR_WEIGHT = 4.0
 OBS_WEIGHT = 0.5
 SIM_WEIGHT_WARM = 0.3
 SIM_WEIGHT_COLD = 0.0
-SIM_SAFETY_THRESHOLD = 0.55  # disable sim below this agreement rate
+SIM_SAFETY_THRESHOLD = 0.90  # disable sim below this agreement rate
 
 # ABC-based blending
 ABC_PRIOR_WEIGHT = 0.80
@@ -741,6 +741,22 @@ EQUIV_COLD_POOLED = 50
 EQUIV_WARM_PER_SEED = 20
 
 
+def validate_mc_against_obs(mc_pred, obs_counts, map_h, map_w):
+    """Check if MC predictions agree with observations. Returns agreement rate."""
+    agree = total = 0
+    for r in range(map_h):
+        for c in range(map_w):
+            n_obs = sum(obs_counts[r][c])
+            if n_obs < 1:
+                continue
+            obs_argmax = max(range(N_CLASSES), key=lambda k: obs_counts[r][c][k])
+            mc_argmax = max(range(N_CLASSES), key=lambda k: mc_pred[r][c][k])
+            total += 1
+            if obs_argmax == mc_argmax:
+                agree += 1
+    return agree / max(total, 1), total
+
+
 def generate_prediction_abc(grid, mc_pred, map_w, map_h,
                              obs_counts=None, expansion_rate=None,
                              dist_multipliers=None, port_ratio=0.75,
@@ -754,7 +770,14 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
     is_cold = warmth == "cold"
 
     equiv_samples = EQUIV_COLD_POOLED if is_cold else EQUIV_WARM_PER_SEED
-    mc_w = ABC_MC_WEIGHT if mc_pred is not None else 0.0
+
+    # Validate MC against observations — skip if it disagrees too much
+    mc_w = 0.0
+    if mc_pred is not None and obs_counts is not None:
+        agreement, n_compared = validate_mc_against_obs(mc_pred, obs_counts, map_h, map_w)
+        if agreement >= SIM_SAFETY_THRESHOLD:
+            mc_w = ABC_MC_WEIGHT
+        # else: mc_w stays 0, prior-only blend
     prior_w = ABC_PRIOR_WEIGHT
 
     prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
