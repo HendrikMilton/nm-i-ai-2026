@@ -4,6 +4,8 @@
 **Score:** 1.33 (7/7 checks pass) | **Tier:** 1 (max 2.0)
 **Problem:** Pure efficiency — all checks pass, too many write calls
 
+**UPDATE:** Inline invoice approach found (see below) — better than batch orderlines. 6W -> 2W.
+
 ---
 
 ## Task Description
@@ -36,85 +38,92 @@ POST /invoice                     <- WRITE 6
 
 ## Root Cause
 
-The agent adds order lines ONE AT A TIME with 3 separate POST /order/orderline calls. The system prompt explicitly says "Add order lines ONE AT A TIME".
+The agent creates order + orderlines + invoice as separate writes. But POST /invoice supports creating the order and orderlines inline.
 
 ---
 
-## Fix: Use POST /order/orderline/list (Batch Endpoint)
+## BEST FIX: POST /invoice with Inline Order+OrderLines (2 writes)
 
-### Sandbox verification
+POST /invoice docs: "Related Order and OrderLines can be created first, or **included as new objects inside the Invoice**."
 
-**Test 1 — Batch creation:**
+### Sandbox test:
 ```
-POST /order/orderline/list with [
-  {order:{id}, product:{id:84383247}, count:1, unitPriceExcludingVatCurrency:19500, vatType:{id:3}},
-  {order:{id}, product:{id:84383248}, count:1, unitPriceExcludingVatCurrency:14200, vatType:{id:3}},
-  {order:{id}, product:{id:84383249}, count:1, unitPriceExcludingVatCurrency:8300, vatType:{id:3}}
-]
--> 201: Created 3 order lines in 1 POST
-```
-
-**Test 2 — Full end-to-end flow:**
-Order 402027122 -> batch 3 lines -> Invoice created
-- amount (incl VAT) = 52 500.00
-- amountExclVat = 42 000.00
-- 3 order lines on invoice
-
-**Test 3 — Inline orderLines on POST /order:**
-```
-POST /order with {customer, orderDate, orderLines:[...]}
--> Order created but orderLines = 0 (NOT supported — must use separate call)
+POST /invoice?sendToCustomer=false with {
+  invoiceDate, invoiceDueDate,
+  orders: [{
+    customer:{id}, orderDate, deliveryDate,
+    orderLines: [
+      {product:{id}, count:1, unitPriceExcludingVatCurrency:19500, vatType:{id:3}},
+      {product:{id}, count:1, unitPriceExcludingVatCurrency:14200, vatType:{id:3}},
+      {product:{id}, count:1, unitPriceExcludingVatCurrency:8300, vatType:{id:3}}
+    ]
+  }]
+}
+-> SUCCESS: Invoice with 3 lines, amount=52500, exclVat=42000
 ```
 
-### UI verification (Invoice #34)
+### UI verification (Invoice #36)
 All 3 product lines visible in invoice PDF:
 - Kontorpult: 14 200 ekskl, 3 550 mva, 17 750 inkl
 - Kontorpult 2: 8 300 ekskl, 2 075 mva, 10 375 inkl
 - Testprodukt: 19 500 ekskl, 4 875 mva, 24 375 inkl
 - Sum: 42 000 ekskl, 10 500 mva, 52 500 inkl
-- Kontrollsum: correct, Kontonummer: shown, Bilag created
+- Identical to traditionally-created invoice #34
 
 ---
 
-## Optimized Approach (4 write calls)
+## Optimized Approach (2 write calls)
 
 ```
 GET  /customer                         (free)
 GET  /product x 3                      (free)
 GET  /ledger/account?number=1920       (free)
 PUT  /ledger/account/xxx               <- WRITE 1 (bankAccountNumber, if empty)
-POST /order                            <- WRITE 2
-POST /order/orderline/list             <- WRITE 3 (ALL 3 lines in 1 call)
-POST /invoice                          <- WRITE 4
+POST /invoice (with inline order+lines)<- WRITE 2 (creates order+3 lines+invoice in 1 call)
 ```
 
-**4 writes, 0 errors -> expected efficiency ~1.67-2.0**
+**2 writes, 0 errors -> expected efficiency ~2.0 -> score = 2.0**
+
+---
+
+## Alternative: Batch Orderlines (4 writes, SUPERSEDED)
+
+Also tested POST /order/orderline/list (batch). It works but inline invoice is better:
+- Batch: 6W -> 4W
+- Inline: 6W -> 2W
+
+Also tested inline orderLines on POST /order — does NOT work (0 lines created).
 
 ---
 
 ## System Prompt Changes Needed
 
-Two lines need to change:
-
-**Line 23 (Workflow: Create invoice):**
+### Workflow: Create invoice (line ~18)
+Replace order+orderline+invoice steps with single inline POST:
 ```
-BEFORE: 5. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}
-AFTER:  5. Add ALL order lines in ONE call: POST /order/orderline/list with [{order:{id}, product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}, ...] — NEVER add lines one at a time
+BEFORE:
+  4. POST /order with {customer:{id}, orderDate, deliveryDate}
+  5. Add order lines ONE AT A TIME: POST /order/orderline with {...}
+  6. POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
+
+AFTER:
+  4. POST /invoice?sendToCustomer=true with {
+       invoiceDate, invoiceDueDate,
+       orders: [{
+         customer:{id}, orderDate, deliveryDate,
+         orderLines: [{product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}, ...]
+       }]
+     }
+     This creates order+orderlines+invoice in 1 write call.
 ```
 
-**Line 31 (Workflow: Create order + invoice + payment, Task 10):**
-```
-BEFORE: 3. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}
-AFTER:  3. Add ALL order lines in ONE call: POST /order/orderline/list with [{order:{id}, product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}, ...] — NEVER add lines one at a time
-```
+### Workflow: Create order + invoice + payment (Task 10, line ~26)
+Same change — inline order in POST /invoice. Then PUT /:payment as before.
 
-DO NOT change lines 77, 127, 147, 154 — those are single-line tasks (milestone invoices, project invoices) where batch isn't needed.
-
----
-
-## Note: Task 06 is a DIFFERENT task type
-
-Task 06 is single-product create+send invoice (not multi-product). It has variable writes (4-6) depending on whether product/customer need to be created. Requires separate analysis.
+### DO NOT change:
+- Fixed-price project milestone invoices (need POST /order for project linking)
+- Timesheet invoices (need order with project reference)
+- Reminder fee invoices (different flow)
 
 ---
 
@@ -122,7 +131,7 @@ Task 06 is single-product create+send invoice (not multi-product). It has variab
 
 | Task | Before | After | Gain |
 |------|--------|-------|------|
-| Task 05 | 1.33 | 1.67-2.0 | +0.34 to +0.67 |
-| Task 10 | 2.40 | 2.40+ | +0.0 to +0.27 |
-
-Also benefits any future multi-line invoice/order task.
+| Task 05 | 1.33 (6W) | 2.0 (2W) | **+0.67** |
+| Task 06 | 1.25 (4-6W) | 1.67-2.0 (2-3W) | **+0.42 to +0.75** |
+| Task 10 | 2.40 (6W) | 2.40+ (3W) | **+0.0 to +0.27** |
+| **Total** | | | **+1.09 to +1.69** |
