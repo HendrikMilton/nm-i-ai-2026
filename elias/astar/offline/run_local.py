@@ -163,10 +163,15 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         print(f"\n{'='*60}")
         print(f"  v2 Backtest — Round {round_num} ({round_id[:8]}...)")
         print(f"  Budget: {budget}, ABC: {use_abc}")
+        if iteration_id:
+            print(f"  Name: {iteration_id}")
         print(f"{'='*60}")
 
     rd = get_round(round_id)
     map_w, map_h = extract_map_dimensions(rd)
+
+    if not quiet:
+        print(f"  Map: {map_w}x{map_h}")
 
     # Parse per-seed grids
     initial_states = rd.get("initial_states") or []
@@ -176,6 +181,13 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         if grid:
             seed_grids[i] = grid
 
+    if not quiet:
+        for si in sorted(seed_grids.keys()):
+            g = seed_grids[si]
+            n_settle = sum(1 for r in g for c in r if c in (1, 2))
+            n_forest = sum(1 for r in g for c in r if c == 4)
+            print(f"  Seed {si}: {n_settle} settlements/ports, {n_forest} forests")
+
     # Load ground truth
     seed_gt = {}
     for seed in range(N_SEEDS):
@@ -184,6 +196,8 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
 
     # Build tiling
     tiling = build_tiling(map_w, map_h)
+    if not quiet:
+        print(f"  Tiling: {len(tiling)} viewports per seed")
     seed_viewports = {s: tiling for s in range(N_SEEDS)}
 
     rng = random.Random(rng_seed if rng_seed is not None else round_num * 7919)
@@ -281,13 +295,27 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         obs_result = score_prediction(obs_pred, ground_truth)
         prior_result = score_prediction(prior_pred, ground_truth)
 
+        # Count observations per cell for this seed
+        n_observed = sum(1 for r in range(map_h) for c in range(map_w)
+                         if sum(effective_obs[r][c]) > 0)
+        total_obs = sum(sum(effective_obs[r][c]) for r in range(map_h) for c in range(map_w))
+
+        # Count initial settlements for this seed
+        n_initial_settle = sum(1 for r in grid for c in r if c in (1, 2))
+
         seed_results[seed] = {
             "obs_score": obs_result["score"],
             "prior_score": prior_result["score"],
             "weighted_kl": obs_result["weighted_kl"],
+            "prior_weighted_kl": prior_result["weighted_kl"],
             "scored_cells": obs_result["scored_cells"],
+            "n_initial_settlements": n_initial_settle,
+            "n_observed_cells": n_observed,
+            "total_observations": total_obs,
             "elapsed_s": round(elapsed, 1),
             "n_queries": len(seed_queries.get(seed, [])),
+            "worst_cells": [(r, c, round(ekl, 4), round(kl, 4), round(ent, 4))
+                            for r, c, ekl, kl, ent in obs_result["worst_cells"][:10]],
             "queries": seed_queries.get(seed, []),
             "initial_grid": grid,
             "prediction": obs_pred,
@@ -295,8 +323,14 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         }
 
         if not quiet:
+            delta = obs_result['score'] - prior_result['score']
             print(f"pipeline={obs_result['score']:.1f}  "
-                  f"prior={prior_result['score']:.1f}  ({elapsed:.1f}s)")
+                  f"prior={prior_result['score']:.1f}  "
+                  f"delta={delta:+.1f}  "
+                  f"kl={obs_result['weighted_kl']:.4f}  "
+                  f"cells={obs_result['scored_cells']}  "
+                  f"obs={n_observed}/{map_w*map_h}  "
+                  f"({elapsed:.1f}s)")
 
     # Round score
     scores = [s["obs_score"] for s in seed_results.values()]
@@ -313,9 +347,27 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
 
     if not quiet:
         prior_avg = sum(s["prior_score"] for s in seed_results.values()) / N_SEEDS
-        print(f"\n  Round score: {round_score:.1f}  (prior baseline: {prior_avg:.1f})")
+        print(f"\n  {'─'*50}")
+        print(f"  Round score: {round_score:.1f}  (prior baseline: {prior_avg:.1f})")
         print(f"  Pipeline improvement: {round_score - prior_avg:+.1f}")
-        print(f"  Saved to: {saved_path}")
+
+        # Per-seed summary table
+        worst_seed = min(seed_results, key=lambda s: seed_results[s]["obs_score"])
+        best_seed = max(seed_results, key=lambda s: seed_results[s]["obs_score"])
+        print(f"  Best seed: {best_seed} ({seed_results[best_seed]['obs_score']:.1f})")
+        print(f"  Worst seed: {worst_seed} ({seed_results[worst_seed]['obs_score']:.1f})")
+        spread = seed_results[best_seed]["obs_score"] - seed_results[worst_seed]["obs_score"]
+        print(f"  Spread: {spread:.1f}")
+
+        # Show top 5 worst cells from the worst seed
+        worst_cells = seed_results[worst_seed].get("worst_cells", [])
+        if worst_cells:
+            print(f"\n  Worst cells (seed {worst_seed}):")
+            print(f"  {'(r,c)':<10} {'ent*kl':<10} {'kl':<10} {'entropy':<10}")
+            for r, c, ekl, kl, ent in worst_cells[:5]:
+                print(f"  ({r},{c}){'':<5} {ekl:<10.4f} {kl:<10.4f} {ent:<10.4f}")
+
+        print(f"\n  Saved to: {saved_path}")
 
     return seed_results, round_score
 
