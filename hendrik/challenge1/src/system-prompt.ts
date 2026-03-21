@@ -49,6 +49,16 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
 ## Workflow: Supplier invoice from text prompt
 Same as Task 20 but data comes from prompt text instead of PDF. Follow same steps.
 
+## Workflow: Receipt/expense registration as employee expense (Task 22)
+Register receipt expenses as employee expenses (ansattutlegg), NOT as ledger vouchers. Using POST /ledger/voucher will score 0.
+1. In parallel: GET /employee?fields=id&count=1, GET /department?name=<dept>&fields=id,name,
+   GET /travelExpense/costCategory?fields=id,description, GET /travelExpense/paymentType?fields=id,description
+2. POST /travelExpense with {employee:{id}, title:<expense_description_from_task>}
+3. PUT /travelExpense/{id}/convert — converts to ansattutlegg (employee expense type=0)
+4. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id:<"Representasjon - fradragsb." for representation, or match to expense type>}, paymentType:{id:<"Privat utlegg">}, date:<receipt_date>, amountCurrencyIncVat:<amount_from_receipt>, comments:<description>}
+5. PUT /travelExpense/{id} with {id, version, title, department:{id}, travelDetails:{departureDate:<receipt_date>, returnDate:<receipt_date>, isForeignTravel:false, isDayTrip:true, isCompensationFromRates:false, departureFrom:<city_from_receipt>, destination:<city_from_receipt>, departureTime:"18:00", returnTime:"21:00", purpose:<description>}}
+6. PUT /travelExpense/:deliver?id={id} — submits the expense
+
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
    The project response includes projectManager with their id — no need for a separate employee GET.
@@ -75,11 +85,11 @@ Total: 4 write calls.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. GET /department?fields=id,name&count=100 (create department if needed, match by name from contract)
-2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{...}} — extract ALL fields from the contract
-3. If start date given: ensure division exists, then POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", percentageOfFullTimeEquivalent:100, division:{id}}
-   - CRITICAL: occupationCode STYRK numbers (e.g. 3512) are NOT API IDs. You MUST look up the correct ID:
-     GET /employee/employment/occupationCode?nameNO=<occupation_title_from_contract> to find the matching entry, then use its {id} value.
-     The API uses 7-digit codes internally — never pass a 4-digit STYRK code as the id.
+2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
+3. If start date given: ensure division exists, then:
+   BEFORE creating employment, you MUST call: GET /employee/employment/occupationCode?nameNO=<job_title_from_contract>&count=1
+   Use the returned {id} value as occupationCode. NEVER use the STYRK number as the id — STYRK 3512 is NOT id 3512. The API uses 7-digit internal codes. Using STYRK as id maps to WRONG occupations (e.g. 3512 = "LØNNINGSSJEF" not "IKT-brukerstøtte").
+   Then POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", percentageOfFullTimeEquivalent:100, division:{id}, occupationCode:{id:<from_lookup>}}
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
@@ -100,20 +110,22 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 5. After all costs added: PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
 
 ## Workflow: Timesheet + project invoice (Task 16)
-1. Find employee, customer, project, activity (GET all in parallel)
+1. Find employee, customer, project, activity (GET all in parallel). Also GET /project/hourlyRates?projectId=X to get rate config.
 2. If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-3. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
-4. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
+3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:<today>, hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
+   This ensures timesheet entries get the correct hourlyRate. Do employee PUT and rate PUT in parallel.
+4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
+5. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
    Do NOT check or update bank account 1920 — invoices work without it.
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
-1. In parallel: GET customer, supplier, all employees, project (fields=id,name,version,projectManager(id),isInternal), activity, ledger accounts (4300 expense + 2400 payable), bank account 1920
-   Do NOT use fields=budget on project (causes 400).
-2. If the project budget is not set or differs from the task amount: GET /project/{id}?fields=* then PUT /project/{id} with the full object + budget amount field.
-3. For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-4. Ensure bank account 1920 has bankAccountNumber.
-5. Log timesheet entries ONE AT A TIME sequentially (parallel causes 409): POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
+1. In parallel: GET customer, supplier, all employees, project (fields=id,name,version,projectManager(id),isInternal,isFixedPrice,fixedprice), activity, ledger accounts (4300 expense + 2400 payable), GET /project/hourlyRates?projectId=X
+   Do NOT check or update bank account 1920 — invoices work without it.
+2. PUT /project/{id} to set isFixedPrice:true, fixedprice:<budget_amount> from the task.
+   For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+   Do all PUTs in parallel.
+3. Log timesheet entries ONE AT A TIME sequentially (parallel causes 409): POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
 6. Register supplier cost via POST /ledger/voucher with postings that INCLUDE project:{id} on the debit posting:
    The supplier cost amount in the task is EXCL VAT. Use calculate tool: grossAmount = supplierCost * 1.25
    {date, description, postings: [
@@ -123,7 +135,7 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
    CRITICAL: credit posting (row 2) MUST include vatType:{id:0} explicitly.
 7. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
    POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
-   POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}}
+   POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}} — use EXACTLY "Project invoice" as description, do NOT append project name
    POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
 
 ## Workflow: Reminder fee + partial payment (Task 25)
@@ -142,14 +154,17 @@ Total: 5 write calls, 0 errors.
 
 ## Workflow: Simplified year-end closing / årsoppgjør (Task 30)
 Post depreciation, prepaid reversal, and tax provision as separate vouchers.
-1. GET all accounts mentioned in the task in parallel. If an account doesn't exist (e.g. 1209, 8700), POST /ledger/account to create it.
+1. GET all accounts mentioned in the task in parallel. Also GET the account for 8700 and the accumulation account (e.g. 1209) — if they don't exist, POST /ledger/account to create ONLY 8700 and the accumulation account.
+   Do NOT create other accounts — use existing ones.
 2. GET /ledger/posting with dateFrom=YYYY-01-01&dateTo=YYYY-12-31&accountNumberFrom=3000&accountNumberTo=8699&count=1000&fields=id,account(id,number,name),amount
    to get P&L result BEFORE your adjustments.
-3. Calculate depreciation: amount/years for each asset. Use Math.round(x * 100) / 100 for rounding.
+3. Calculate depreciation using calculate tool: amount/years for each asset.
 4. POST one voucher per depreciation (each as separate bilag):
+   If the task specifies an accumulation account (e.g. 1209): credit that account.
+   If NOT specified: credit the ASSET ACCOUNT DIRECTLY (e.g. 1250, 1230, 1210) — do NOT create accumulated depreciation accounts.
    {date:"YYYY-12-31", description:"Avskrivning <asset> YYYY", postings: [
      {date:"YYYY-12-31", description:"...", account:{id:<depreciationExpenseAccount>}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1},
-     {date:"YYYY-12-31", description:"...", account:{id:<accumDepreciationAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
+     {date:"YYYY-12-31", description:"...", account:{id:<creditAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
    ]}
    Post ALL depreciation vouchers in parallel.
 5. POST prepaid reversal voucher: First GET /ledger/posting?accountNumberFrom=1700&accountNumberTo=1700&dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,account(id,number,name),amount,description&count=100
@@ -189,29 +204,32 @@ Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new 
 6. DONE. Do NOT verify trial balance — it wastes steps.
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
+ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /resultbudget (400), or /ledger/account with numberFrom/numberTo ranges.
 1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=4000&accountNumberTo=7999, count=1000)
    Use fields=id,account(id,number,name),amount
-   Do NOT use /ledger/openPostings (404) or /resultbudget with nested fields (400). Use /ledger/posting directly.
-2. Aggregate amounts by account for each month, calculate increases, find top 3.
+2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
 3. GET /employee?fields=id&count=1 (for project manager)
 4. POST /project × 3 in parallel: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
 5. POST /activity × 3 in parallel: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
-6. Link each activity to its project ONE AT A TIME: POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
+   Use ONLY these 3 fields. Do NOT include isProjectActivity, isGeneral, or other fields.
+6. CRITICAL — DO NOT SKIP: Link each activity to its project ONE AT A TIME sequentially:
+   POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
+   Without this step, 3 checks FAIL and the task scores near 0.
 
 ## Workflow: Bank reconciliation — match CSV to invoices (Task 23)
-Parse the CSV bank statement. Match each row to customer invoices or supplier invoices.
-1. In parallel: GET /invoice/paymentType, GET /invoice (all open, with fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding), GET /ledger/account?number=1920 and GET /ledger/account?number=2400
-   Do NOT use /ledger/openPostings (404) or /supplierInvoice with amountOutstanding field (400).
-   For supplier invoices: GET /ledger/voucher with fields including postings to find open supplier balances on account 2400.
-2. For each INCOMING payment (Inn) in CSV: match to a customer invoice by customer name and/or invoice number.
-   PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId, paidAmount=<amount_from_CSV>
-   CRITICAL: use the date from the CSV, NOT today's date. Handle partial payments (paidAmount < invoice amount).
-3. For each OUTGOING payment (Ut) in CSV: match to a supplier voucher/posting.
-   Register supplier payment via POST /ledger/voucher with {date:<DATE_FROM_CSV>, description, postings: [
-     {date, description, account:{id:2400}, amountGross:<positive_amount>, amountGrossCurrency:<positive_amount>, vatType:{id:0}, row:1},
-     {date, description, account:{id:1920}, amountGross:<negative_amount>, amountGrossCurrency:<negative_amount>, vatType:{id:0}, row:2}
-   ]}
-4. Bankgebyr (bank fees): POST /ledger/voucher with expense account (e.g. 7770 or similar bank fee account) and credit 1920.
+Reconcile bank statement CSV against open invoices. MUST create a bank reconciliation entity — just registering payments scores 0.
+1. In parallel: GET /invoice (open, fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding),
+   GET /invoice/paymentType, GET /supplierInvoice?invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,invoiceNumber,supplier(id,name),amount (do NOT use amountOutstanding field),
+   GET /ledger/accountingPeriod, GET /bank/reconciliation/paymentType?fields=id,description,
+   GET /ledger/account?number=1920&fields=id
+2. Parse CSV: categorize each line as customer payment (Inn column), supplier payment (Ut + "Leverandør"), or bank fee (Bankgebyr). Note final Saldo as closing balance.
+3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<amount>
+   CRITICAL: use date from CSV, NOT today.
+4. Register supplier payments ONE AT A TIME: POST /supplierInvoice/{id}/:addPayment with params paymentDate=<DATE_FROM_CSV>, amount=<amount>, useDefaultPaymentType=true
+5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<matching_period>}, bankAccountClosingBalanceCurrency:<CSV_final_saldo>, isClosed:false}
+6. If bank fees exist: PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:"Bankgebyr", amount:<positive_amount>, paymentType:{id:<bankgebyr_type>}}]
+7. Close: PUT /bank/reconciliation/{id} with {id, version, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
+   Only succeeds when accounting balance = bank statement balance (avvik = 0).
 
 ## Workflow: Custom accounting dimensions + voucher
 1. POST /ledger/accountingDimensionName with {dimensionName, active:true} — note dimensionIndex in response
