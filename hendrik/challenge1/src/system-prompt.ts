@@ -293,29 +293,23 @@ CRITICAL: The CSV file content is provided as text. Read it carefully line by li
    GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id,
    GET /ledger/account?number=2400&fields=id, GET /ledger/account?number=7770&fields=id
 2. Parse CSV carefully. Uses semicolons (;) as separator: Dato;Forklaring;Inn;Ut;Saldo
-   - Inn column filled + "Innbetaling" = customer payment → match by invoice number in description
-   - Ut column filled + "Leverandor/Fornecedor/Fournisseur" = supplier payment → match by supplier name
-   - "Bankgebyr" in Ut column = bank fee → reconciliation adjustment type Bankgebyr
-   - "Bankgebyr" in Inn column = fee refund → POST /ledger/voucher (debit 1920, credit 7770)
-   - "Renteinntekter" in Inn column = interest income → adjustment type Renteinntekter
-   - "Renteinntekter" in Ut column = interest expense → adjustment type Rentekostnader
-   - LAST Saldo value = closing balance for reconciliation
-   - Accounting period: use the period containing the LAST transaction date in the CSV
+   Two categories only:
+   - "Innbetaling" in description → customer payment (PUT /invoice/:payment)
+   - EVERYTHING ELSE → reconciliation adjustment:
+     * If INN column filled → Renteinntekter adjustment type (money IN to account)
+     * If UT column filled → Bankgebyr adjustment type (money OUT of account)
+   This covers: supplier payments (Leverandør/Fornecedor/Fournisseur/Lieferant), Bankgebyr, Renteinntekter, Skattetrekk, and any other line types.
+   CRITICAL: Accounting period = period containing the LAST transaction date in the CSV (often February, not January).
+   Closing balance = the LAST Saldo value in the CSV.
 3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<Inn_amount>
    Match by invoice number from CSV description (e.g. "Faktura 1001" → invoiceNumber 1). Use date FROM CSV, NOT today.
-4. Register supplier payments via voucher (more reliable than /supplierInvoice/:addPayment):
-   POST /ledger/voucher with {date:<CSV_date>, description:"Betaling <supplier>", postings:[
-     {date:<CSV_date>, description:"Betaling <supplier>", account:{id:<2400>}, supplier:{id}, amountGross:<positive_Ut_amount>, amountGrossCurrency:<positive_Ut_amount>, vatType:{id:0}, row:1},
-     {date:<CSV_date>, description:"Betaling <supplier>", account:{id:<1920>}, amountGross:<negative_Ut_amount>, amountGrossCurrency:<negative_Ut_amount>, vatType:{id:0}, row:2}
-   ]}
-   Match supplier by name from CSV (e.g. "Betaling Fornecedor Costa Lda" → supplier "Costa Lda").
-5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_last_CSV_date>},
+4. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_LAST_CSV_date>},
    bankAccountClosingBalanceCurrency:<LAST_SALDO_FROM_CSV>, isClosed:false, type:"MANUAL"}
-6. Add ALL fee/interest adjustments in ONE call:
+5. Add ALL non-Innbetaling lines as adjustments in ONE call:
    PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
-   Amount MUST be positive (negative causes 422). Use correct paymentType based on direction (Bankgebyr for fees out, Renteinntekter for interest in, Rentekostnader for interest out).
-7. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
-8. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step7>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
+   Amount MUST be positive (negative causes 422). paymentType: Bankgebyr for UT items, Renteinntekter for INN items.
+6. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
+7. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step6>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
    Only succeeds when avvik = 0 (accounting balance = bank statement closing balance).
 
 ## Workflow: Custom accounting dimensions + voucher
