@@ -131,6 +131,28 @@ Total: 6 write calls, 0 errors.
 1. Find customer → find invoice (see payment workflow steps 1-2)
 2. PUT /invoice/{id}/:createCreditNote?date=YYYY-MM-DD — date as QUERY PARAM, empty body
 
+## Workflow: Simplified year-end closing / årsoppgjør (Task 30)
+Post depreciation, prepaid reversal, and tax provision as separate vouchers.
+1. GET all accounts mentioned in the task in parallel. If an account doesn't exist (e.g. 1209, 8700), POST /ledger/account to create it.
+2. GET /ledger/posting with dateFrom=YYYY-01-01&dateTo=YYYY-12-31&accountNumberFrom=3000&accountNumberTo=8699&count=1000&fields=id,account(id,number,name),amount
+   to get P&L result BEFORE your adjustments.
+3. Calculate depreciation: amount/years for each asset. Use Math.round(x * 100) / 100 for rounding.
+4. POST one voucher per depreciation (each as separate bilag):
+   {date:"YYYY-12-31", description:"Avskrivning <asset> YYYY", postings: [
+     {date:"YYYY-12-31", description:"...", account:{id:<depreciationExpenseAccount>}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1},
+     {date:"YYYY-12-31", description:"...", account:{id:<accumDepreciationAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
+   ]}
+   Post ALL depreciation vouchers in parallel.
+5. POST prepaid reversal voucher: debit the CORRECT expense account (check what 1700 relates to — e.g. if "Forskuddsbetalt leiekostnad" then debit 6300 Leie lokale), credit 1700.
+6. Calculate tax: take existing P&L result (from step 2), ADD depreciation expenses and prepaid reversal (these increase expenses = reduce profit).
+   Revenue is NEGATIVE in Tripletex, expenses POSITIVE. Net result negative = profit.
+   taxableProfit = -(existingResult + totalDepreciation + prepaidAmount)
+   If taxableProfit > 0: tax = round(taxableProfit * 0.22, 2). If <= 0: no tax voucher needed.
+   POST tax voucher: debit 8700 (skattekostnad), credit 2920 (or account specified in task).
+7. Post all remaining vouchers (prepaid + tax) in parallel with depreciation vouchers if possible.
+CRITICAL: Do NOT re-query /ledger/posting after posting vouchers. Calculate tax from the ORIGINAL P&L query.
+CRITICAL: Do NOT use /resultbudget — it often returns wrong fields. Use /ledger/posting directly.
+
 ## Workflow: Monthly closing / journal vouchers (Task 26)
 Post accruals, depreciation, provisions etc. as vouchers.
 1. GET all the accounts mentioned in the task — all in parallel. Look up any additional accounts if needed for correct postings.
@@ -181,6 +203,11 @@ Before making ANY API call, read the task and identify which workflow below matc
 - 4xx errors on write calls reduce the efficiency bonus. Get writes right first try.
 - Efficiency bonus can up to DOUBLE the score, but ONLY if correctness is perfect (all checks pass).
 - Priority: (1) pass ALL checks, (2) minimize write calls, (3) zero write errors.
+
+## Calculator tool
+ALWAYS use the "calculate" tool for ANY arithmetic: sums, divisions, percentages, aggregations. Never do math in your head.
+Examples: calculate({expression: "288400 / 3"}), calculate({expression: "[96133.33, 40250, 24850].reduce((a,b) => a+b, 0)"}), calculate({expression: "Math.round(1258929.80 * 0.22 * 100) / 100"})
+For aggregating ledger postings, pass the amounts array to calculate: calculate({expression: "[amount1, amount2, ...].reduce((a,b) => a+b, 0)"})
 
 ## Critical rules
 - PUT requires "id" and "version" from a prior GET — always GET first with ?fields=* before updating

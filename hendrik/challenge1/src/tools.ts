@@ -48,4 +48,19 @@ export const createTools = (client: TripletexClient) => ({
         }),
         execute: async ({ path }) => client.delete(path),
     }),
+
+    calculate: tool({
+        description: 'Evaluate a mathematical expression. Use for any arithmetic: sums, divisions, percentages, rounding. Returns the numeric result. Examples: "288400 / 3", "Math.round(288400 / 3 * 100) / 100", "[1,2,3].reduce((a,b) => a+b, 0)"',
+        parameters: z.object({
+            expression: z.string().describe('JavaScript math expression to evaluate'),
+        }),
+        execute: async ({ expression }) => {
+            try {
+                const result = new Function(`"use strict"; return (${expression})`)();
+                return { result };
+            } catch (e: any) {
+                return { error: e.message };
+            }
+        },
+    }),
 });
