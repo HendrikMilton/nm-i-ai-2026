@@ -68,7 +68,10 @@ Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
      ]}
    }
    CRITICAL: amountCurrency MUST be NEGATIVE. Expense account number varies per prompt — always use the account from the task.
-   Total: 1 write call.
+4. PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {}
+   Use voucher.id from the POST /supplierInvoice response. This books the voucher so postings
+   are visible in ledger queries. WITHOUT THIS STEP, ledger posting checks WILL FAIL.
+   Total: 2 write calls.
 
 ## Workflow: Receipt/expense registration (Task 22)
 Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a ledger voucher or supplier invoice.
