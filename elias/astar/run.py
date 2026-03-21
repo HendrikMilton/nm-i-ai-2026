@@ -258,7 +258,8 @@ def get_contextual_prior(grid, r, c, map_h, map_w, prior_table=None):
 
 def get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map, expansion_rate,
                               dist_multipliers=None, port_ratio=0.75, ruin_ratio=0.10,
-                              prior_table=None):
+                              prior_table=None, survival_rate=None,
+                              forest_change_rate=None, coastal_preference=None):
     """Prior adjusted for distance to nearest settlement and expansion rate."""
     terrain = grid[r][c]
 
@@ -270,10 +271,69 @@ def get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map, expansion_rate,
     prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
     dist = dist_map[r][c]
 
-    # Existing settlements keep their own dynamics
+    # --- Initial settlements: blend survival_rate with contextual prior ---
     if terrain in (1, 2):
+        if survival_rate is not None:
+            # Count adjacent forests (food = survival advantage)
+            n_forest = sum(
+                1 for dr in (-1, 0, 1) for dc in (-1, 0, 1)
+                if not (dr == 0 and dc == 0)
+                and 0 <= r+dr < map_h and 0 <= c+dc < map_w
+                and grid[r+dr][c+dc] == 4
+            )
+            # Adjust survival based on food and coastal trade
+            adj_survival = min(0.95, survival_rate + n_forest * 0.04)
+            is_port = terrain == 2
+            if is_port:
+                adj_survival = min(0.95, adj_survival + 0.03)
+
+            # Build survival-based distribution
+            surv = [0.0] * 6
+            surv[1] = adj_survival * (0.4 if is_port else 0.85)
+            surv[2] = adj_survival * (0.6 if is_port else 0.0)
+            death = max(0.02, 1.0 - adj_survival)
+            surv[3] = death * 0.3
+            surv[0] = death * 0.4
+            surv[4] = death * 0.3
+            total = sum(surv)
+            if total > 0:
+                surv = [v / total for v in surv]
+
+            # Blend 40% survival model + 60% contextual prior
+            blended = [0.4 * surv[k] + 0.6 * prior[k] for k in range(6)]
+            total = sum(blended)
+            if total > 0:
+                blended = [v / total for v in blended]
+            return blended
         return prior
 
+    # --- Forest cells: blend forest_change_rate with contextual prior ---
+    if terrain == 4 and forest_change_rate is not None:
+        change = forest_change_rate
+        if dist <= 2:
+            change = min(0.8, change * (2.0 if dist == 1 else 1.5))
+        elif dist >= 5:
+            change = change * 0.3
+
+        stay_forest = max(0.05, 1.0 - change)
+        fc = [0.0] * 6
+        fc[4] = stay_forest
+        fc[1] = change * 0.5
+        fc[0] = change * 0.3
+        fc[3] = change * 0.1
+        fc[2] = change * 0.1
+        total = sum(fc)
+        if total > 0:
+            fc = [v / total for v in fc]
+
+        # Blend 30% forest model + 70% contextual prior
+        blended = [0.3 * fc[k] + 0.7 * prior[k] for k in range(6)]
+        total = sum(blended)
+        if total > 0:
+            blended = [v / total for v in blended]
+        return blended
+
+    # --- Expandable land cells (plains, empty, ruin) ---
     # Distance-based settlement probability
     mults = dist_multipliers or DIST_DECAY_DEFAULT
     if dist <= 7:
@@ -283,23 +343,15 @@ def get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map, expansion_rate,
 
     target_settle = expansion_rate * decay
 
-    # Forest cells near settlements are attractive expansion targets (food bonus)
-    # Apply boost BEFORE computing port/ruin (fixed v1 double-compute bug)
-    if terrain == 4 and dist <= 2:
-        terrain_boost = 1.5 if dist == 1 else 1.2
-        target_settle *= terrain_boost
+    # Coastal preference boost
+    is_coastal = any(
+        0 <= r+dr < map_h and 0 <= c+dc < map_w and grid[r+dr][c+dc] == 10
+        for dr in (-1, 0, 1) for dc in (-1, 0, 1) if not (dr == 0 and dc == 0)
+    )
+    if is_coastal and coastal_preference is not None:
+        target_settle *= coastal_preference
 
     # Coastal → ports; activity → ruins
-    is_coastal = False
-    for dr in (-1, 0, 1):
-        for dc in (-1, 0, 1):
-            nr, nc = r + dr, c + dc
-            if 0 <= nr < map_h and 0 <= nc < map_w and grid[nr][nc] == 10:
-                is_coastal = True
-                break
-        if is_coastal:
-            break
-
     target_port = target_settle * port_ratio if is_coastal else 0.0
     target_ruin = target_settle * ruin_ratio
 
@@ -551,10 +603,104 @@ def estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w):
     return port_ratio, ruin_ratio
 
 
+def estimate_survival_rate(seed_grids, seed_counts, map_h, map_w):
+    """Estimate what fraction of initial settlements survive to year 50.
+
+    Looks at cells that start as settlement/port and counts how often
+    they're still settlement/port in observations.
+    Returns None if insufficient data (< 20 observations).
+    """
+    alive_obs = 0
+    total_obs = 0
+    for s in seed_grids:
+        grid = seed_grids[s]
+        counts = seed_counts.get(s)
+        if counts is None:
+            continue
+        for r in range(map_h):
+            for c in range(map_w):
+                if grid[r][c] not in (1, 2):
+                    continue
+                n_obs = sum(counts[r][c])
+                if n_obs == 0:
+                    continue
+                total_obs += n_obs
+                alive_obs += counts[r][c][1] + counts[r][c][2]
+    if total_obs < 20:
+        return None  # not enough data, fall back to contextual prior
+    return alive_obs / total_obs
+
+
+def estimate_forest_change_rate(seed_grids, seed_counts, map_h, map_w):
+    """Estimate what fraction of initial forest cells change to non-forest.
+
+    Returns None if insufficient data (< 30 observations).
+    """
+    changed_obs = 0
+    total_obs = 0
+    for s in seed_grids:
+        grid = seed_grids[s]
+        counts = seed_counts.get(s)
+        if counts is None:
+            continue
+        for r in range(map_h):
+            for c in range(map_w):
+                if grid[r][c] != 4:
+                    continue
+                n_obs = sum(counts[r][c])
+                if n_obs == 0:
+                    continue
+                total_obs += n_obs
+                changed_obs += n_obs - counts[r][c][4]
+    if total_obs < 30:
+        return None  # not enough data
+    return changed_obs / total_obs
+
+
+def estimate_coastal_preference(seed_grids, seed_counts, map_h, map_w):
+    """Estimate how much more likely expansion targets coastal vs inland cells.
+
+    Returns None if insufficient data (< 10 coastal settlement observations).
+    """
+    coastal_settle = coastal_total = 0
+    inland_settle = inland_total = 0
+    for s in seed_grids:
+        grid = seed_grids[s]
+        counts = seed_counts.get(s)
+        if counts is None:
+            continue
+        for r in range(map_h):
+            for c in range(map_w):
+                if grid[r][c] in (10, 5, 1, 2):
+                    continue
+                n_obs = sum(counts[r][c])
+                if n_obs == 0:
+                    continue
+                is_coastal = any(
+                    0 <= r+dr < map_h and 0 <= c+dc < map_w and grid[r+dr][c+dc] == 10
+                    for dr in (-1, 0, 1) for dc in (-1, 0, 1) if not (dr == 0 and dc == 0)
+                )
+                settle_obs = counts[r][c][1] + counts[r][c][2]
+                if is_coastal:
+                    coastal_settle += settle_obs
+                    coastal_total += n_obs
+                else:
+                    inland_settle += settle_obs
+                    inland_total += n_obs
+    if coastal_settle < 10 or inland_total < 50:
+        return None  # not enough coastal data
+    coastal_rate = coastal_settle / max(coastal_total, 1)
+    inland_rate = inland_settle / max(inland_total, 1)
+    if inland_rate < 0.001:
+        return None
+    return min(5.0, coastal_rate / inland_rate)
+
+
 def aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w):
     """Compute expansion rate, distance multipliers, port/ruin ratios from all seeds.
 
-    Returns: (expansion_rate, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth, decay_defaults)
+    Returns: (expansion_rate, dist_multipliers, port_ratio, ruin_ratio,
+              prior_table, warmth, survival_rate, forest_change_rate, coastal_preference)
     """
     agg_dist_settle = {}
     expansion_rates = []
@@ -601,7 +747,13 @@ def aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w):
 
     port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w)
 
-    return avg_expansion, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth
+    # New hidden parameters
+    survival_rate = estimate_survival_rate(seed_grids, seed_counts, map_h, map_w)
+    forest_change_rate = estimate_forest_change_rate(seed_grids, seed_counts, map_h, map_w)
+    coastal_pref = estimate_coastal_preference(seed_grids, seed_counts, map_h, map_w)
+
+    return (avg_expansion, dist_multipliers, port_ratio, ruin_ratio,
+            prior_table, warmth, survival_rate, forest_change_rate, coastal_pref)
 
 
 # ---------------------------------------------------------------------------
@@ -745,14 +897,20 @@ def run_observation_phases(seed_grids, total_budget, map_w, map_h,
         budget_spent += len(viewports)
 
     # Aggregate stats from observed seeds
-    avg_expansion, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth = \
+    (avg_expansion, dist_multipliers, port_ratio, ruin_ratio,
+     prior_table, warmth, survival_rate, forest_change_rate, coastal_pref) = \
         aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w)
 
     print_fn(f"  Expansion rate: {avg_expansion:.4f} → {warmth} round")
     print_fn(f"  Dist multipliers: " + " ".join(f"d{d}={dist_multipliers.get(d, 0):.2f}" for d in range(1, 8)))
     print_fn(f"  Port ratio: {port_ratio:.3f}, Ruin ratio: {ruin_ratio:.3f}")
+    sr_str = f"{survival_rate:.3f}" if survival_rate is not None else "N/A (low data)"
+    fc_str = f"{forest_change_rate:.3f}" if forest_change_rate is not None else "N/A (low data)"
+    cp_str = f"{coastal_pref:.2f}x" if coastal_pref is not None else "N/A (low data)"
+    print_fn(f"  Survival rate: {sr_str}, Forest change: {fc_str}, Coastal pref: {cp_str}")
 
-    return seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio, warmth
+    return (seed_counts, avg_expansion, dist_multipliers, prior_table,
+            port_ratio, ruin_ratio, warmth, survival_rate, forest_change_rate, coastal_pref)
 
 
 # ---------------------------------------------------------------------------
@@ -763,7 +921,9 @@ def generate_prediction(grid, settlements, map_w, map_h,
                         obs_counts=None, sim_pred=None,
                         expansion_rate=None, dist_multipliers=None,
                         port_ratio=0.75, ruin_ratio=0.10,
-                        prior_table=None, warmth="warm"):
+                        prior_table=None, warmth="warm",
+                        survival_rate=None, forest_change_rate=None,
+                        coastal_preference=None):
     """Generate prediction by blending distance-aware priors + observations + simulator.
 
     Warm/cold-aware: uses SIM_WEIGHT_COLD=0 for cold rounds.
@@ -799,7 +959,9 @@ def generate_prediction(grid, settlements, map_w, map_h,
                     grid, r, c, map_h, map_w, dist_map, expansion_rate,
                     dist_multipliers=dist_multipliers,
                     port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                    prior_table=prior_table)
+                    prior_table=prior_table, survival_rate=survival_rate,
+                    forest_change_rate=forest_change_rate,
+                    coastal_preference=coastal_preference)
             else:
                 prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
 
@@ -865,7 +1027,8 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
                              obs_counts=None, expansion_rate=None,
                              dist_multipliers=None, port_ratio=0.75,
                              ruin_ratio=0.10, prior_table=None,
-                             warmth="warm"):
+                             warmth="warm", survival_rate=None,
+                             forest_change_rate=None, coastal_preference=None):
     """Three-layer blending: distance-aware prior + ABC MC + Bayesian obs update."""
     dist_map = None
     if expansion_rate is not None:
@@ -897,7 +1060,9 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
                     grid, r, c, map_h, map_w, dist_map, expansion_rate,
                     dist_multipliers=dist_multipliers,
                     port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                    prior_table=prior_table)
+                    prior_table=prior_table, survival_rate=survival_rate,
+                    forest_change_rate=forest_change_rate,
+                    coastal_preference=coastal_preference)
             else:
                 prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
 
@@ -922,3 +1087,263 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
                 prediction[r][c] = blended
 
     return floor_and_normalize(prediction)
+
+
+# ---------------------------------------------------------------------------
+# Live game logging
+# ---------------------------------------------------------------------------
+
+_LOGS_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
+_ROUNDS_DIR = os.path.join(_LOGS_DIR, "rounds")
+_INDEX_PATH = os.path.join(_LOGS_DIR, "index.json")
+
+
+def _ensure_round_log(round_id, map_width=MAP_W, map_height=MAP_H):
+    os.makedirs(_ROUNDS_DIR, exist_ok=True)
+    path = os.path.join(_ROUNDS_DIR, f"{round_id}.json")
+    if os.path.exists(path):
+        with open(path) as f:
+            try:
+                return json.load(f)
+            except json.JSONDecodeError:
+                pass
+    from datetime import datetime, timezone
+    data = {
+        "started_at": datetime.now(timezone.utc).isoformat(),
+        "map_width": map_width, "map_height": map_height,
+        "queries": [], "submissions": [], "actions": [],
+    }
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+    # Update index
+    try:
+        with open(_INDEX_PATH) as f:
+            index = json.load(f)
+    except (FileNotFoundError, json.JSONDecodeError):
+        index = {"rounds": []}
+    if not any(r["id"] == round_id for r in index["rounds"]):
+        from datetime import datetime, timezone
+        index["rounds"].append({"id": round_id, "started_at": datetime.now(timezone.utc).isoformat()})
+        with open(_INDEX_PATH, "w") as f:
+            json.dump(index, f, indent=2)
+    return data
+
+
+def _save_round_log(round_id, data):
+    path = os.path.join(_ROUNDS_DIR, f"{round_id}.json")
+    with open(path, "w") as f:
+        json.dump(data, f, indent=2)
+
+
+def log_action(round_id, action, details=None):
+    from datetime import datetime, timezone
+    data = _ensure_round_log(round_id)
+    data["actions"].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "action": action, "details": details or {},
+    })
+    _save_round_log(round_id, data)
+
+
+def log_query(round_id, seed_index, viewport, grid, budget_remaining):
+    from datetime import datetime, timezone
+    data = _ensure_round_log(round_id)
+    data["queries"].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "seed_index": seed_index, "viewport": viewport,
+        "grid": grid, "budget_remaining": budget_remaining,
+    })
+    _save_round_log(round_id, data)
+
+
+def log_submission(round_id, seed_index, result):
+    from datetime import datetime, timezone
+    data = _ensure_round_log(round_id)
+    data["submissions"].append({
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "seed_index": seed_index, "result": result,
+    })
+    _save_round_log(round_id, data)
+
+
+# ---------------------------------------------------------------------------
+# Live game observation (calls real API)
+# ---------------------------------------------------------------------------
+
+RATE_LIMIT_DELAY = 0.25
+
+
+def observe_seed_live(round_id, seed_index, viewports, map_w, map_h):
+    """Run simulate queries against the real API for one seed."""
+    import time as _time
+    from shared.utils import simulate
+
+    counts = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+
+    for vx, vy in viewports:
+        print(f"  simulate seed={seed_index} viewport=({vx},{vy})")
+        try:
+            result = simulate(round_id, seed_index, vx, vy, VIEWPORT, VIEWPORT)
+        except Exception as e:
+            print(f"    ERROR: {e}")
+            log_action(round_id, "simulate_error", {
+                "seed_index": seed_index,
+                "viewport": {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
+                "error": str(e),
+            })
+            continue
+
+        queries_used = result.get("queries_used")
+        queries_max = result.get("queries_max")
+        budget = queries_max - queries_used if queries_used is not None and queries_max is not None else None
+        grid = result.get("grid") or []
+
+        log_query(round_id, seed_index,
+                  {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
+                  grid, budget)
+
+        for r, row in enumerate(grid):
+            for c, val in enumerate(row):
+                map_r = vy + r
+                map_c = vx + c
+                if 0 <= map_r < map_h and 0 <= map_c < map_w:
+                    cls = TERRAIN_TO_CLASS.get(val, 0)
+                    counts[map_r][map_c][cls] += 1
+
+        print(f"    budget remaining: {budget}")
+        _time.sleep(RATE_LIMIT_DELAY)
+
+    return counts
+
+
+# ---------------------------------------------------------------------------
+# Live game main
+# ---------------------------------------------------------------------------
+
+def main():
+    import time as _time
+    from shared.utils import get_active_round, get_round as fetch_round, get_budget, submit
+
+    # 1. Find active round
+    print("Fetching active round...")
+    active = get_active_round()
+    if not active:
+        print("No active round found. Exiting.")
+        return
+
+    round_id = active["id"]
+    print(f"Active round: {round_id}")
+    log_action(round_id, "fetch_active_round", {"round": active})
+
+    # 2. Get round details
+    round_data = fetch_round(round_id)
+    map_w, map_h = extract_map_dimensions(round_data)
+    _ensure_round_log(round_id, map_w, map_h)
+    log_action(round_id, "fetch_round_details", {"raw_response": round_data})
+    print(f"Map: {map_w}x{map_h}")
+
+    # Parse per-seed grids
+    initial_states = round_data.get("initial_states") or []
+    seed_grids = {}
+    for i, state in enumerate(initial_states):
+        grid = state.get("grid") or state.get("terrain") or []
+        if grid:
+            seed_grids[i] = grid
+
+    for si in sorted(seed_grids.keys()):
+        g = seed_grids[si]
+        n_settle = sum(1 for r in g for c in r if c in (1, 2))
+        n_forest = sum(1 for r in g for c in r if c == 4)
+        print(f"  Seed {si}: {n_settle} settlements/ports, {n_forest} forests")
+
+    # 3. Check budget
+    budget_info = get_budget()
+    log_action(round_id, "check_budget", {"raw_response": budget_info})
+    used = budget_info.get("queries_used", 0)
+    max_q = budget_info.get("queries_max", 50)
+    total_budget = int(max_q) - int(used)
+    print(f"Budget: {total_budget} remaining ({used} used / {max_q} max)")
+
+    if total_budget <= 0:
+        print("No budget remaining. Exiting.")
+        return
+
+    # 4. Run observations using depth-over-breadth strategy
+    def live_observe(seed_idx, viewports):
+        print(f"\n--- Seed {seed_idx} ({len(viewports)} queries) ---")
+        log_action(round_id, "start_seed_observation", {
+            "seed_index": seed_idx, "num_queries": len(viewports),
+        })
+        return observe_seed_live(round_id, seed_idx, viewports, map_w, map_h)
+
+    (seed_counts, avg_expansion, dist_multipliers, prior_table,
+     port_ratio, ruin_ratio, warmth, survival_rate, forest_change_rate, coastal_pref) = \
+        run_observation_phases(
+            seed_grids, total_budget, map_w, map_h,
+            observe_fn=live_observe,
+        )
+
+    log_action(round_id, "expansion_rate_estimate", {
+        "pooled_rate": round(avg_expansion, 4),
+        "warmth": warmth,
+        "dist_multipliers": {str(k): round(v, 3) for k, v in dist_multipliers.items()},
+        "port_ratio": round(port_ratio, 3),
+        "ruin_ratio": round(ruin_ratio, 3),
+        "survival_rate": round(survival_rate, 3),
+        "forest_change_rate": round(forest_change_rate, 3),
+        "coastal_preference": round(coastal_pref, 2),
+    })
+
+    # 5. Pool observations for cold rounds
+    is_cold = warmth == "cold"
+    if is_cold:
+        pooled_counts = pool_observations(seed_counts, map_w, map_h)
+        print("Cold round: using pooled observations across all seeds")
+
+    # 6. Generate predictions and submit for each seed
+    for seed_idx in range(N_SEEDS):
+        print(f"\nBuilding prediction for seed {seed_idx}...")
+
+        grid, settlements = extract_grid_and_settlements(round_data, seed_idx)
+        effective_obs = pooled_counts if is_cold else seed_counts[seed_idx]
+
+        t0 = _time.time()
+
+        # Use prior + Bayesian obs update (no MC in live — too slow)
+        prediction = generate_prediction_abc(
+            grid, None, map_w, map_h,
+            obs_counts=effective_obs,
+            expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
+            port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+            prior_table=prior_table, warmth=warmth,
+            survival_rate=survival_rate, forest_change_rate=forest_change_rate,
+            coastal_preference=coastal_pref)
+
+        elapsed = _time.time() - t0
+        print(f"  Prediction built in {elapsed:.1f}s")
+
+        log_action(round_id, "build_prediction", {
+            "seed_index": seed_idx,
+            "method": "v2_prior_obs_bayesian",
+            "elapsed_s": round(elapsed, 1),
+            "prediction": prediction,
+        })
+
+        print(f"  Submitting seed {seed_idx}...")
+        try:
+            result = submit(round_id, seed_idx, prediction)
+            log_submission(round_id, seed_idx, result)
+            print(f"  Submit result: {result}")
+        except Exception as e:
+            print(f"  Submit ERROR: {e}")
+            log_action(round_id, "submit_error", {
+                "seed_index": seed_idx, "error": str(e),
+            })
+        _time.sleep(0.6)
+
+    log_action(round_id, "run_complete", {"seeds_submitted": N_SEEDS})
+    print("\nDone! All 5 seeds submitted.")
+
+
+if __name__ == "__main__":
+    main()
