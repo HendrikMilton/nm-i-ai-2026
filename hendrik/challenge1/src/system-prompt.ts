@@ -180,15 +180,18 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
 2. PUT /project/{id} to set isFixedPrice:true, fixedprice:<budget_amount> from the task.
    For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
    Do all PUTs in parallel.
-3. Log timesheet entries ONE AT A TIME sequentially (parallel causes 409): POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
-6. Register supplier cost via POST /ledger/voucher with postings that INCLUDE project:{id} on the debit posting:
+3. Log timesheet entries ONE AT A TIME — send first entry, wait for 201, then send next.
+   NEVER send timesheet entries in parallel — it causes 409 "Duplicate entry" errors.
+   POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
+   Use DIFFERENT dates for each employee (e.g. first employee on 2026-03-17, second on 2026-03-18).
+4. Register supplier cost via POST /ledger/voucher. CRITICAL: debit posting MUST include project:{id} — without it the cost is NOT linked to the project and the check FAILS.
    The supplier cost amount in the task is EXCL VAT. Use calculate tool: grossAmount = supplierCost * 1.25
    {date, description, postings: [
      {date, description, account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<grossAmount>, amountGrossCurrency:<grossAmount>, vatType:{id:1}, invoiceNumber:"SUP-001", row:1},
      {date, description, account:{id:2400}, supplier:{id}, amountGross:<-grossAmount>, amountGrossCurrency:<-grossAmount>, vatType:{id:0}, row:2}
    ]}
    CRITICAL: credit posting (row 2) MUST include vatType:{id:0} explicitly.
-7. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
+5. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
    POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
    POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}} — use EXACTLY "Project invoice" as description, do NOT append project name
    POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
