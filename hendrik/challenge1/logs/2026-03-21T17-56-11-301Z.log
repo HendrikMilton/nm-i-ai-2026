@@ -1,0 +1,4 @@
+[2026-03-21T17:56:11.302Z] [AGENT] model=claude-opus-4-6 prompt="L'un de vos clients a une facture en retard. Trouvez la facture en retard et enregistrez des frais de rappel de 60 NOK. Debit creances clients (1500), credit revenus de rappel (3400). Créez également une facture pour les frais de rappel au client et envoyez-la. De plus, enregistrez un paiement partiel de 5000 NOK sur la facture en retard."
+
+[LEADERBOARD] Task 25 scored
+[LEADERBOARD] Total: 66.75 → 66.75 (0.00)

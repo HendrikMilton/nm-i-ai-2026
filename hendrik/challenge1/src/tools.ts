@@ -1,7 +1,6 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { TripletexClient } from './tripletex';
-import { validatePost, validatePut } from './validators';
 
 export const createTools = (client: TripletexClient) => ({
     tripletex_get: tool({
@@ -17,28 +16,20 @@ export const createTools = (client: TripletexClient) => ({
         description: 'Make a POST request to the Tripletex API to create a resource.',
         parameters: z.object({
             path: z.string().describe('API path, e.g. /employee, /customer, /order/orderline'),
-            body: z.record(z.unknown()).describe('JSON body to send'),
+            body: z.unknown().describe('JSON body to send (object or array)'),
             params: z.record(z.string()).optional().describe('Query parameters'),
         }),
-        execute: async ({ path, body, params }) => {
-            const err = validatePost(path, body);
-            if (err) return { validation_error: err, hint: "Fix the body and retry." };
-            return client.post(path, body, params);
-        },
+        execute: async ({ path, body, params }) => client.post(path, body as any, params),
     }),
 
     tripletex_put: tool({
         description: 'Make a PUT request to the Tripletex API to update an existing resource.',
         parameters: z.object({
             path: z.string().describe('API path with ID, e.g. /customer/123'),
-            body: z.record(z.unknown()).describe('JSON body with updated fields'),
+            body: z.unknown().describe('JSON body with updated fields (object or array)'),
             params: z.record(z.string()).optional().describe('Query parameters'),
         }),
-        execute: async ({ path, body, params }) => {
-            const err = validatePut(path, body);
-            if (err) return { validation_error: err, hint: "Fix the body and retry." };
-            return client.put(path, body, params);
-        },
+        execute: async ({ path, body, params }) => client.put(path, body as any, params),
     }),
 
     tripletex_delete: tool({
@@ -56,7 +47,7 @@ export const createTools = (client: TripletexClient) => ({
         }),
         execute: async ({ expression }) => {
             try {
-                const raw = new Function(`"use strict"; return (${expression})`)();
+                const raw = new Function(expression.includes('return') ? expression : `return (${expression})`)();
                 const result = typeof raw === 'number' ? Math.round(raw * 100) / 100 : raw;
                 return { result };
             } catch (e: any) {

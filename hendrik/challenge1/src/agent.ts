@@ -9,7 +9,7 @@ import { createTools } from './tools';
 import { SYSTEM_PROMPT } from './system-prompt';
 import { GCP_PROJECT, GCP_LOCATION, GCP_LOCATION_ANTHROPIC } from './config';
 
-const MODEL = process.env.MODEL ?? 'claude-opus-4-6';
+const MODEL = process.env.MODEL ?? 'claude-sonnet-4-6';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const LOGS_DIR = join(__dirname, '..', 'logs');
 
