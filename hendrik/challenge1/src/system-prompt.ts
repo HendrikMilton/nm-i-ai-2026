@@ -80,7 +80,8 @@ Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a led
 4. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date:<receipt_date>, amountCurrencyIncVat:<amount_incl_vat>, comments:"<description>"}
    VAT treatment: use vatType 0 (no VAT) for representation expenses. The costCategory handles VAT automatically.
 5. PUT /travelExpense/{id} with {id, version, department:{id}, travelDetails:{departureDate:<receipt_date>, returnDate:<receipt_date>, isDayTrip:true, departureFrom:"Oslo", destination:"Oslo", departureTime:"12:00", returnTime:"14:00", purpose:"<description>"}}
-6. PUT /travelExpense/:deliver?id={id} — submits the expense. MUST deliver or it won't be scored.
+6. PUT /travelExpense/:deliver?id={id} — submits the expense.
+7. PUT /travelExpense/:approve?id={id} — approves and creates the accounting voucher. MUST approve or it won't be scored.
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
