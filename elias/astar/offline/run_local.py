@@ -210,7 +210,8 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
     print_fn = (lambda *a: None) if quiet else print
 
     # Run observations
-    seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio, warmth = \
+    (seed_counts, avg_expansion, dist_multipliers, prior_table,
+     port_ratio, ruin_ratio, warmth, survival_rate, forest_change_rate, coastal_pref) = \
         run_observation_phases(
             seed_grids, budget, map_w, map_h,
             observe_fn=local_observe, print_fn=print_fn,
@@ -277,7 +278,9 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
                 obs_counts=effective_obs,
                 expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
                 port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                prior_table=prior_table, warmth=warmth)
+                prior_table=prior_table, warmth=warmth,
+                survival_rate=survival_rate, forest_change_rate=forest_change_rate,
+                coastal_preference=coastal_pref)
         else:
             # Non-ABC path: obs + sim + prior (with warm/cold sim weight)
             from offline.simulator import run_monte_carlo, DEFAULT_PARAMS
@@ -288,7 +291,9 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
                 obs_counts=effective_obs, sim_pred=sim_pred,
                 expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
                 port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                prior_table=prior_table, warmth=warmth)
+                prior_table=prior_table, warmth=warmth,
+                survival_rate=survival_rate, forest_change_rate=forest_change_rate,
+                coastal_preference=coastal_pref)
 
         elapsed = time.time() - t0
 
@@ -301,7 +306,9 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
                     grid, r, c, map_h, map_w, dist_map, avg_expansion,
                     dist_multipliers=dist_multipliers,
                     port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                    prior_table=prior_table)
+                    prior_table=prior_table, survival_rate=survival_rate,
+                    forest_change_rate=forest_change_rate,
+                    coastal_preference=coastal_pref)
         prior_pred = floor_and_normalize(prior_pred)
 
         obs_result = score_prediction(obs_pred, ground_truth)
