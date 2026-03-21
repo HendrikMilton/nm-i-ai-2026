@@ -3510,8 +3510,8 @@
       "id": "v2_R9",
       "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
       "round_number": 9,
-      "timestamp": "2026-03-21T08:33:02.747553+00:00",
-      "round_score": 86.8709,
+      "timestamp": "2026-03-21T08:52:38.689791+00:00",
+      "round_score": 86.9318,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3524,8 +3524,8 @@
       "id": "v2_R10",
       "round_id": "75e625c3-60cb-4392-af3e-c86a98bde8c2",
       "round_number": 10,
-      "timestamp": "2026-03-21T08:33:36.789592+00:00",
-      "round_score": 80.7225,
+      "timestamp": "2026-03-21T08:53:17.718999+00:00",
+      "round_score": 81.3271,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3538,8 +3538,8 @@
       "id": "v2_R11",
       "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
       "round_number": 11,
-      "timestamp": "2026-03-21T08:39:47.838815+00:00",
-      "round_score": 79.4925,
+      "timestamp": "2026-03-21T08:59:30.145807+00:00",
+      "round_score": 82.3146,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3552,8 +3552,8 @@
       "id": "v2_R12",
       "round_id": "795bfb1f-54bd-4f39-a526-9868b36f7ebd",
       "round_number": 12,
-      "timestamp": "2026-03-21T08:46:28.416291+00:00",
-      "round_score": 51.3127,
+      "timestamp": "2026-03-21T09:06:17.743746+00:00",
+      "round_score": 52.6725,
       "n_sims": 500,
       "config": {
         "mode": "abc",
