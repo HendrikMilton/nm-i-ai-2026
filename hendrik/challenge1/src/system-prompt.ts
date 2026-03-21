@@ -46,11 +46,12 @@ This is a CUSTOMER INVOICE operation — never use supplier invoice or voucher.
 Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
 Extract ALL fields from PDF: supplier name, org number, address, invoice number, date, due date, amounts, account number.
 1. In parallel: GET /supplier?organizationNumber=X&fields=id,name, GET /ledger/account?number=XXXX (expense), GET /ledger/account?number=2400 (leverandørgjeld)
-2. If supplier not found, create: POST /supplier with {name, organizationNumber, email:"${dummyEmail}", invoiceEmail:"${dummyEmail}", postalAddress:{addressLine1, postalCode, city}}
-   NEVER include bankAccounts field — it is broken and causes 422. Skip bank account entirely.
+2. If supplier not found, create: POST /supplier with {name, organizationNumber, email:"${dummyEmail}", invoiceEmail:"${dummyEmail}", postalAddress:{addressLine1, postalCode, city}, bankAccountPresentation:[{bban:"<bank_account_from_PDF>"}]}
+   NEVER include bankAccounts field (deprecated, causes 422). Use bankAccountPresentation with bban instead.
+   If the PDF contains a bank account number ("Bankkonto", "Kontonummer"), extract it and include it in bankAccountPresentation.
 3. POST /ledger/voucher with {date:<invoice_date>, description, postings: [
      {date, description, account:{id:expense}, supplier:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"INV-...", row:1},
-     {date, description, account:{id:2400}, supplier:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, row:2}
+     {date, description, account:{id:2400}, supplier:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, vatType:{id:0}, row:2}
    ]}
 
 ## Workflow: Supplier invoice from text prompt
@@ -150,7 +151,8 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
 ## Workflow: Reminder fee + partial payment (Task 25)
 1. GET /invoice with invoiceDateFrom & invoiceDateTo to find the overdue invoice. Also GET /ledger/account for 3400, GET /invoice/paymentType — all in parallel.
 2. POST /product with account:{id:<3400_id>} — this makes the invoice credit 3400 automatically, no manual voucher needed.
-   {name:"Purregebyr", number:9999, priceExcludingVatCurrency:<fee>, vatType:{id:3}, account:{id:<3400_id>}}
+   {name:"Purregebyr", number:9999, priceExcludingVatCurrency:<fee>, vatType:{id:0}, account:{id:<3400_id>}}
+   CRITICAL: Purregebyr is EXEMPT from VAT — always use vatType:{id:0}. Using vatType 3 (25%) gives wrong amount and fails checks.
 3. POST /order with customer, then POST /order/orderline with product — sequential.
 4. POST /invoice?sendToCustomer=true with the order.
 5. PUT /invoice/{overdueInvoiceId}/:payment with paymentDate, paymentTypeId ("Betalt til bank"), paidAmount.
