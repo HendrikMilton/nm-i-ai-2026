@@ -1,0 +1,172 @@
+[2026-03-21T19:14:14.486Z] [AGENT] model=claude-sonnet-4-6 prompt="Vous avez recu une lettre d'offre (voir PDF ci-joint) pour un nouvel employe. Effectuez l'integration complete : creez l'employe, attribuez le bon departement, configurez les details d'emploi avec le pourcentage et le salaire annuel, et configurez les heures de travail standard."
+[2026-03-21T19:14:14.486Z] [AGENT] saved attachment: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge1/logs/attachments/2026-03-21T19-14-14-486Z/files/tilbudsbrev_fr_03.pdf
+[2026-03-21T19:14:14.486Z] [AGENT] files: files/tilbudsbrev_fr_03.pdf
+[2026-03-21T19:14:22.596Z] [API] GET /department?fields=id%2Cname&count=100 → 200
+[2026-03-21T19:14:22.596Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":949630,"name":"Avdeling"}]}
+[2026-03-21T19:14:22.614Z] [API] GET /division?fields=id%2Cname&count=1 → 200
+[2026-03-21T19:14:22.614Z] [API] ← {"fullResultSize":0,"from":0,"count":0,"versionDigest":"'If-None-Match' header not specified","values":[]}
+[2026-03-21T19:14:22.615Z] [API] GET /employee/employment/occupationCode?nameNO=Prosjektleder&count=1 → 200
+[2026-03-21T19:14:22.615Z] [API] ← {"fullResultSize":2,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":2615,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/2615","nameNO":"IT-PROSJEKTLEDER","code":"2130111"}]}
+[2026-03-21T19:14:29.630Z] [API] GET /employee/employment/occupationCode?nameNO=Prosjektleder&count=10 → 200
+[2026-03-21T19:14:29.630Z] [API] ← {"fullResultSize":11,"from":0,"count":10,"versionDigest":"'If-None-Match' header not specified","values":[{"id":2615,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/2615","nameNO":"IT-PROSJEKTLEDER","code":"2130111"},{"id":4552,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4552","nameNO":"PROSJEKTLEDER (ARBEIDSTAKERORGANISASJON)","code":"2512144"},{"id":4553,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4553","nameNO":"PROSJEKTLEDER (AVIS)","code":"3491138"},{"id":4554,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4554","nameNO":"PROSJEKTLEDER (BANK)","code":"3418127"},{"id":4555,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4555","nameNO":"PROSJEKTLEDER (BETONGREHABILITERING)","code":"7122109"},{"id":4556,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4556","nameNO":"PROSJEKTLEDER (BISTANDSARBEID)","code":"3431119"},{"id":4557,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4557","nameNO":"PROSJEKTLEDER (BYGG OG ANLEGG)","code":"2142108"},{"id":4558,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4558","nameNO":"PROSJEKTLEDER (ELEKTRONIKK)","code":"3113143"},{"id":4559,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4559","nameNO":"PROSJEKTLEDER (ELKRAFTTEKNIKK)","code":"2143125"},{"id":4560,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4560","nameNO":"PROSJEKTLEDER (FINANS)","code":"3411121"}]}
+[2026-03-21T19:14:29.650Z] [API] GET /municipality?count=1 → 200
+[2026-03-21T19:14:29.650Z] [API] ← {"fullResultSize":2,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":1,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/municipality/1","number":"5016","name":"Agdenes","county":"Trøndelag","payrollTaxZone":"","displayName":"Agdenes (5016) Inaktiv"}]}
+[2026-03-21T19:14:34.288Z] [API] POST /department → 201 body={"name":"Produksjon"}
+[2026-03-21T19:14:34.288Z] [API] ← {"value":{"id":949658,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/department/949658","name":"Produksjon","departmentNumber":"","departmentManager":null,"displayName":"Produksjon","isInactive":false,"businessActivityTypeId":0}}
+[2026-03-21T19:14:34.317Z] [API] POST /division → 201 body={"name":"Hovedvirksomhet","organizationNumber":"999999999","startDate":"2026-01-01","municipalityDate":"2026-01-01","municipality":{"id":1}}
+[2026-03-21T19:14:34.317Z] [API] ← {"value":{"id":108402051,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/division/108402051","displayName":"(999999999) Hovedvirksomhet","name":"Hovedvirksomhet","startDate":"2026-01-01","endDate":null,"organizationNumber":"999999999","municipalityDate":"2026-01-01","municipality":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/municipality/1"}}}
+[2026-03-21T19:14:38.960Z] [API] POST /employee → 201 body={"firstName":"Louise","lastName":"Moreau","department":{"id":949658},"userType":"NO_ACCESS","dateOfBirth":"1986-10-01","email":"louise.moreau@example.org"}
+[2026-03-21T19:14:38.960Z] [API] ← {"value":{"id":18652455,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/18652455","firstName":"Louise","lastName":"Moreau","displayName":"Louise Moreau","employeeNumber":"","dateOfBirth":"1986-10-01","email":"louise.moreau@example.org","phoneNumberMobileCountry":{"id":161,"url":"kkpqfuj-amager.tripletex.dev/v2/country/161"},"phoneNumberMobile":"","phoneNumberHome":"","phoneNumberWork":"","nationalIdentityNumber":"","dnumber":"","internationalId":{"intAmeldingType":null,"country":null,"number":""},"bankAccountNumber":"","iban":"","bic":"","creditorBankCountryId":0,"usesAbroadPayment":false,"userType":null,"allowInformationRegistration":true,"isContact":false,"isProxy":false,"comments":"","address":null,"department":{"id":949658,"url":"kkpqfuj-amager.tripletex.dev/v2/department/949658"},"employments":[],"holidayAllowanceEarned":{"year":0,"amount":0,"basis":0,"amountExtraHolidayWeek":0},"employeeCategory":null,"isAuthProjectOverviewURL":true,"pictureId":0,"companyId":108401967,"vismaConnect2FAactive":false}}
+[2026-03-21T19:14:45.342Z] [API] POST /employee/employment → 201 body={"employee":{"id":18652455},"startDate":"2026-07-22","division":{"id":108402051},"employmentId":"1","isMainEmployer":true,"taxDeductionCode":"loennFraHovedarbeidsgiver","employmentDetails":[{"date":"2026-07-22","employmentType":"ORDINARY","employmentForm":"PERMANENT","remunerationType":"MONTHLY_WAGE","workingHoursScheme":"NOT_SHIFT","percentageOfFullTimeEquivalent":80,"shiftDurationHours":7.5,"occupationCode":{"id":2615},"annualSalary":700000}]}
+[2026-03-21T19:14:45.342Z] [API] ← {"value":{"id":2829027,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/2829027","employee":{"id":18652455,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/18652455"},"employmentId":"1","startDate":"2026-07-22","endDate":null,"employmentEndReason":null,"division":{"id":108402051,"url":"kkpqfuj-amager.tripletex.dev/v2/division/108402051"},"lastSalaryChangeDate":null,"noEmploymentRelationship":false,"isMainEmployer":true,"taxDeductionCode":"loennFraHovedarbeidsgiver","employmentDetails":[{"id":3727905,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/details/3727905"}],"isRemoveAccessAtEmploymentEnded":false,"latestSalary":null}}
+[2026-03-21T19:14:49.237Z] [API] POST /employee/standardTime → 201 body={"employee":{"id":18652455},"fromDate":"2026-07-22","hoursPerDay":6}
+[2026-03-21T19:14:49.237Z] [API] ← {"value":{"id":44151,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/standardTime/44151","employee":{"id":18652455,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/18652455"},"fromDate":"2026-07-22","hoursPerDay":6}}
+[2026-03-21T19:14:57.210Z] [STEP 1] calls: tripletex_get({"path":"/department","params":{"fields":"id,name","count":"100"}}), tripletex_get({"path":"/employee/employment/occupationCode","params":{"nameNO":"Prosjektleder","count":"1"}}), tripletex_get({"path":"/division","params":{"fields":"id,name","count":"1"}})
+[2026-03-21T19:14:57.210Z] [STEP 1] results: tripletex_get→{"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":949630,"name":"Avdeling"}]}, tripletex_get→{"fullResultSize":2,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":2615,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/2615","nameNO":"IT-PROSJEKTLEDER","code":"2130111"}]}, tripletex_get→{"fullResultSize":0,"from":0,"count":0,"versionDigest":"'If-None-Match' header not specified","values":[]}
+[2026-03-21T19:14:57.210Z] [STEP 1] text: Following workflow: **Employee onboarding from offer letter (Task 21)**
+
+Let me extract the key details from the offer letter:
+- **Name**: Louise Moreau
+- **Date of birth**: 01.10.1986
+- **Start date**: 22.07.2026
+- **Department**: Produksjon
+- **Job title**: Prosjektleder
+- **Employment form**: Fast stilling (PERMANENT)
+- **Percentage**: 80.0%
+- **Annual salary**: 700,000 kr
+- **Working hours**: 6.0 timer per dag
+
+**Step 1**: Get departments, occupation code, and division in parallel.
+[2026-03-21T19:14:57.210Z] [STEP 2] calls: tripletex_get({"path":"/employee/employment/occupationCode","params":{"nameNO":"Prosjektleder","count":"10"}}), tripletex_get({"path":"/municipality","params":{"count":"1"}})
+[2026-03-21T19:14:57.210Z] [STEP 2] results: tripletex_get→{"fullResultSize":11,"from":0,"count":10,"versionDigest":"'If-None-Match' header not specified","values":[{"id":2615,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/2615","nameNO":"IT-PROSJEKTLEDER","code":"2130111"},{"id":4552,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4552","nameNO":"PROSJEKTLEDER (ARBEIDSTAKERORGANISASJON)","code":"2512144"},{"id":4553,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4553","nameNO":"PROSJEKTLEDER (AVIS)","code":"3491138"},{"id":4554,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4554","nameNO":"PROSJEKTLEDER (BANK)","code":"3418127"},{"id":4555,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4555","nameNO":"PROSJEKTLEDER (BETONGREHABILITERING)","code":"7122109"},{"id":4556,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4556","nameNO":"PROSJEKTLEDER (BISTANDSARBEID)","code":"3431119"},{"id":4557,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4557","nameNO":"PROSJEKTLEDER (BYGG OG ANLEGG)","code":"2142108"},{"id":4558,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4558","nameNO":"PROSJEKTLEDER (ELEKTRONIKK)","code":"3113143"},{"id":4559,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4559","nameNO":"PROSJEKTLEDER (ELKRAFTTEKNIKK)","code":"2143125"},{"id":4560,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/occupationCode/4560","nameNO":"PROSJEKTLEDER (FINANS)","code":"3411121"}]}, tripletex_get→{"fullResultSize":2,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":1,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/municipality/1","number":"5016","name":"Agdenes","county":"Trøndelag","payrollTaxZone":"","displayName":"Agdenes (5016) Inaktiv"}]}
+[2026-03-21T19:14:57.210Z] [STEP 2] text: I see:
+- Only one department exists: "Avdeling" (id: 949630) — no "Produksjon" department, need to create it
+- Occupation code for "Prosjektleder": id 2615 (IT-PROSJEKTLEDER) — let me search more specifically
+- No division exists — need to create one
+
+Let me search for a better occupation code match and get municipality data in parallel, and also create the "Produksjon" department:
+[2026-03-21T19:14:57.210Z] [STEP 3] calls: tripletex_post({"path":"/department","body":{"name":"Produksjon"}}), tripletex_post({"path":"/division","body":{"name":"Hovedvirksomhet","organizationNumber":"999999999","startDate":"2026-01-01","municipalityDate":"2026-01-01","municipality":{"id":1}}})
+[2026-03-21T19:14:57.210Z] [STEP 3] results: tripletex_post→{"value":{"id":949658,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/department/949658","name":"Produksjon","departmentNumber":"","departmentManager":null,"displayName":"Produksjon","isInactive":false,"businessActivityTypeId":0}}, tripletex_post→{"value":{"id":108402051,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/division/108402051","displayName":"(999999999) Hovedvirksomhet","name":"Hovedvirksomhet","startDate":"2026-01-01","endDate":null,"organizationNumber":"999999999","municipalityDate":"2026-01-01","municipality":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/municipality/1"}}}
+[2026-03-21T19:14:57.210Z] [STEP 3] text: I'll use occupation code id 2615 (IT-PROSJEKTLEDER) as the best general match for "Prosjektleder". Now let me create the department "Produksjon" and the division in parallel:
+[2026-03-21T19:14:57.210Z] [STEP 4] calls: tripletex_post({"path":"/employee","body":{"firstName":"Louise","lastName":"Moreau","department":{"id":949658},"userType":"NO_ACCESS","dateOfBirth":"1986-10-01","email":"louise.moreau@example.org"}})
+[2026-03-21T19:14:57.210Z] [STEP 4] results: tripletex_post→{"value":{"id":18652455,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/18652455","firstName":"Louise","lastName":"Moreau","displayName":"Louise Moreau","employeeNumber":"","dateOfBirth":"1986-10-01","email":"louise.moreau@example.org","phoneNumberMobileCountry":{"id":161,"url":"kkpqfuj-amager.tripletex.dev/v2/country/161"},"phoneNumberMobile":"","phoneNumberHome":"","phoneNumberWork":"","nationalIdentityNumber":"","dnumber":"","internationalId":{"intAmeldingType":null,"country":null,"number":""},"bankAccountNumber":"","iban":"","bic":"","creditorBankCountryId":0,"usesAbroadPayment":false,"userType":null,"allowInformationRegistration":true,"isContact":false,"isProxy":false,"comments":"","address":null,"department":{"id":949658,"url":"kkpqfuj-amager.tripletex.dev/v2/department/949658"},"employments":[],"holidayAllowanceEarned":{"year":0,"amount":0,"basis":0,"amountExtraHolidayWeek":0},"employeeCategory":null,"isAuthProjectOverviewURL":true,"pictureId":0,"companyId":108401967,"vismaConnect2FAactive":false}}
+[2026-03-21T19:14:57.210Z] [STEP 4] text: Department "Produksjon" (id: 949658) and division (id: 108402051) created. Now let me create the employee:
+
+**Step 3**: Create the employee Louise Moreau.
+
+Email generated: louise.moreau@example.org (ø→o, special chars handled)
+[2026-03-21T19:14:57.210Z] [STEP 5] calls: tripletex_post({"path":"/employee/employment","body":{"employee":{"id":18652455},"startDate":"2026-07-22","division":{"id":108402051},"employmentId":"1","isMainEmployer":true,"taxDeductionCode":"loennFraHovedarbeidsgiver","employmentDetails":[{"date":"2026-07-22","employmentType":"ORDINARY","employmentForm":"PERMANENT","remunerationType":"MONTHLY_WAGE","workingHoursScheme":"NOT_SHIFT","percentageOfFullTimeEquivalent":80,"shiftDurationHours":7.5,"occupationCode":{"id":2615},"annualSalary":700000}]}})
+[2026-03-21T19:14:57.210Z] [STEP 5] results: tripletex_post→{"value":{"id":2829027,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/2829027","employee":{"id":18652455,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/18652455"},"employmentId":"1","startDate":"2026-07-22","endDate":null,"employmentEndReason":null,"division":{"id":108402051,"url":"kkpqfuj-amager.tripletex.dev/v2/division/108402051"},"lastSalaryChangeDate":null,"noEmploymentRelationship":false,"isMainEmployer":true,"taxDeductionCode":"loennFraHovedarbeidsgiver","employmentDetails":[{"id":3727905,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/employment/details/3727905"}],"isRemoveAccessAtEmploymentEnded":false,"latestSalary":null}}
+[2026-03-21T19:14:57.210Z] [STEP 5] text: Employee created (id: 18652455). Now create the employment:
+
+**Step 4**: Create employment with all details.
+[2026-03-21T19:14:57.210Z] [STEP 6] calls: tripletex_post({"path":"/employee/standardTime","body":{"employee":{"id":18652455},"fromDate":"2026-07-22","hoursPerDay":6}})
+[2026-03-21T19:14:57.210Z] [STEP 6] results: tripletex_post→{"value":{"id":44151,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/standardTime/44151","employee":{"id":18652455,"url":"kkpqfuj-amager.tripletex.dev/v2/employee/18652455"},"fromDate":"2026-07-22","hoursPerDay":6}}
+[2026-03-21T19:14:57.210Z] [STEP 6] text: Employment created (id: 2829027). Now create the standard working hours:
+
+**Step 5**: Configure standard working hours (6.0 hours per day).
+[2026-03-21T19:14:57.210Z] [STEP 7] text: All steps completed successfully! Here's a summary of everything that was done:
+
+---
+
+## ✅ Onboarding complet — Louise Moreau
+
+### Employée créée
+| Champ | Valeur |
+|-------|--------|
+| **Nom** | Louise Moreau |
+| **Date de naissance** | 01.10.1986 |
+| **Email** | louise.moreau@example.org |
+| **Département** | Produksjon (créé) |
+| **Type d'accès** | NO_ACCESS |
+
+### Détails d'emploi
+| Champ | Valeur |
+|-------|--------|
+| **Date de début** | 22.07.2026 |
+| **Forme d'emploi** | PERMANENT (Fast stilling) |
+| **Pourcentage** | 80% |
+| **Salaire annuel** | 700 000 kr |
+| **Code profession** | IT-PROSJEKTLEDER (2615) |
+| **Employeur principal** | Oui |
+| **Code déduction fiscale** | loennFraHovedarbeidsgiver |
+
+### Heures de travail standard
+| Champ | Valeur |
+|-------|--------|
+| **Heures par jour** | 6,0 heures |
+| **À partir du** | 22.07.2026 |
+
+### Ressources créées
+- 🏢 Département **Produksjon** (id: 949658)
+- 🏭 Division **Hovedvirksomhet** (id: 108402051)
+- 👤 Employée **Louise Moreau** (id: 18652455)
+- 💼 Emploi (id: 2829027)
+- ⏰ Heures standard (id: 44151)
+[2026-03-21T19:14:57.210Z] [AGENT] DONE elapsed=42.7s steps=7 apiCalls=10 errors=0
+[2026-03-21T19:14:57.210Z] [AGENT] apiLog: [{"method":"GET","path":"/department","status":200},{"method":"GET","path":"/division","status":200},{"method":"GET","path":"/employee/employment/occupationCode","status":200},{"method":"GET","path":"/employee/employment/occupationCode","status":200},{"method":"GET","path":"/municipality","status":200},{"method":"POST","path":"/department","status":201},{"method":"POST","path":"/division","status":201},{"method":"POST","path":"/employee","status":201},{"method":"POST","path":"/employee/employment","status":201},{"method":"POST","path":"/employee/standardTime","status":201}]
+[2026-03-21T19:14:57.210Z] [AGENT] response: All steps completed successfully! Here's a summary of everything that was done:
+
+---
+
+## ✅ Onboarding complet — Louise Moreau
+
+### Employée créée
+| Champ | Valeur |
+|-------|--------|
+| **Nom** | Louise Moreau |
+| **Date de naissance** | 01.10.1986 |
+| **Email** | louise.moreau@example.org |
+| **Département** | Produksjon (créé) |
+| **Type d'accès** | NO_ACCESS |
+
+### Détails d'emploi
+| Champ | Valeur |
+|-------|--------|
+| **Date de début** | 22.07.2026 |
+| **Forme d'emploi** | PERMANENT (Fast stilling) |
+| **Pourcentage** | 80% |
+| **Salaire annuel** | 700 000 kr |
+| **Code profession** | IT-PROSJEKTLEDER (2615) |
+| **Employeur principal** | Oui |
+| **Code déduction fiscale** | loennFraHovedarbeidsgiver |
+
+### Heures de travail standard
+| Champ | Valeur |
+|-------|--------|
+| **Heures par jour** | 6,0 heures |
+| **À partir du** | 22.07.2026 |
+
+### Ressources créées
+- 🏢 Département **Produksjon** (id: 949658)
+- 🏭 Division **Hovedvirksomhet** (id: 108402051)
+- 👤 Employée **Louise Moreau** (id: 18652455)
+- 💼 Emploi (id: 2829027)
+- ⏰ Heures standard (id: 44151)
+[2026-03-21T19:14:57.210Z] ---
+
+[SCORING] {
+  "id": "bcd5eccb-555a-4553-a04a-501109b22b33",
+  "status": "completed",
+  "queued_at": "2026-03-21T19:14:09.930450+00:00",
+  "completed_at": "2026-03-21T19:14:57.725665+00:00",
+  "score_raw": 12,
+  "score_max": 14,
+  "normalized_score": 2.5714,
+  "duration_ms": 47518,
+  "feedback": {
+    "comment": "1/10 checks failed.",
+    "checks": [
+      "Check 1: passed",
+      "Check 2: passed",
+      "Check 3: passed",
+      "Check 4: passed",
+      "Check 5: failed",
+      "Check 6: passed",
+      "Check 7: passed",
+      "Check 8: passed",
+      "Check 9: passed",
+      "Check 10: passed"
+    ]
+  }
+}
