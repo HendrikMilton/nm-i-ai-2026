@@ -1,14 +1,13 @@
 # Astar Island — Strategy
 
-## Current Scores (budget=50, rounds 9-12)
+## Current Scores (budget=50, offline backtests)
 
 | Round | Pipeline | Prior-only | Delta | Warmth | Expansion Rate |
 |------:|--------:|-----------:|------:|--------|---------------:|
-| 9     | 88.5    | 88.6       | -0.1  | warm   | 0.156          |
-| 10    | 82.9    | 73.7       | +9.2  | cold   | 0.014          |
-| 11    | 84.6    | 80.1       | +4.5  | warm   | ~0.10          |
-| 12    | 54.5    | 48.4       | +6.1  | cold   | ~0.01          |
-| **Avg** | **77.6** |          |       |        |                |
+| 1     | 82.8    | 77.7       | +5.1  | warm   | 0.192          |
+| 9     | 88.9    | 88.1       | +0.8  | warm   | 0.159          |
+| 13    | 87.2    | 87.6       | -0.4  | warm   | 0.104          |
+| 14    | 72.3    | 69.1       | +3.1  | warm   | 0.309          |
 
 ## Pipeline Architecture
 
@@ -20,11 +19,17 @@ Three-layer blending (ABC path):
 
 Cold rounds pool observations across all 5 seeds for 5x data amplification.
 
-## Observation Strategy
+## Observation Strategy — Depth Over Breadth
 
-- **Phase 1**: 9 viewports (3x3 tiling) per seed, all 5 seeds = 45 queries. Covers ~90% of the 40x40 map.
-- **Phase 2**: 5 remaining queries targeted at boundary cells (distance 1-3 from settlements) on the most surprising seeds.
-- Expansion rate, distance decay, port/ruin ratios estimated from Phase 1 observations.
+Instead of spreading 50 queries thinly across all 5 seeds (9 each, ~1 obs/cell), we observe **3 seeds deeply** and let the remaining 2 rely on learned parameters + priors + MC.
+
+- **Deep seed selection**: Pick 3 seeds with the most diverse initial terrain (greedy max-min terrain diff) to maximize the variety of dynamics we learn from.
+- **Per-seed budget**: ~16-17 queries each (50 / 3), split as:
+  - **Coverage** (9 queries): Full 3x3 tiling covering ~90% of the map
+  - **Depth** (7-8 queries): Extra viewports targeting dynamic areas near settlements (Chebyshev distance 1-4), scored by proximity to initial settlements. Overlap with coverage viewports avoided.
+- **Unobserved seeds** (2 of 5): Get 0 direct observations. Predictions come from distance-aware prior + ABC-fitted MC simulation. MC is trusted without validation since it was fitted on observed seeds.
+- **MC validation**: For observed seeds, MC is gated by argmax agreement (threshold 0.72). For unobserved seeds, MC is always used.
+- Expansion rate, distance decay, port/ruin ratios estimated from the 3 observed seeds.
 - Warm/cold classification at expansion rate threshold 0.05.
 
 ## Key Parameters
@@ -33,6 +38,8 @@ Cold rounds pool observations across all 5 seeds for 5x data amplification.
 |-----------|-------|------|
 | `ABC_PRIOR_WEIGHT` | 0.80 | Prior weight in prior+MC blend |
 | `ABC_MC_WEIGHT` | 0.20 | MC weight in prior+MC blend |
+| `SIM_SAFETY_THRESHOLD` | 0.72 | MC argmax agreement gate (observed seeds only) |
+| `N_DEEP_SEEDS` | 3 | Seeds to observe deeply |
 | `EQUIV_WARM_PER_SEED` | 20 | Dirichlet prior strength (warm) |
 | `EQUIV_COLD_POOLED` | 50 | Dirichlet prior strength (cold) |
 | `MC_TOTAL_RUNS` | 500 | Total MC simulations per seed |
@@ -43,8 +50,8 @@ Cold rounds pool observations across all 5 seeds for 5x data amplification.
 
 Two-stage Approximate Bayesian Computation with 14 directly-fitted parameters:
 
-**Stage 1**: 500 LHS candidates x 2 sims x 5 seeds, scored by argmax match rate, keep top 50.
-**Stage 2**: Perturb top 20 into 200 candidates x 50 sims, scored by log-likelihood, keep top 15.
+**Stage 1**: 50 LHS candidates x 2 sims x 5 seeds, scored by argmax match rate, keep top 15.
+**Stage 2**: Perturb top 15 into 40 candidates x 20 sims, scored by log-likelihood, keep top 8.
 
 Parameters fitted directly (no translation layer):
 - Growth: `expansion_chance`, `expansion_threshold`, `base_food_production`, `population_growth_rate`
@@ -71,5 +78,6 @@ All distance checks use Chebyshev (max of |dx|, |dy|).
 
 - **Contextual priors** with terrain+neighborhood context are the strongest single signal
 - **ABC MC** now helps (+1-9 points over prior) after fixing direct parameter mapping and simulator bugs
+- **Depth-over-breadth observations** — 3 deep seeds with MC transfer to unobserved seeds reduces spread (1.6-2.6) and improves average score on dynamic rounds
 - **Observation pooling** on cold rounds is essential (5x data amplification)
 - **Distance-aware priors** correctly model settlement probability decay from initial positions

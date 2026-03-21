@@ -1,0 +1,30 @@
+========== claude-sonnet-4-6 (port 4003) ==========
+
+--- easy ---
+  ✓ easy/01-create-employee (27297ms)
+  ✓ easy/02-create-customer (8893ms)
+  ✓ easy/03-create-product (6047ms)
+  ✓ easy/04-create-department (5144ms)
+  ✓ easy/05-create-supplier (6751ms)
+
+--- medium ---
+  ✓ medium/01-create-invoice (22993ms)
+  ✓ medium/02-register-payment (47204ms)
+  ✓ medium/03-create-project (65555ms)
+  ✓ medium/04-travel-expense (34705ms)
+  ✓ medium/05-update-customer (15359ms)
+
+--- hard ---
+  ✓ hard/01-invoice-with-credit-note (34036ms)
+  ✓ hard/02-full-workflow (37076ms)
+  ✓ hard/03-delete-travel-expense (23438ms)
+
+--- multilingual ---
+  ✓ multilingual/01-english (16109ms)
+  ✓ multilingual/02-spanish (8969ms)
+  ✓ multilingual/03-german (23713ms)
+  ✓ multilingual/04-french (7322ms)
+  ✓ multilingual/05-portuguese (11805ms)
+  ✓ multilingual/06-nynorsk (12271ms)
+
+TOTAL: 19 | PASSED: 19 | FAILED: 0

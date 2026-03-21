@@ -1,0 +1,17 @@
+# 3. Getting ready for production – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/getting-started/3-getting-ready-for-production
+
+3. Getting ready for production
+
+Once you have tested your integration in our test environment and planned out the scope of your integration it is time to think about progressing to production.
+
+To gain access to the API in production you will need to send an application to us. This is a screening process and is mandatory for all integrators, even if the integration is for internal use only.
+
+To apply for access to production you can fill out this form. Usually you will get a response within 2-3 weeks. We have no way to speed up this process for individual applications. The response will be sent to the e-mail address given as technical contact in the form.
+
+In the approval e-mail you will find some basic info, consumer token and application name, and how to reach us. If it is a commercial integration you will also find a link to a form where you can apply to have your integration published on Tripletex.no. If you haven’t received a response within the estimated time or need to change your application name, please contact us.
+
+Once you receive your consumer token, your end users can start using your integration by selecting “Adapted setup” when creating an employee token and providing your application name. They will also need to choose what entitlements the API key should have: All entitlements, copy the user’s entitlements, or assign them manually. Your customers can find a how-to guide on this process in our help center.
+
+Doc navigation
+← 2. Explore

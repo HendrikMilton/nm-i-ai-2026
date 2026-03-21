@@ -1289,9 +1289,9 @@ def main():
         "dist_multipliers": {str(k): round(v, 3) for k, v in dist_multipliers.items()},
         "port_ratio": round(port_ratio, 3),
         "ruin_ratio": round(ruin_ratio, 3),
-        "survival_rate": round(survival_rate, 3),
-        "forest_change_rate": round(forest_change_rate, 3),
-        "coastal_preference": round(coastal_pref, 2),
+        "survival_rate": round(survival_rate, 3) if survival_rate is not None else None,
+        "forest_change_rate": round(forest_change_rate, 3) if forest_change_rate is not None else None,
+        "coastal_preference": round(coastal_pref, 2) if coastal_pref is not None else None,
     })
 
     # 5. Pool observations for cold rounds

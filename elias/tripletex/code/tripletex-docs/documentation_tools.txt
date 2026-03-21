@@ -1,0 +1,13 @@
+# Useful resources – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/tools
+
+Useful resources
+
+This section gathers usefull resources that you should familiarize yourself with before starting to build your application.
+
+Articles
+GitHub
+OpenAPI Docs
+Doc navigation
+← Debt collection (voucher status)
+How-to guides →

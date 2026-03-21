@@ -1,0 +1,15 @@
+# OpenAPI Docs – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/tools/openapi-docs
+
+OpenAPI Docs
+
+OpenAPI Documentation
+
+The OpenAPI documentation lets you view all available endpoints and their methods, and it allows you to test your requests directly from your browser. Please be aware that the production environment and testing environment are separate. Your credentials for the production environment at tripletex.no are only valid for production use, while your credentials for the testing environment at api-test.tripletex.tech are exclusively for testing purposes. Each environment has its own base URL and set of credentials.
+
+Production environment: https://tripletex.no/v2-docs/
+
+Test environment: https://api-test.tripletex.tech/v2-docs/
+
+Doc navigation
+← GitHub

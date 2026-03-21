@@ -1,0 +1,68 @@
+# Using vatTypes/VAT-codes – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/using-vattypes-vat-codes
+
+Using vatTypes/VAT-codes
+
+When using VAT-codes (in for example orderLines or postings) then you need to make sure that the VAT-codes you are attempting to use are…
+
+Valid to use with your current endpoint (voucher = incoming, orderLines = outgoing, for instance)
+Active in the Tripletex account (To enable VAT codes this is done via GUI in Accounts -> Settings -> VAT-settings)
+If you are also specifying an account with the vatType then you also need to make sure the account is not locked to a specific VAT-code (VAT locked) and that the vatType is allowed for that account type.
+Exists in Tripletex
+
+To validate wether or not these conditions are met you can do the following:
+
+Use GET ledger/account to fetch the legalVatTypes for a given account.
+Check GET ledger/vatType with typeOfVat defined as either incoming or outgoing. This endpoint only returns VAT-codes that are active in the Tripletex account.
+Check the accountId you are using via GET ledger/account to make sure the vatType is valid.
+What VatTypes should I use?
+
+In general this should be something you agree with (and map up) with your end user(s). The following table shows what codes are available (given that they are active in the Tripletex account) and wether they are inbound or outbound. Keep in mind that orderLine objects can only use inbound vatTypes. The database ID indicates the id-parameter in vatType, the number column indicate the VAT-code (shown in GUI)
+
+DatabaseID	Number (In GUI)	Name	Inbound or outbound (sales) VAT Type	Basis precentage	Tax percentage
+(2022-08-16)
+1	1	Deduction of input tax, high rate	Inbound	100%	25%
+11	11	Deduction of input tax, medium rate	Inbound	100%	15%
+111	12	Deduction of input tax, raw fish	Inbound	100%	11,11%
+12	13	Deduction of input tax, low rate	Inbound	100%	12%
+23	14	Deduction of input tax paid on importation, high rate	Inbound	100%	100%
+24	15	Deduction of input tax paid on importation, medium rate	Inbound	100%	100%
+230	20	Basis, no input tax on importation	Inbound	100%	0%
+13	21	Basis input tax on importation, high rate	Inbound	100%	0%
+14	22	Basis including import tax, medium rate	Inbound	100%	0%
+3	3	Outbound tax, high rate	Outbound	100%	25%
+31	31	Outbound tax, medium rate	Outbound	100%	15%
+311	32	Outgoing fee, raw fish	Outbound	100%	11,11%
+32	33	Outgoing fee, low rate	Outbound	100%	12%
+5	5	No output tax (within the VAT Act)	Outbound	100%	0%
+51	51	Tax-free inland turnover with reverse tax liability	Outbound	100%	0%
+52	52	Duty-free export of goods and services	Outbound	100%	0%
+6	6	No output tax (outside the VAT Act)	Outbound	100%	
+7	7	No tax processing (revenues)	Outbound	100%	0%
+81	81	Deduction of input tax on importation, high rate	Outbound	100%	25%
+82	82	Input tax without deduction on importation, high rate	Inbound	100%	25%
+83	83	Deduction of input tax on importation, medium rate	Inbound	100%	15%
+84	84	Input tax without deduction on importation, medium rate	Inbound	100%	15%
+85	85	Basic, duty-free importation	Inbound	100%	0%
+34	86	Deduction of input tax when purchasing services from abroad, high rate	Inbound	100%	25%
+35	87	Purchase of services from abroad without deduction, high rate	Inbound	100%	25%
+88	88	Deduction of input tax when purchasing services from abroad, low rate	Inbound	100%	12%
+89	89	Purchase of services from abroad without deduction, low rate	Inbound	100%	12%
+91	91	Deduction of input tax when purchasing climate quotas/gold	Inbound	100%	25%
+92	92	Purchase of climate quotas/gold without tax compensation	Inbound	100%	25%
+559	JUST-1	VAT adjustment for capital goods – code 1		100%	25%
+562	JUST-81	VAT adjustment for capital goods – code 81		100%	25%
+550	TAP-1	Loss of claim – code 1		100%	25%
+551	TAP-11	Loss of claim – code 11		100%	15%
+552	TAP-12	Loss of claim – code 12		100%	11,11%
+553	TAP-13	Loss of claim – code 13		100%	12%
+560	TILB-1	Refund of VAT for capital goods – code 1		100%	25%
+561	TILB-81	Refund of VAT for capital goods – code 81		100%	25%
+554	UTTAK-3	Withdrawal – code 3		100%	25%
+556	UTTAK-31	Withdrawal – code 31		100%	15%
+557	UTTAK-32	Withdrawal – code 32		100%	11,11%
+558	UTTAK-33	Withdrawal – code 33		100%	12%
+555	UTTAK-5	Withdrawal – code 5		100%	0%
+Doc navigation
+← Checksum
+Debt collection (voucher status) →
