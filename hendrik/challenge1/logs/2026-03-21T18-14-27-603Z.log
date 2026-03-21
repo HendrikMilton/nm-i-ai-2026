@@ -135,3 +135,34 @@ Hvert bilag har **debet = kredit**, og alle posteringer er i balanse. Saldobalan
 
 [LEADERBOARD] Task 26 scored
 [LEADERBOARD] Total: 66.75 → 66.75 (0.00)
+
+[SCORING] {
+  "id": "bc9cf69e-bff2-4465-ae19-65f51b2e3613",
+  "status": "completed",
+  "queued_at": "2026-03-21T18:20:25.396663+00:00",
+  "completed_at": "2026-03-21T18:21:28.317533+00:00",
+  "score_raw": 10,
+  "score_max": 22,
+  "normalized_score": 1.3636,
+  "duration_ms": 62911,
+  "feedback": {
+    "comment": "8/15 checks failed.",
+    "checks": [
+      "Check 1: passed",
+      "Check 2: passed",
+      "Check 3: passed",
+      "Check 4: passed",
+      "Check 5: passed",
+      "Check 6: passed",
+      "Check 7: passed",
+      "Check 8: failed",
+      "Check 9: failed",
+      "Check 10: failed",
+      "Check 11: failed",
+      "Check 12: failed",
+      "Check 13: failed",
+      "Check 14: failed",
+      "Check 15: failed"
+    ]
+  }
+}
