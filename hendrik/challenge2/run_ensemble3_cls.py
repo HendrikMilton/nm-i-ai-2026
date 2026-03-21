@@ -110,7 +110,9 @@ def load_classifier(device):
 
     model = models.efficientnet_v2_s()
     model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    # Convert FP16 weights back to FP32 for inference
+    state_dict = {k: v.float() if v.dtype == torch.float16 else v for k, v in checkpoint["model_state_dict"].items()}
+    model.load_state_dict(state_dict)
     model.to(device)
     model.eval()
 

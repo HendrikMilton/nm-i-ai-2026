@@ -102,7 +102,8 @@ def load_classifier(device):
     idx_to_cat = {v: int(k) for k, v in class_to_idx.items()}
     model = models.efficientnet_v2_s()
     model.classifier[1] = nn.Linear(model.classifier[1].in_features, num_classes)
-    model.load_state_dict(checkpoint["model_state_dict"])
+    state_dict = {k: v.float() if v.dtype == torch.float16 else v for k, v in checkpoint["model_state_dict"].items()}
+    model.load_state_dict(state_dict)
     model.to(device)
     model.eval()
     transform = transforms.Compose([
