@@ -258,7 +258,7 @@ Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new 
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
 ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /resultbudget (400), or /ledger/account with numberFrom/numberTo ranges.
-1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=4000&accountNumberTo=7999, count=1000)
+1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000)
    Use fields=id,account(id,number,name),amount
 2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
 3. GET /employee?fields=id&count=1 (for project manager)
