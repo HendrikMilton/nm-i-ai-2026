@@ -1,6 +1,6 @@
 import { type ReactNode, useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-import { Menu, X, ChevronRight, ScrollText, Play, Sun, Moon, ShoppingCart, Images, Package, FlaskConical } from 'lucide-react';
+import { Menu, X, ChevronRight, ScrollText, Play, Sun, Moon, ShoppingCart, Images, Package, FlaskConical, Map } from 'lucide-react';
 import { clsx } from 'clsx';
 import { useTheme } from '../hooks/useTheme';
 
@@ -16,6 +16,7 @@ const navItems: NavItem[] = [
     { to: '/challenges/2/dataset', icon: Images, label: 'Dataset', indent: true },
     { to: '/challenges/2/products', icon: Package, label: 'Products', indent: true },
     { to: '/challenges/2/training', icon: FlaskConical, label: 'Training Runs', indent: true },
+    { to: '/challenges/3/astar', icon: Map, label: '3 - Astar Island' },
     { to: '/logs', icon: ScrollText, label: 'Debug Logs' },
     { to: '/replay/1/0', icon: Play, label: 'Replay' },
 ];

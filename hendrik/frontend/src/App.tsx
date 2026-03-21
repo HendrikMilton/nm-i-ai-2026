@@ -6,6 +6,7 @@ import { ChallengePage } from './pages/ChallengePage';
 import { DatasetPage } from './pages/DatasetPage';
 import { ProductsPage } from './pages/ProductsPage';
 import { TrainingPage } from './pages/TrainingPage';
+import { AstarPage } from './pages/AstarPage';
 import { ThemeContext, useThemeState } from './hooks/useTheme';
 import './compiled.css';
 
@@ -22,6 +23,7 @@ export function App() {
                         <Route path="/challenges/2/dataset" element={<DatasetPage />} />
                         <Route path="/challenges/2/products" element={<ProductsPage />} />
                         <Route path="/challenges/2/training" element={<TrainingPage />} />
+                        <Route path="/challenges/3/astar" element={<AstarPage />} />
                         <Route path="/logs" element={<LogsPage />} />
                         <Route path="/replay/:challenge/:index" element={<ReplayPage />} />
                     </Routes>
