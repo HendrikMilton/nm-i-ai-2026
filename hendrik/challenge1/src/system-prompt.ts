@@ -104,7 +104,7 @@ Total: 4 write calls.
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
 1. In parallel: GET /department?fields=id,name&count=100, GET /employee/employment/occupationCode?nameNO=<job_title>, GET /division?fields=id,name&count=1
 2. Create department if needed. If no division, GET /municipality?count=1 then POST /division.
-3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth}
+3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth, email:"<firstname.lastname@example.org>" (generate from name, lowercase, replace special chars: ø→o, å→a, æ→ae, ü→u, ö→o, ä→a, é→e, á→a, ñ→n, í→i, ó→o, ú→u)}
 4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, shiftDurationHours:7.5, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
 5. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:<hours_from_offer>} — REQUIRED when offer mentions "arbeidstid" / working hours
 
