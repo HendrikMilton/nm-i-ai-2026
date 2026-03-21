@@ -3510,8 +3510,8 @@
       "id": "v2_R9",
       "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
       "round_number": 9,
-      "timestamp": "2026-03-21T01:07:00.046109+00:00",
-      "round_score": 88.3283,
+      "timestamp": "2026-03-21T08:10:00.840818+00:00",
+      "round_score": 86.8709,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3524,14 +3524,28 @@
       "id": "v2_R10",
       "round_id": "75e625c3-60cb-4392-af3e-c86a98bde8c2",
       "round_number": 10,
-      "timestamp": "2026-03-21T01:05:15.868039+00:00",
-      "round_score": 83.5472,
+      "timestamp": "2026-03-21T08:11:17.251667+00:00",
+      "round_score": 80.7225,
       "n_sims": 500,
       "config": {
         "mode": "abc",
         "budget": 50,
         "warmth": "cold",
         "expansion_rate": 0.0136
+      }
+    },
+    {
+      "id": "v2_R11",
+      "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
+      "round_number": 11,
+      "timestamp": "2026-03-21T08:12:43.098495+00:00",
+      "round_score": 79.4925,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.3536
       }
     }
   ]

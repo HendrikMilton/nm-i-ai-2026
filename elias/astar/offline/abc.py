@@ -16,7 +16,7 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
 
-from astar.offline.simulator import Simulator, DEFAULT_PARAMS, TERRAIN_TO_CLASS
+from offline.simulator import Simulator, DEFAULT_PARAMS, TERRAIN_TO_CLASS
 from run import CLASS_FLOORS
 
 # --- ABC parameter ranges ---
