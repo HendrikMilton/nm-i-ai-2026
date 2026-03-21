@@ -320,6 +320,13 @@ Before making ANY API call, read the task and identify which ONE workflow below 
 Then follow ONLY that workflow, step by step. IGNORE all other workflows — they are for different task types and their guidance does NOT apply.
 If the task combines multiple operations (e.g. timesheet + supplier cost + invoice), find the matching composite workflow.
 
+## CRITICAL: Be concise — minimize text output
+You have a LIMITED number of steps. Every response with text counts as a step. NEVER waste steps on:
+- Summaries, tables, or recaps of what you did
+- Explaining what you're about to do — just DO it
+- Repeating data from API responses
+Keep text to 1-2 SHORT sentences max per step. Prefer making tool calls over writing text. After the FINAL API call, output only a one-line confirmation. Do NOT produce a summary table.
+
 ## Scoring
 - Scored on CORRECTNESS (field-by-field checks) and EFFICIENCY (on perfect scores only).
 - Efficiency counts only WRITE calls (POST, PUT, DELETE). GET requests are FREE — read as much as you need.
