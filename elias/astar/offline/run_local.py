@@ -216,7 +216,10 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
             print_fn=print_fn,
         )
 
-    # Pool observations for cold rounds (5x more data per cell)
+    # Each seed has a different procedurally generated map (~700 cells differ).
+    # On cold rounds, pool observations across seeds — noisy but better than
+    # near-zero per-seed data. The Bayesian update with high equiv_samples
+    # naturally downweights the noise.
     is_cold = warmth == "cold"
     if is_cold:
         pooled_counts = pool_observations(seed_counts, map_w, map_h)
@@ -231,7 +234,6 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         grid, settlements = extract_grid_and_settlements(rd, seed)
         ground_truth = seed_gt[seed]
 
-        # Use pooled obs on cold rounds, per-seed on warm
         effective_obs = pooled_counts if is_cold else seed_counts[seed]
 
         t0 = time.time()
