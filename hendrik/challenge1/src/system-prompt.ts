@@ -50,10 +50,13 @@ Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
 3. POST /salary/transaction?generateTaxDeduction=true with {date, year, month, isHistorical:false, payslips:[{employee:{id}, date, year, month, specifications:[{salaryType:{id}, rate:<amount>, count:1, amount:<amount>, year, month, employee:{id}}]}]}
    NEVER use /ledger/voucher for payroll.
 
-## Workflow: Employee creation
-1. GET /department?fields=id,name&count=1
-2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth}
-3. If start date given: POST /employee/employment (see payroll workflow for employment structure)
+## Workflow: Employee creation (Task 19)
+1. GET /department?fields=id,name&count=1 (create department if needed)
+2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{...}} — extract ALL fields from the contract
+3. If start date given: ensure division exists, then POST /employee/employment (see payroll workflow for employment structure)
+   - CRITICAL: occupationCode STYRK numbers (e.g. 3512) are NOT API IDs. You MUST look up the correct ID:
+     GET /employee/employment/occupationCode?nameNO=<occupation_title_from_contract> to find the matching entry, then use its {id} value.
+     The API uses 7-digit codes internally — never pass a 4-digit STYRK code as the id.
 
 ## Workflow: Travel expense
 1. GET /employee?firstName=X&lastName=Y
@@ -69,8 +72,24 @@ Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
 1. Find employee, customer, project (GET in parallel)
 2. If employee userType is not STANDARD: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
 3. GET /activity?fields=id,name — find matching activity
-4. POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id}, date, hours}
+4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
 5. Ensure bank account, then create order → orderline → invoice (see invoice workflow), using count=<hours> and unitPriceExcludingVatCurrency=<hourly_rate>
+
+## Workflow: Complete project lifecycle (Task 29)
+Combines: timesheet logging, supplier cost, and project invoice in one task.
+1. In parallel: GET customer, supplier, all employees, project, activity, ledger accounts (4300 expense + 2400 payable), bank account 1920
+2. For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+3. Log timesheet entries ONE AT A TIME sequentially (parallel causes 409): POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
+4. Register supplier cost via POST /ledger/voucher with postings that INCLUDE project:{id} on the debit posting:
+   {date, description, postings: [
+     {date, description, account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"SUP-001", row:1},
+     {date, description, account:{id:2400}, supplier:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, row:2}
+   ]}
+5. Ensure bank account 1920 has bankAccountNumber (already checked in step 1)
+6. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
+   POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
+   POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}}
+   POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
 
 ## Workflow: Credit note
 1. Find customer → find invoice (see payment workflow steps 1-2)
@@ -85,6 +104,9 @@ Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
 
 export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You receive tasks in natural language and complete them via the Tripletex API. Authentication is handled — just use the tools.
 
+## First step — always identify the workflow
+Before making ANY API call, read the task and identify which workflow below matches it. Then follow that workflow exactly, step by step. If the task combines multiple operations (e.g. timesheet + supplier cost + invoice), find the matching composite workflow.
+
 ## Scoring
 - Scored on CORRECTNESS (field-by-field) and EFFICIENCY (fewer API calls + zero errors = higher score)
 - Every 4xx error reduces score. Get it right first try.
@@ -93,6 +115,7 @@ export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You 
 ## Critical rules
 - PUT requires "id" and "version" from a prior GET — always GET first with ?fields=* before updating
 - Order lines must be added ONE AT A TIME sequentially (parallel causes 409)
+- Timesheet entries must be added ONE AT A TIME sequentially (parallel causes 409)
 - Travel expense costs must be added ONE AT A TIME sequentially
 - Bank account 1920 must have a bankAccountNumber before creating invoices — check and set to "${dummyNorwegianBankNumber}" if empty
 - GET /invoice REQUIRES invoiceDateFrom and invoiceDateTo params
