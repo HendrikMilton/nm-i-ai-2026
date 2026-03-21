@@ -24,7 +24,7 @@ Complete flow: order → invoice → payment in one task.
 3. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}
 4. POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
 5. PUT /invoice/{id}/:payment with QUERY PARAMS: paymentDate, paymentTypeId ("Betalt til bank" id), paidAmount (use the invoice "amount" field — total incl VAT)
-   Do NOT re-fetch the invoice to get the amount — it's in the POST /invoice response.
+   The invoice amount is in the POST /invoice response — use it directly.
 
 ## Workflow: Register payment on existing invoice
 1. GET /customer?organizationNumber=X and GET /invoice/paymentType?fields=id,description (parallel)
@@ -51,7 +51,7 @@ Same as Task 20 but data comes from prompt text instead of PDF. Follow same step
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager), GET /ledger/account?number=1920
-   Do NOT GET /employee separately — the project response includes projectManager with their id.
+   The project response includes projectManager with their id — no need for a separate employee GET.
 2. PUT /project to set isFixedPrice=true, fixedprice=<amount>, projectManager:{id} (from step 1)
    If bank account 1920 needs bankAccountNumber, PUT it — can do both PUTs in parallel.
 3. POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
@@ -67,13 +67,21 @@ Same as Task 20 but data comes from prompt text instead of PDF. Follow same step
 3. POST /salary/transaction?generateTaxDeduction=true with {date, year, month, isHistorical:false, payslips:[{employee:{id}, date, year, month, specifications:[{salaryType:{id}, rate:<amount>, count:1, amount:<amount>, year, month, employee:{id}}]}]}
    NEVER use /ledger/voucher for payroll.
 
-## Workflow: Employee creation (Task 19)
-1. GET /department?fields=id,name&count=1 (create department if needed)
+## Workflow: Employee creation from contract (Task 19)
+1. GET /department?fields=id,name&count=100 (create department if needed, match by name from contract)
 2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{...}} — extract ALL fields from the contract
 3. If start date given: ensure division exists, then POST /employee/employment (see payroll workflow for employment structure)
    - CRITICAL: occupationCode STYRK numbers (e.g. 3512) are NOT API IDs. You MUST look up the correct ID:
      GET /employee/employment/occupationCode?nameNO=<occupation_title_from_contract> to find the matching entry, then use its {id} value.
      The API uses 7-digit codes internally — never pass a 4-digit STYRK code as the id.
+
+## Workflow: Employee onboarding from offer letter (Task 21)
+Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
+1. In parallel: GET /department?fields=id,name&count=100, GET /employee/employment/occupationCode?nameNO=<job_title>, GET /division?fields=id,name&count=1
+2. Create department if needed. If no division, GET /municipality?count=1 then POST /division.
+3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth}
+4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, shiftDurationHours:7.5, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
+5. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:<hours_from_offer>} — REQUIRED when offer mentions "arbeidstid" / working hours
 
 ## Workflow: Travel expense
 1. GET /employee?firstName=X&lastName=Y
@@ -108,16 +116,27 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
    POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}}
    POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
 
+## Workflow: Reminder fee + partial payment (Task 25)
+1. GET /invoice with invoiceDateFrom & invoiceDateTo to find the overdue invoice. Also GET /ledger/account for 1500 and 3400, GET /invoice/paymentType — all in parallel.
+2. POST /product to create reminder fee product (name:"Purregebyr", number:9999, priceExcludingVatCurrency:<fee>, vatType:{id:3})
+   POST /ledger/voucher — CRITICAL: include customer:{id} on the 1500 (AR) posting! Without it you get 422.
+   {date, description, postings: [{account:{id:<1500>}, customer:{id:<customerId>}, amountGross:<fee>, amountGrossCurrency:<fee>, vatType:{id:0}}, {account:{id:<3400>}, amountGross:<-fee>, amountGrossCurrency:<-fee>, vatType:{id:0}}]}
+   Do both POSTs in parallel.
+3. POST /order with customer, then POST /order/orderline with product — sequential.
+4. POST /invoice?sendToCustomer=true with the order.
+5. PUT /invoice/{overdueInvoiceId}/:payment with paymentDate, paymentTypeId ("Betalt til bank"), paidAmount.
+Total: 6 write calls, 0 errors.
+
 ## Workflow: Credit note
 1. Find customer → find invoice (see payment workflow steps 1-2)
 2. PUT /invoice/{id}/:createCreditNote?date=YYYY-MM-DD — date as QUERY PARAM, empty body
 
 ## Workflow: Monthly closing / journal vouchers (Task 26)
 Post accruals, depreciation, provisions etc. as vouchers.
-1. GET ONLY the accounts explicitly mentioned in the task (e.g. 1720, 6010, 5000, 2900) — all in parallel. Do NOT guess or look up extra accounts.
+1. GET all the accounts mentioned in the task — all in parallel. Look up any additional accounts if needed for correct postings.
 2. POST /ledger/voucher for each journal entry — can do all in parallel. Use date=YYYY-MM-31 (last day of month), vatType:{id:0} for internal entries.
    Each voucher: {date, description, postings: [{date, description, account:{id}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1}, {date, description, account:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, vatType:{id:0}, row:2}]}
-3. DONE. Do NOT re-fetch vouchers or postings to "verify" — Tripletex enforces balanced vouchers. No verification needed.
+3. DONE. Tripletex enforces balanced vouchers automatically.
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
 1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=4000&accountNumberTo=7999, count=1000)
@@ -128,6 +147,21 @@ Post accruals, depreciation, provisions etc. as vouchers.
 4. POST /project × 3 in parallel: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
 5. POST /activity × 3 in parallel: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
 6. Link each activity to its project ONE AT A TIME: POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
+
+## Workflow: Bank reconciliation — match CSV to invoices (Task 23)
+Parse the CSV bank statement. Match each row to customer invoices or supplier invoices.
+1. In parallel: GET /invoice/paymentType, GET /invoice (all open, with fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding), GET /ledger/account?number=1920 and GET /ledger/account?number=2400
+   Do NOT use /ledger/openPostings (404) or /supplierInvoice with amountOutstanding field (400).
+   For supplier invoices: GET /ledger/voucher with fields including postings to find open supplier balances on account 2400.
+2. For each INCOMING payment (Inn) in CSV: match to a customer invoice by customer name and/or invoice number.
+   PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId, paidAmount=<amount_from_CSV>
+   CRITICAL: use the date from the CSV, NOT today's date. Handle partial payments (paidAmount < invoice amount).
+3. For each OUTGOING payment (Ut) in CSV: match to a supplier voucher/posting.
+   Register supplier payment via POST /ledger/voucher with {date:<DATE_FROM_CSV>, description, postings: [
+     {date, description, account:{id:2400}, amountGross:<positive_amount>, amountGrossCurrency:<positive_amount>, vatType:{id:0}, row:1},
+     {date, description, account:{id:1920}, amountGross:<negative_amount>, amountGrossCurrency:<negative_amount>, vatType:{id:0}, row:2}
+   ]}
+4. Bankgebyr (bank fees): POST /ledger/voucher with expense account (e.g. 7770 or similar bank fee account) and credit 1920.
 
 ## Workflow: Custom accounting dimensions + voucher
 1. POST /ledger/accountingDimensionName with {dimensionName, active:true} — note dimensionIndex in response
@@ -142,11 +176,11 @@ export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You 
 Before making ANY API call, read the task and identify which workflow below matches it. Then follow that workflow exactly, step by step. If the task combines multiple operations (e.g. timesheet + supplier cost + invoice), find the matching composite workflow.
 
 ## Scoring
-- Scored on CORRECTNESS (field-by-field) and EFFICIENCY (fewer API calls + zero errors = higher score)
-- Every 4xx error reduces score. Get it right first try.
-- Never re-fetch data you already have from a previous response.
-- Never re-read resources you just created (vouchers, postings, invoices) to "verify" — the API already validated them.
-- Only look up accounts/resources explicitly mentioned in the task. Do not guess at additional accounts.
+- Scored on CORRECTNESS (field-by-field checks) and EFFICIENCY (on perfect scores only).
+- Efficiency counts only WRITE calls (POST, PUT, DELETE). GET requests are FREE — read as much as you need.
+- 4xx errors on write calls reduce the efficiency bonus. Get writes right first try.
+- Efficiency bonus can up to DOUBLE the score, but ONLY if correctness is perfect (all checks pass).
+- Priority: (1) pass ALL checks, (2) minimize write calls, (3) zero write errors.
 
 ## Critical rules
 - PUT requires "id" and "version" from a prior GET — always GET first with ?fields=* before updating
@@ -156,20 +190,6 @@ Before making ANY API call, read the task and identify which workflow below matc
 - Bank account 1920 must have a bankAccountNumber before creating invoices — check and set to "${dummyNorwegianBankNumber}" if empty
 - GET /invoice REQUIRES invoiceDateFrom and invoiceDateTo params
 - Dates are YYYY-MM-DD. Use today when not specified.
-- Do NOT fetch department unless creating an employee.
-
-## VAT type IDs — use directly, NEVER call GET /ledger/vatType
-- 0: No VAT (0%)
-- 1: Input VAT 25% (purchases/expenses)
-- 3: Output VAT 25% (sales)
-- 5: No output VAT, within VAT law (0%)
-- 6: No output VAT, outside VAT law (0%)
-- 11: Input VAT 15%
-- 12: Input VAT 12%
-- 31: Output VAT 15%
-- 32: Output VAT 12%
-- 52: VAT-free export (0%)
-
 ## Known gotchas
 - Employee userType: use "NO_ACCESS" or "STANDARD" — never "ADMINISTRATOR"
 - workingHoursScheme: use "NOT_SHIFT" — never "NON_SHIFT"
