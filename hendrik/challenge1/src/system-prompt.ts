@@ -101,21 +101,25 @@ Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a led
 Total: 4 write calls.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-Use the salary API with isHistorical=true. This auto-finalizes without needing :run (which is blocked with 403).
+Use the salary API with isHistorical=true and MANUAL tax deduction. This auto-finalizes without :run.
+NEVER use generateTaxDeduction query param — it causes 422 with isHistorical=true.
 NEVER use /ledger/voucher for payroll — the checker validates via salary/payslip, not ledger postings.
-1. In parallel: GET /employee?email=X&fields=id,firstName,lastName (or firstName/lastName),
-   GET /salary/type?number=2000&fields=id,number,name, GET /salary/type?number=2002&fields=id,number,name
-2. GET /employee/{id}?fields=* — check dateOfBirth, bankAccountNumber, employment.
-   If dateOfBirth is null or bankAccountNumber is empty: PUT /employee/{id} with {id, version, firstName, lastName, email, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}"}
-3. GET /employee/employment?employeeId=X&fields=id,startDate,division
-   If no employment: GET /division?fields=id,name&count=1
+NEVER use isHistorical=false — it creates an unfinalized transaction that scores 0.
+1. In parallel: GET /employee?email=X&fields=id,firstName,lastName,dateOfBirth,bankAccountNumber,version (or use firstName/lastName),
+   GET /salary/type?number=2000&fields=id, GET /salary/type?number=2002&fields=id, GET /salary/type?number=6000&fields=id
+2. If dateOfBirth is null or bankAccountNumber is empty: PUT /employee/{id} with {id, version, firstName, lastName, email, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}"}
+   In parallel: GET /employee/employment?employeeId=X&fields=id,startDate,division
+3. If no employment: GET /division?fields=id,name&count=1
    If no division: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}}
    Then POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, shiftDurationHours:7.5}]}
-4. POST /salary/transaction?generateTaxDeduction=true with {date:<today>, year:2026, month:3, isHistorical:true, payslips:[{employee:{id}, date:<today>, year:2026, month:3, specifications:[
+4. Calculate tax: use calculate tool for tax = (base_salary + bonus) * 0.5 (50% tax rate).
+   POST /salary/transaction (NO generateTaxDeduction param) with {date:<today>, year:2026, month:3, isHistorical:true, payslips:[{employee:{id}, date:<today>, year:2026, month:3, specifications:[
      {salaryType:{id:<2000_id>}, rate:<base_salary>, count:1, amount:<base_salary>, year:2026, month:3, employee:{id}},
-     {salaryType:{id:<2002_id>}, rate:<bonus>, count:1, amount:<bonus>, year:2026, month:3, employee:{id}}
+     {salaryType:{id:<2002_id>}, rate:<bonus>, count:1, amount:<bonus>, year:2026, month:3, employee:{id}},
+     {salaryType:{id:<6000_id>}, rate:<tax>, count:1, amount:-<tax>, year:2026, month:3, employee:{id}}
    ]}]}
-   CRITICAL: isHistorical MUST be true — this auto-finalizes the transaction. isHistorical=false requires :run which returns 403.
+   CRITICAL: isHistorical MUST be true. Tax specification (type 6000) amount MUST be NEGATIVE.
+   CRITICAL: Do NOT use generateTaxDeduction query param — it causes 422 with isHistorical.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
