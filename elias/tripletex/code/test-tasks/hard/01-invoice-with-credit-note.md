@@ -1,1 +1,0 @@
-Opprett en faktura til kunde Polarlys Industri AS (org.nr. 945612378) for 3 stk "Sensormodul X7" à 12500 kr eks. mva. Send fakturaen. Deretter opprett en kreditnota på hele fakturaen fordi kunden returnerte varene.
