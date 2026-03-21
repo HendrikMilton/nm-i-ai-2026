@@ -29,11 +29,14 @@ V2_DATA_DIR = Path(__file__).parent / "../../elias/logs/offline"
 FEATURE_NAMES = [
     "terrain_code",
     "n_ocean", "n_settlement", "n_port", "n_forest", "n_mountain", "n_plains", "n_ruin",
-    "is_coastal", "has_settle_nbr",
-    "dist_to_settlement", "dist_to_ocean",
-    "settle_density_r3", "settle_density_r5", "forest_density_r3",
+    "is_coastal", "has_settle_nbr", "n_settle_nbr",
+    "dist_to_settlement", "dist_to_ocean", "dist_to_port", "dist_to_forest",
+    "settle_density_r3", "settle_density_r5", "settle_density_r7",
+    "forest_density_r3", "forest_density_r5",
+    "port_density_r3",
     "is_warm", "expansion_rate",
     "row_norm", "col_norm",
+    "n_land_nbr", "terrain_diversity",
 ]
 
 
@@ -77,6 +80,7 @@ def extract_features(grid, is_warm, expansion_rate):
     land = 1.0 - masks["ocean"]
     is_coastal = (n_ocean > 0).astype(np.float32) * land
     has_settle_nbr = (n_settle > 0).astype(np.float32)
+    n_settle_nbr = n_settle * 8  # un-normalize to get actual count
 
     def dist_norm(mask, max_d=20):
         if mask.sum() == 0:
@@ -85,10 +89,15 @@ def extract_features(grid, is_warm, expansion_rate):
 
     dist_settle = dist_norm(masks["settlement"])
     dist_ocean = dist_norm(masks["ocean"])
+    dist_port = dist_norm(masks["port"])
+    dist_forest = dist_norm(masks["forest"])
 
     settle_d3 = gaussian_filter(masks["settlement"], sigma=3).astype(np.float32)
     settle_d5 = gaussian_filter(masks["settlement"], sigma=5).astype(np.float32)
+    settle_d7 = gaussian_filter(masks["settlement"], sigma=7).astype(np.float32)
     forest_d3 = gaussian_filter(masks["forest"], sigma=3).astype(np.float32)
+    forest_d5 = gaussian_filter(masks["forest"], sigma=5).astype(np.float32)
+    port_d3 = gaussian_filter(masks["port"], sigma=3).astype(np.float32)
 
     row_norm = np.repeat(np.linspace(0, 1, h)[:, None], w, axis=1).astype(np.float32)
     col_norm = np.repeat(np.linspace(0, 1, w)[None, :], h, axis=0).astype(np.float32)
@@ -96,14 +105,33 @@ def extract_features(grid, is_warm, expansion_rate):
     warm_arr = np.full((h, w), float(is_warm), dtype=np.float32)
     exp_arr = np.full((h, w), expansion_rate, dtype=np.float32)
 
+    n_land_nbr = nbr_count(land)
+    # Terrain diversity: count of unique terrain types in 3x3 neighborhood
+    div = np.zeros((h, w), dtype=np.float32)
+    for dy in (-1, 0, 1):
+        for dx in (-1, 0, 1):
+            if dy == 0 and dx == 0:
+                continue
+            shifted = np.zeros_like(grid)
+            r_src = slice(max(0, -dy), min(h, h - dy))
+            c_src = slice(max(0, -dx), min(w, w - dx))
+            r_dst = slice(max(0, dy), min(h, h + dy))
+            c_dst = slice(max(0, dx), min(w, w + dx))
+            shifted[r_dst, c_dst] = grid[r_src, c_src]
+            div += (shifted != grid).astype(np.float32)
+    terrain_div = div / 8.0
+
     feature_maps = [
         grid.astype(np.float32),
         n_ocean, n_settle, n_port, n_forest, n_mountain, n_plains, n_ruin,
-        is_coastal, has_settle_nbr,
-        dist_settle, dist_ocean,
-        settle_d3, settle_d5, forest_d3,
+        is_coastal, has_settle_nbr, n_settle_nbr,
+        dist_settle, dist_ocean, dist_port, dist_forest,
+        settle_d3, settle_d5, settle_d7,
+        forest_d3, forest_d5,
+        port_d3,
         warm_arr, exp_arr,
         row_norm, col_norm,
+        n_land_nbr, terrain_div,
     ]
 
     return np.stack([f.ravel() for f in feature_maps], axis=1)
@@ -141,18 +169,35 @@ def load_v2_data():
     return samples
 
 
-def build_training_arrays(samples):
-    """Convert samples to (X, Y) arrays."""
+def build_training_arrays(samples, augment=True):
+    """Convert samples to (X, Y) arrays with optional D4 augmentation."""
     n_cells = GRID_SIZE * GRID_SIZE
     n_features = len(FEATURE_NAMES)
-    X = np.zeros((len(samples) * n_cells, n_features), dtype=np.float32)
-    Y = np.zeros((len(samples) * n_cells, N_CLASSES), dtype=np.float32)
+    n_augs = 8 if augment else 1
+    total = len(samples) * n_augs
 
-    for i, s in enumerate(samples):
-        start = i * n_cells
-        end = start + n_cells
-        X[start:end] = extract_features(s["grid"], s["is_warm"], s["expansion_rate"])
-        Y[start:end] = s["gt"].reshape(n_cells, N_CLASSES)
+    X = np.zeros((total * n_cells, n_features), dtype=np.float32)
+    Y = np.zeros((total * n_cells, N_CLASSES), dtype=np.float32)
+
+    idx = 0
+    for s in samples:
+        grid = s["grid"]
+        gt = s["gt"]
+        for k in range(n_augs):
+            # D4 transform: k%4 rotations, k>=4 adds flip
+            g = np.rot90(grid, k % 4)
+            t = np.rot90(gt, k % 4)
+            if k >= 4:
+                g = np.fliplr(g)
+                t = np.fliplr(t)
+            g = np.ascontiguousarray(g)
+            t = np.ascontiguousarray(t)
+
+            start = idx * n_cells
+            end = start + n_cells
+            X[start:end] = extract_features(g, s["is_warm"], s["expansion_rate"])
+            Y[start:end] = t.reshape(n_cells, N_CLASSES)
+            idx += 1
 
     return X, Y
 
@@ -163,14 +208,15 @@ def build_training_arrays(samples):
 LGB_PARAMS = {
     "objective": "regression",
     "metric": "mse",
-    "n_estimators": 500,
-    "max_depth": 6,
-    "learning_rate": 0.05,
-    "min_child_samples": 50,
+    "n_estimators": 1000,
+    "max_depth": 7,
+    "learning_rate": 0.03,
+    "min_child_samples": 30,
     "subsample": 0.8,
     "colsample_bytree": 0.8,
-    "reg_alpha": 0.1,
-    "reg_lambda": 1.0,
+    "reg_alpha": 0.05,
+    "reg_lambda": 0.5,
+    "device": "gpu",
     "verbose": -1,
     "n_jobs": -1,
     "random_state": 42,
@@ -179,12 +225,16 @@ LGB_PARAMS = {
 
 def train_models(X, Y):
     """Train 6 independent LightGBM regressors."""
+    import time
     models = []
+    t0 = time.time()
     for k in range(N_CLASSES):
+        tk = time.time()
         model = lgb.LGBMRegressor(**LGB_PARAMS)
         model.fit(X, Y[:, k], categorical_feature=[0])
         models.append(model)
-        log.info(f"  Class {k}: Y_mean={Y[:, k].mean():.4f}")
+        elapsed = time.time() - tk
+        log.info(f"  Class {k}/{N_CLASSES}: {elapsed:.1f}s (total {time.time()-t0:.0f}s)")
     return models
 
 
@@ -279,12 +329,17 @@ def cross_validate():
         rounds.setdefault(s["round"], []).append(s)
     round_nums = sorted(rounds.keys())
 
+    import time
     all_round_scores = []
-    for test_rn in round_nums:
+    cv_start = time.time()
+    for fold_i, test_rn in enumerate(round_nums):
+        fold_start = time.time()
         train = [s for rn in round_nums if rn != test_rn for s in rounds[rn]]
         test = rounds[test_rn]
 
+        log.info(f"  Fold {fold_i+1}/{len(round_nums)}: building features...")
         X_train, Y_train = build_training_arrays(train)
+        log.info(f"  Fold {fold_i+1}/{len(round_nums)}: training on X={X_train.shape}...")
         models = train_models(X_train, Y_train)
 
         seed_scores = []
@@ -296,10 +351,13 @@ def cross_validate():
         round_mean = np.mean(seed_scores)
         all_round_scores.append(round_mean)
         warmth = "warm" if test[0]["is_warm"] else "cold"
-        log.info(f"  R{test_rn:2d} ({warmth}): {round_mean:.1f}  seeds=[{' '.join(f'{s:.1f}' for s in seed_scores)}]")
+        fold_time = time.time() - fold_start
+        elapsed = time.time() - cv_start
+        eta = elapsed / (fold_i + 1) * (len(round_nums) - fold_i - 1)
+        log.info(f"  R{test_rn:2d} ({warmth}): {round_mean:.1f}  seeds=[{' '.join(f'{s:.1f}' for s in seed_scores)}]  [{fold_time:.0f}s, ETA {eta:.0f}s]")
 
     mean = np.mean(all_round_scores)
-    log.info(f"\n  LOO Mean: {mean:.1f}")
+    log.info(f"\n  LOO Mean: {mean:.1f} (total {time.time()-cv_start:.0f}s)")
     return mean
 
 
