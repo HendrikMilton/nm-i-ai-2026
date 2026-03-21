@@ -4051,6 +4051,90 @@
         "warmth": "warm",
         "expansion_rate": 0.2037
       }
+    },
+    {
+      "id": "v2_R15_run11",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:27:56.948557+00:00",
+      "round_score": 89.6291,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2009
+      }
+    },
+    {
+      "id": "v2_R15_run12",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:29:52.701906+00:00",
+      "round_score": 88.4164,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2012
+      }
+    },
+    {
+      "id": "v2_R15_run13",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:32:45.200679+00:00",
+      "round_score": 88.3665,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2017
+      }
+    },
+    {
+      "id": "v2_R15_run14",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:35:40.284878+00:00",
+      "round_score": 88.444,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2019
+      }
+    },
+    {
+      "id": "v2_R15_run15",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:37:42.991332+00:00",
+      "round_score": 88.4753,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2132
+      }
+    },
+    {
+      "id": "v2_R15_run16",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:40:11.345565+00:00",
+      "round_score": 89.6296,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2078
+      }
     }
   ]
 }
