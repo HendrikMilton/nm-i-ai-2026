@@ -107,12 +107,20 @@ Total: 4 write calls.
    Empty body. This finalizes the payslip and creates the Lønnsbilag voucher. If 403, ignore — the transaction is still created.
 
 ## Workflow: Employee creation from contract (Task 19)
-1. GET /department?fields=id,name&count=100 (create department if needed, match by name from contract)
-2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
-3. If start date given: ensure division exists, then:
-   BEFORE creating employment, you MUST call: GET /employee/employment/occupationCode?nameNO=<job_title_from_contract>&count=1
-   Use the returned {id} value as occupationCode. NEVER use the STYRK number as the id — STYRK 3512 is NOT id 3512. The API uses 7-digit internal codes. Using STYRK as id maps to WRONG occupations (e.g. 3512 = "LØNNINGSSJEF" not "IKT-brukerstøtte").
-   Then POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", percentageOfFullTimeEquivalent:100, division:{id}, occupationCode:{id:<from_lookup>}}
+1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
+2. Look up STYRK occupation code. The contract has a 4-digit STYRK code (e.g. 1211, 3512).
+   DO NOT search by ?code=STYRK or ?id=STYRK — these return WRONG results.
+   Instead, use the STYRK-to-name mapping below and search by name:
+   Common STYRK codes: 1211→"Finansdirektør", 1221→"Salgsdirektør", 1223→"Forskningsdirektør",
+   2411→"Revisor", 2412→"Rådgiver", 3120→"Dataoperatør", 3512→"IKT-brukerstøtte",
+   3313→"Regnskapsfører", 4110→"Kontormedarbeider", 5223→"Butikkmedarbeider"
+   Search: GET /employee/employment/occupationCode?nameNO=<norwegian_title>&count=5
+   If no match, try shorter/broader terms. Pick the FIRST result. Do NOT spend more than 2 GET calls on this.
+   If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
+3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
+4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
+5. POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
+   CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
