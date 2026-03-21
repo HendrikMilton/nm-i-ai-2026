@@ -152,7 +152,8 @@ def observe_seed_local(ground_truth, seed_index, viewports, map_w, map_h, rng,
 # --- Full pipeline backtest ---
 
 def backtest_full_pipeline(round_id, round_num, budget=50,
-                           use_abc=True, rng_seed=None, quiet=False):
+                           use_abc=True, rng_seed=None, quiet=False,
+                           iteration_id=None):
     """Full pipeline backtest with GT-sampled queries.
 
     With use_abc=True (default), runs the ABC parameter fitting path.
@@ -307,7 +308,8 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         "warmth": warmth,
         "expansion_rate": round(avg_expansion, 4),
     }
-    saved_path = save_backtest(round_id, round_num, seed_results, round_score, config=config)
+    saved_path = save_backtest(round_id, round_num, seed_results, round_score,
+                               iteration_id=iteration_id, config=config)
 
     if not quiet:
         prior_avg = sum(s["prior_score"] for s in seed_results.values()) / N_SEEDS
@@ -330,6 +332,8 @@ def main():
                         help="Disable ABC fitting (use legacy obs+sim+prior)")
     parser.add_argument("--all-rounds", action="store_true",
                         help="Backtest all completed rounds")
+    parser.add_argument("--name", type=str, default=None,
+                        help="Name for this backtest run (used as file ID)")
     args = parser.parse_args()
 
     if args.all_rounds:
@@ -363,7 +367,8 @@ def main():
                 return
         backtest_full_pipeline(
             target["id"], target["round_number"],
-            budget=args.budget, use_abc=not args.no_abc)
+            budget=args.budget, use_abc=not args.no_abc,
+            iteration_id=args.name)
         return
 
     parser.print_help()
