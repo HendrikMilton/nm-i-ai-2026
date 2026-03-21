@@ -35,7 +35,7 @@ import solve
 # ============================================================
 # Config
 # ============================================================
-QUERIES_PER_SEED = 10
+TOTAL_BUDGET = 50
 N_SEEDS = 5
 GRID_SIZE = 40
 VIEWPORT = 15
@@ -47,31 +47,23 @@ os.environ["AINM_TOKEN"] = TOKEN
 
 
 # ============================================================
-# Viewport tiling
+# Viewport tiling (same as Elias's run.py)
 # ============================================================
-def tile_viewports(map_size=GRID_SIZE, vp_size=VIEWPORT):
-    """Generate viewport positions that tile the map with overlap."""
-    positions = []
-    step = vp_size - 1  # slight overlap
-    for y in range(0, map_size, step):
-        for x in range(0, map_size, step):
-            # Clamp to map bounds
-            x = min(x, map_size - vp_size)
-            y = min(y, map_size - vp_size)
-            positions.append((x, y))
-    # Deduplicate
-    return list(set(positions))
+def build_tiling():
+    """Build full-coverage tiling that skips the 1-cell ocean border.
+    Returns 9 viewports that cover the 40x40 interior."""
+    def tile_positions(map_size, vp_size):
+        n_tiles = -(-map_size // vp_size)  # ceil division
+        if n_tiles <= 1:
+            return [0]
+        step = (map_size - vp_size) / (n_tiles - 1)
+        return sorted(set(int(i * step + 0.5) for i in range(n_tiles)))
 
-
-def select_viewports(n_queries, map_size=GRID_SIZE, vp_size=VIEWPORT):
-    """Select n_queries viewports for good coverage."""
-    all_vps = tile_viewports(map_size, vp_size)
-    if n_queries >= len(all_vps):
-        return all_vps[:n_queries]
-    # Spread evenly
-    step = max(1, len(all_vps) // n_queries)
-    selected = all_vps[::step][:n_queries]
-    return selected
+    interior_w = GRID_SIZE - 2
+    interior_h = GRID_SIZE - 2
+    xs = [x + 1 for x in tile_positions(interior_w, VIEWPORT)]
+    ys = [y + 1 for y in tile_positions(interior_h, VIEWPORT)]
+    return [(x, y) for y in ys for x in xs]
 
 
 # ============================================================
@@ -187,23 +179,50 @@ def main():
             print(f"  Seed {i}: WARNING no grid, using seed 0")
             seed_grids[i] = seed_grids.get(0, np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.int32))
 
-    # Step 3: Run queries
-    viewports = select_viewports(QUERIES_PER_SEED)
-    print(f"\n[3] Queries: {QUERIES_PER_SEED} per seed x {N_SEEDS} seeds = {QUERIES_PER_SEED * N_SEEDS} total")
-    print(f"  Viewports: {viewports}")
+    # Step 3: Run queries — Phase 1 (tiled coverage) + Phase 2 (remaining budget)
+    tiling = build_tiling()  # 9 viewports
+    phase1_total = len(tiling) * N_SEEDS  # 45
+    phase2_total = TOTAL_BUDGET - phase1_total  # 5
+    print(f"\n[3] Query plan:")
+    print(f"  Phase 1: {len(tiling)} viewports x {N_SEEDS} seeds = {phase1_total} queries")
+    print(f"  Phase 2: {phase2_total} remaining queries (spread across seeds)")
+    print(f"  Tiling: {tiling}")
 
     seed_obs = {}
     if no_query:
         print("  SKIPPING queries (--no-query)")
     else:
+        # Phase 1: full tiling per seed
         for seed_idx in range(N_SEEDS):
-            print(f"\n  --- Seed {seed_idx} ---")
+            print(f"\n  --- Seed {seed_idx} Phase 1 ({len(tiling)} queries) ---")
             if dry_run:
-                print(f"    DRY RUN: would query {len(viewports)} viewports")
+                print(f"    DRY RUN: would query {len(tiling)} viewports")
                 seed_obs[seed_idx] = (None, None, [])
             else:
-                obs_probs, n_obs, query_grids = run_queries(round_id, seed_idx, viewports)
+                obs_probs, n_obs, query_grids = run_queries(round_id, seed_idx, tiling)
                 seed_obs[seed_idx] = (obs_probs, n_obs, query_grids)
+
+        # Phase 2: spread remaining queries across seeds (round-robin)
+        if phase2_total > 0 and not dry_run:
+            print(f"\n  --- Phase 2: {phase2_total} extra queries ---")
+            # Re-query the center viewport for each seed (most dynamic area)
+            center_vp = tiling[len(tiling) // 2]  # center tile
+            for i in range(phase2_total):
+                seed_idx = i % N_SEEDS
+                print(f"    Extra query: seed={seed_idx} vp={center_vp}")
+                extra_probs, extra_nobs, extra_grids = run_queries(round_id, seed_idx, [center_vp])
+                # Merge into existing observations
+                obs_probs, n_obs, query_grids = seed_obs[seed_idx]
+                if obs_probs is not None:
+                    mask = extra_nobs > 0
+                    total = n_obs + extra_nobs
+                    new_probs = np.zeros_like(obs_probs)
+                    has_data = total > 0
+                    new_probs[has_data] = (
+                        obs_probs[has_data] * n_obs[has_data, None] +
+                        extra_probs[has_data] * extra_nobs[has_data, None]
+                    ) / total[has_data, None]
+                    seed_obs[seed_idx] = (new_probs, total, query_grids + extra_grids)
 
     # Step 4: Predict and submit
     print(f"\n[4] Predicting and submitting...")
