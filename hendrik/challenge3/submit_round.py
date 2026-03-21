@@ -224,6 +224,31 @@ def main():
                     ) / total[has_data, None]
                     seed_obs[seed_idx] = (new_probs, total, query_grids + extra_grids)
 
+    # Step 3.5: Save query results + per-seed grids
+    save_path = Path(f"round_data/round_{round_number:02d}_submit.json")
+    save_data = {
+        "round_id": round_id,
+        "round_number": round_number,
+        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+        "seeds": {},
+    }
+    for seed_idx in range(N_SEEDS):
+        seed_save = {
+            "initial_grid": seed_grids[seed_idx].tolist(),
+        }
+        if seed_idx in seed_obs:
+            obs_probs, n_obs, query_grids = seed_obs[seed_idx]
+            seed_save["query_grids"] = query_grids
+            if obs_probs is not None:
+                seed_save["observed_probs"] = obs_probs.tolist()
+                seed_save["n_observations"] = n_obs.tolist()
+        save_data["seeds"][seed_idx] = seed_save
+
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+    with open(save_path, "w") as f:
+        json.dump(save_data, f)
+    print(f"\n[3.5] Saved query results + grids to {save_path}")
+
     # Step 4: Predict and submit
     print(f"\n[4] Predicting and submitting...")
     solve._ensure_models()
