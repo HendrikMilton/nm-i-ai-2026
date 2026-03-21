@@ -101,18 +101,21 @@ Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a led
 Total: 4 write calls.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-Use manual voucher on 5000-series accounts. The salary API finalization is blocked (403), so use ledger voucher instead.
-The prompt itself says: "Dersom lønns-API-et ikke fungerer, kan du bruke manuelle bilag på lønnskontoer (5000-serien)".
-1. GET /employee?email=X&fields=id,firstName,lastName (or use firstName/lastName from prompt)
-2. POST /ledger/voucher with {date:<today>, description:"Lønn <month> 2026 - <employee_name>",
-     postings: [
-       {date:<today>, account:{id:<5000_id>}, employee:{id}, amountGross:+<base_salary>, amountGrossCurrency:+<base_salary>, description:"Fastlønn", vatType:{id:0}},
-       {date:<today>, account:{id:<5000_id>}, employee:{id}, amountGross:+<bonus>, amountGrossCurrency:+<bonus>, description:"Bonus", vatType:{id:0}},
-       {date:<today>, account:{id:<2930_id>}, employee:{id}, amountGross:-<gross>, amountGrossCurrency:-<gross>, description:"Skyldig lønn", vatType:{id:0}}
-     ]}
-   Where gross = base_salary + bonus. Look up account IDs: GET /ledger/account?number=5000 and GET /ledger/account?number=2930 (in parallel with step 1).
-   The voucher auto-posts immediately (gets bilag number). No sendToLedger needed.
-   Total: 1 write call.
+Use the salary API with isHistorical=true. This auto-finalizes without needing :run (which is blocked with 403).
+NEVER use /ledger/voucher for payroll — the checker validates via salary/payslip, not ledger postings.
+1. In parallel: GET /employee?email=X&fields=id,firstName,lastName (or firstName/lastName),
+   GET /salary/type?number=2000&fields=id,number,name, GET /salary/type?number=2002&fields=id,number,name
+2. GET /employee/{id}?fields=* — check dateOfBirth, bankAccountNumber, employment.
+   If dateOfBirth is null or bankAccountNumber is empty: PUT /employee/{id} with {id, version, firstName, lastName, email, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}"}
+3. GET /employee/employment?employeeId=X&fields=id,startDate,division
+   If no employment: GET /division?fields=id,name&count=1
+   If no division: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}}
+   Then POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, shiftDurationHours:7.5}]}
+4. POST /salary/transaction?generateTaxDeduction=true with {date:<today>, year:2026, month:3, isHistorical:true, payslips:[{employee:{id}, date:<today>, year:2026, month:3, specifications:[
+     {salaryType:{id:<2000_id>}, rate:<base_salary>, count:1, amount:<base_salary>, year:2026, month:3, employee:{id}},
+     {salaryType:{id:<2002_id>}, rate:<bonus>, count:1, amount:<bonus>, year:2026, month:3, employee:{id}}
+   ]}]}
+   CRITICAL: isHistorical MUST be true — this auto-finalizes the transaction. isHistorical=false requires :run which returns 403.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
