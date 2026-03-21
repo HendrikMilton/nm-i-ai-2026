@@ -23,7 +23,9 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 # ============================================================
 GRID_SIZE = 40
 N_CLASSES = 6
-PROB_FLOOR = 0.01
+# Per-class floors: lower for rare classes to avoid stealing probability mass
+# [empty, settlement, port, ruin, forest, mountain]
+CLASS_FLOORS = np.array([0.001, 0.001, 0.0002, 0.0005, 0.001, 0.0002])
 TERRAIN_TO_CLASS = {0: 0, 10: 0, 11: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
@@ -354,8 +356,8 @@ def predict_grid(models, grid, is_warm, expansion_rate, obs_probs=None, n_obs=No
         pred[mountain_mask] = 0.0
         pred[mountain_mask, 5] = 1.0
 
-    # Floor and renormalize
-    pred = np.clip(pred, PROB_FLOOR, None)
+    # Per-class floor and renormalize
+    pred = np.maximum(pred, CLASS_FLOORS[None, None, :])
     pred = pred / pred.sum(axis=-1, keepdims=True)
     return pred
 
@@ -364,7 +366,7 @@ def predict_grid(models, grid, is_warm, expansion_rate, obs_probs=None, n_obs=No
 # Scoring
 # ============================================================
 def score_prediction(pred, gt):
-    pred = np.clip(pred, PROB_FLOOR, None)
+    pred = np.maximum(pred, CLASS_FLOORS[None, None, :])
     pred = pred / pred.sum(axis=-1, keepdims=True)
     gt_s = np.clip(gt, 1e-10, None)
     pred_s = np.clip(pred, 1e-10, None)
