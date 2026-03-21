@@ -738,7 +738,7 @@ def pool_observations(seed_counts, map_w, map_h):
 # Cold rounds: pooled obs (5x data) + higher equiv (trust prior more per obs)
 # Warm rounds: per-seed obs + lower equiv (trust obs more)
 EQUIV_COLD_POOLED = 50
-EQUIV_WARM_PER_SEED = 14
+EQUIV_WARM_PER_SEED = 20
 
 
 def generate_prediction_abc(grid, mc_pred, map_w, map_h,

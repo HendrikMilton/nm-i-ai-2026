@@ -3521,6 +3521,20 @@
       }
     },
     {
+      "id": "equiv14_test_R9",
+      "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
+      "round_number": 9,
+      "timestamp": "2026-03-21T12:24:38.444379+00:00",
+      "round_score": 87.8719,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1563
+      }
+    },
+    {
       "id": "v2_R10",
       "round_id": "75e625c3-60cb-4392-af3e-c86a98bde8c2",
       "round_number": 10,
