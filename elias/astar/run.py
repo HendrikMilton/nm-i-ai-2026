@@ -50,6 +50,7 @@ SIM_SAFETY_THRESHOLD = 0.72  # disable sim below this agreement rate
 # ABC-based blending
 ABC_PRIOR_WEIGHT = 0.80
 ABC_MC_WEIGHT = 0.20
+ABC_MC_WEIGHT_UNOBSERVED = 0.35  # Higher MC trust for seeds with no direct observations
 MC_EQUIV_SAMPLES = 18
 MC_TOTAL_RUNS = 500
 
@@ -1038,16 +1039,18 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
     equiv_samples = EQUIV_COLD_POOLED if is_cold else EQUIV_WARM_PER_SEED
 
     # Validate MC against observations — skip if it disagrees too much
-    # If no observations exist for this seed, trust MC (it was fitted on other seeds)
+    # If no observations exist for this seed, trust MC more (it was fitted on other seeds)
     mc_w = 0.0
     if mc_pred is not None:
         if obs_counts is not None:
             agreement, n_compared = validate_mc_against_obs(mc_pred, obs_counts, map_h, map_w)
-            if n_compared == 0 or agreement >= SIM_SAFETY_THRESHOLD:
+            if n_compared == 0:
+                mc_w = ABC_MC_WEIGHT_UNOBSERVED  # unobserved seed — MC is primary signal
+            elif agreement >= SIM_SAFETY_THRESHOLD:
                 mc_w = ABC_MC_WEIGHT
             # else: mc_w stays 0, prior-only blend
         else:
-            mc_w = ABC_MC_WEIGHT  # no obs to validate against, use MC
+            mc_w = ABC_MC_WEIGHT_UNOBSERVED  # no obs to validate against, use MC
     prior_w = ABC_PRIOR_WEIGHT
 
     prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]

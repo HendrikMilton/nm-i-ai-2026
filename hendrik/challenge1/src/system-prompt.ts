@@ -52,21 +52,54 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
      ]}
    }
    CRITICAL: amountCurrency must be NEGATIVE (e.g. -81812 for an 81812 kr invoice).
+4. PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {}
+   Use voucher.id from the POST /supplierInvoice response. This books the voucher so postings
+   are visible in ledger queries. WITHOUT THIS STEP, ledger posting checks WILL FAIL.
+   Total: 2 write calls (3 if supplier created).
 
-## Workflow: Supplier invoice from text prompt
-Same as Task 20 but data comes from prompt text instead of PDF. Use POST /supplierInvoice with the same structure.
+## Workflow: Supplier invoice from text prompt (Task 11)
+Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
+1. In parallel: GET /supplier?organizationNumber=X&fields=id,name,
+   GET /ledger/account?number=XXXX (expense account from prompt),
+   GET /ledger/account?number=2400 (leverandørgjeld)
+2. If supplier not found: POST /supplier with {name, organizationNumber, email:"${dummyEmail}", invoiceEmail:"${dummyEmail}"}
+3. POST /supplierInvoice with {
+     invoiceDate:<today>, invoiceDueDate:<today + 30 days>, supplier:{id}, invoiceNumber:"<from_prompt>",
+     amountCurrency: -<totalInclVat>,
+     voucher: {date:<today>, description:"<supplier_name> - <invoice_number>", postings: [
+       {date:<today>, description:"<desc>", account:{id:<expense_acct>}, supplier:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"<inv_num>", row:1},
+       {date:<today>, description:"<desc>", account:{id:<2400>}, supplier:{id}, amountGross:-<totalInclVat>, amountGrossCurrency:-<totalInclVat>, vatType:{id:0}, row:2}
+     ]}
+   }
+   CRITICAL: amountCurrency MUST be NEGATIVE. Expense account number varies per prompt — always use the account from the task.
+4. PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {}
+   Use voucher.id from the POST /supplierInvoice response. This books the voucher so postings
+   are visible in ledger queries. WITHOUT THIS STEP, ledger posting checks WILL FAIL.
+   Total: 2 write calls.
 
 ## Workflow: Receipt/expense registration (Task 22)
-Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a ledger voucher or supplier invoice.
+Register receipt expenses via POST /ledger/voucher — NOT via travelExpense flow.
 1. In parallel: GET /employee?fields=id&count=1, GET /department?name=<dept>&fields=id,name,
-   GET /travelExpense/costCategory?fields=id,description (find "Representasjon - fradragsb." for dinners, or match expense type),
-   GET /travelExpense/paymentType?fields=id,description (find "Privat utlegg")
-2. POST /travelExpense with {employee:{id}, title:"<expense_description>"}
-3. PUT /travelExpense/{id}/convert — converts type 1 (travel) to type 0 (employee expense/ansattutlegg). Empty body.
-4. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date:<receipt_date>, amountCurrencyIncVat:<amount_incl_vat>, comments:"<description>"}
-   VAT treatment: use vatType 0 (no VAT) for representation expenses. The costCategory handles VAT automatically.
-5. PUT /travelExpense/{id} with {id, version, department:{id}, travelDetails:{departureDate:<receipt_date>, returnDate:<receipt_date>, isDayTrip:true, departureFrom:"Oslo", destination:"Oslo", departureTime:"12:00", returnTime:"14:00", purpose:"<description>"}}
-6. PUT /travelExpense/:deliver?id={id} — submits the expense. MUST deliver or it won't be scored.
+   GET /travelExpense/costCategory?fields=id,description,account(id,number),vatType(id),
+   GET /ledger/account?number=2910&fields=id
+2. Match the expense type from the receipt to the correct costCategory.
+   Use the account and vatType from that category:
+   - Data/kontorrekvisita/telefon → vatType 1 (25% MVA)
+   - Transport (tog/fly/taxi/buss/hotell) → vatType 12 (12% MVA)
+   - Representasjon/møte → vatType 0 (0% MVA)
+3. POST /ledger/voucher with {
+     date:<receipt_date>, description:"<expense_type> - <store_name>",
+     postings: [
+       {date:<receipt_date>, description:"<desc>", account:{id:<from_category>}, employee:{id},
+        department:{id}, amountGross:<receipt_total_incl_vat>, amountGrossCurrency:<receipt_total_incl_vat>,
+        vatType:{id:<from_category>}, row:1},
+       {date:<receipt_date>, description:"<desc>", account:{id:<2910>}, employee:{id},
+        amountGross:-<receipt_total_incl_vat>, amountGrossCurrency:-<receipt_total_incl_vat>,
+        vatType:{id:0}, row:2}
+     ]}
+   Credit account is ALWAYS 2910 (Gjeld til ansatte og eiere).
+   The system auto-generates the MVA posting on 2710.
+   Total: 1 write call.
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
@@ -79,26 +112,39 @@ Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a led
 Total: 4 write calls.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002, GET /ledger/paymentTypeOut?fields=id,description
-2. GET /employee/{id}?fields=* — check dateOfBirth, bankAccountNumber, employment
-   CRITICAL: Employee MUST have BOTH dateOfBirth AND bankAccountNumber set (non-empty). If EITHER is missing/empty, PUT /employee/{id} with ALL of: id, version, firstName, lastName, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}", email (keep existing).
-   The PUT body MUST include bankAccountNumber — payroll WILL FAIL silently without it (0 points).
-3. GET /employee/employment?employeeId=X&fields=id,startDate,division
-   If no employment: ensure division exists (GET /division, if empty: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
-   Then POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, shiftDurationHours:7.5}]}
-4. POST /salary/transaction?generateTaxDeduction=true with {date, year, month, isHistorical:false, payslips:[{employee:{id}, date, year, month, specifications:[{salaryType:{id}, rate:<amount>, count:1, amount:<amount>, year, month, employee:{id}}]}]}
-   NEVER use /ledger/voucher for payroll.
-5. FINALIZE the transaction: find paymentTypeId from step 1 (use "Manuelt betalt nettbank").
-   PUT /tsk/salaryv2/transaction/{transactionId}/:run?paymentTypeId={id}&paymentDate={date}&paySlipsAvailableDate={date}&oneTimePassword=
-   Empty body. This finalizes the payslip and creates the Lønnsbilag voucher. If 403, ignore — the transaction is still created.
+Register payroll as a manual ledger voucher matching the real Lønnsbilag structure.
+Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/* API — it cannot be finalized.
+1. In parallel: GET /employee?email=X&fields=id,firstName,lastName (or use firstName/lastName),
+   GET /ledger/account?number=5000&fields=id, GET /ledger/account?number=2910&fields=id,
+   GET /ledger/account?number=2600&fields=id
+2. Calculate using the calculate tool: gross = base_salary + bonus, tax = gross * 0.5, net = gross - tax
+3. POST /ledger/voucher with {date:<today>, description:"Lønn mars 2026 - <employee_name>",
+     postings: [
+       {date:<today>, description:"Fastlønn + Bonus", account:{id:<5000>}, employee:{id},
+        amountGross:<gross>, amountGrossCurrency:<gross>, vatType:{id:0}, row:1},
+       {date:<today>, description:"Forskuddstrekk", account:{id:<2600>}, employee:{id},
+        amountGross:-<tax>, amountGrossCurrency:-<tax>, vatType:{id:0}, row:2},
+       {date:<today>, description:"Gjeld til ansatte", account:{id:<2910>}, employee:{id},
+        amountGross:-<net>, amountGrossCurrency:-<net>, vatType:{id:0}, row:3}
+     ]}
+   Accounts: 5000=Lønn til ansatte (debit gross), 2600=Forskuddstrekk (credit tax 50%), 2910=Gjeld til ansatte (credit net).
+   Total: 1 write call.
 
 ## Workflow: Employee creation from contract (Task 19)
-1. GET /department?fields=id,name&count=100 (create department if needed, match by name from contract)
-2. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
-3. If start date given: ensure division exists, then:
-   BEFORE creating employment, you MUST call: GET /employee/employment/occupationCode?nameNO=<job_title_from_contract>&count=1
-   Use the returned {id} value as occupationCode. NEVER use the STYRK number as the id — STYRK 3512 is NOT id 3512. The API uses 7-digit internal codes. Using STYRK as id maps to WRONG occupations (e.g. 3512 = "LØNNINGSSJEF" not "IKT-brukerstøtte").
-   Then POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", percentageOfFullTimeEquivalent:100, division:{id}, occupationCode:{id:<from_lookup>}}
+1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
+2. Look up STYRK occupation code. The contract has a 4-digit STYRK code (e.g. 1211, 3512).
+   DO NOT search by ?code=STYRK or ?id=STYRK — these return WRONG results.
+   Instead, use the STYRK-to-name mapping below and search by name:
+   Common STYRK codes: 1211→"Finansdirektør", 1221→"Salgsdirektør", 1223→"Forskningsdirektør",
+   2411→"Revisor", 2412→"Rådgiver", 3120→"Dataoperatør", 3512→"IKT-brukerstøtte",
+   3313→"Regnskapsfører", 4110→"Kontormedarbeider", 5223→"Butikkmedarbeider"
+   Search: GET /employee/employment/occupationCode?nameNO=<norwegian_title>&count=5
+   If no match, try shorter/broader terms. Pick the FIRST result. Do NOT spend more than 2 GET calls on this.
+   If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
+3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
+4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
+5. POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
+   CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
@@ -121,8 +167,8 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 ## Workflow: Timesheet + project invoice (Task 16)
 1. Find employee, customer, project, activity (GET all in parallel). Also GET /project/hourlyRates?projectId=X to get rate config.
 2. If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:<today>, hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
-   This ensures timesheet entries get the correct hourlyRate. Do employee PUT and rate PUT in parallel.
+3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:"2026-01-01", hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
+   CRITICAL: startDate MUST be "2026-01-01" (not today) — the rate only applies to timesheet entries ON or AFTER startDate. Using today's date causes entries on earlier dates to get hourlyRate=0.
 4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
 5. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
    Do NOT check or update bank account 1920 — invoices work without it.
@@ -225,7 +271,7 @@ Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new 
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
 ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /resultbudget (400), or /ledger/account with numberFrom/numberTo ranges.
-1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=4000&accountNumberTo=7999, count=1000)
+1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000)
    Use fields=id,account(id,number,name),amount
 2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
 3. GET /employee?fields=id&count=1 (for project manager)
@@ -282,6 +328,13 @@ export const SYSTEM_PROMPT = `You are an AI accounting agent for Tripletex. You 
 Before making ANY API call, read the task and identify which ONE workflow below matches it. State it explicitly: "Following workflow: <name>".
 Then follow ONLY that workflow, step by step. IGNORE all other workflows — they are for different task types and their guidance does NOT apply.
 If the task combines multiple operations (e.g. timesheet + supplier cost + invoice), find the matching composite workflow.
+
+## CRITICAL: Be concise — minimize text output
+You have a LIMITED number of steps. Every response with text counts as a step. NEVER waste steps on:
+- Summaries, tables, or recaps of what you did
+- Explaining what you're about to do — just DO it
+- Repeating data from API responses
+Keep text to 1-2 SHORT sentences max per step. Prefer making tool calls over writing text. After the FINAL API call, output only a one-line confirmation. Do NOT produce a summary table.
 
 ## Scoring
 - Scored on CORRECTNESS (field-by-field checks) and EFFICIENCY (on perfect scores only).
