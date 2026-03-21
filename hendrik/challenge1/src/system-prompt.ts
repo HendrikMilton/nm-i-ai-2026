@@ -78,17 +78,28 @@ Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
    Total: 2 write calls.
 
 ## Workflow: Receipt/expense registration (Task 22)
-Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a ledger voucher or supplier invoice.
+Register receipt expenses via POST /ledger/voucher — NOT via travelExpense flow.
 1. In parallel: GET /employee?fields=id&count=1, GET /department?name=<dept>&fields=id,name,
-   GET /travelExpense/costCategory?fields=id,description (find "Representasjon - fradragsb." for dinners, or match expense type),
-   GET /travelExpense/paymentType?fields=id,description (find "Privat utlegg")
-2. POST /travelExpense with {employee:{id}, title:"<expense_description>"}
-3. PUT /travelExpense/{id}/convert — converts type 1 (travel) to type 0 (employee expense/ansattutlegg). Empty body.
-4. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date:<receipt_date>, amountCurrencyIncVat:<amount_incl_vat>, comments:"<description>"}
-   VAT treatment: use vatType 0 (no VAT) for representation expenses. The costCategory handles VAT automatically.
-5. PUT /travelExpense/{id} with {id, version, department:{id}, travelDetails:{departureDate:<receipt_date>, returnDate:<receipt_date>, isDayTrip:true, departureFrom:"Oslo", destination:"Oslo", departureTime:"12:00", returnTime:"14:00", purpose:"<description>"}}
-6. PUT /travelExpense/:deliver?id={id} — submits the expense.
-7. PUT /travelExpense/:approve?id={id} — approves and creates the accounting voucher. MUST approve or it won't be scored.
+   GET /travelExpense/costCategory?fields=id,description,account(id,number),vatType(id),
+   GET /ledger/account?number=2910&fields=id
+2. Match the expense type from the receipt to the correct costCategory.
+   Use the account and vatType from that category:
+   - Data/kontorrekvisita/telefon → vatType 1 (25% MVA)
+   - Transport (tog/fly/taxi/buss/hotell) → vatType 12 (12% MVA)
+   - Representasjon/møte → vatType 0 (0% MVA)
+3. POST /ledger/voucher with {
+     date:<receipt_date>, description:"<expense_type> - <store_name>",
+     postings: [
+       {date:<receipt_date>, description:"<desc>", account:{id:<from_category>}, employee:{id},
+        department:{id}, amountGross:<receipt_total_incl_vat>, amountGrossCurrency:<receipt_total_incl_vat>,
+        vatType:{id:<from_category>}, row:1},
+       {date:<receipt_date>, description:"<desc>", account:{id:<2910>}, employee:{id},
+        amountGross:-<receipt_total_incl_vat>, amountGrossCurrency:-<receipt_total_incl_vat>,
+        vatType:{id:0}, row:2}
+     ]}
+   Credit account is ALWAYS 2910 (Gjeld til ansatte og eiere).
+   The system auto-generates the MVA posting on 2710.
+   Total: 1 write call.
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
