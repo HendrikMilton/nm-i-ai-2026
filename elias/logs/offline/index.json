@@ -3538,8 +3538,8 @@
       "id": "v2_R11",
       "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
       "round_number": 11,
-      "timestamp": "2026-03-21T09:19:14.316962+00:00",
-      "round_score": 82.9501,
+      "timestamp": "2026-03-21T09:55:08.238650+00:00",
+      "round_score": 84.6091,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3552,8 +3552,8 @@
       "id": "v2_R12",
       "round_id": "795bfb1f-54bd-4f39-a526-9868b36f7ebd",
       "round_number": 12,
-      "timestamp": "2026-03-21T09:25:57.155532+00:00",
-      "round_score": 51.7284,
+      "timestamp": "2026-03-21T10:01:50.309016+00:00",
+      "round_score": 54.5386,
       "n_sims": 500,
       "config": {
         "mode": "abc",
