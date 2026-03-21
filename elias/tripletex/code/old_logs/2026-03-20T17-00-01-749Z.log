@@ -1,0 +1,28 @@
+[2026-03-20T17:00:01.749Z] [AGENT] model=claude-opus-4-6 prompt="Create the customer Oakwood Ltd with organization number 927790629. The address is Solveien 71, 5003 Bergen. Email: post@oakwood.no."
+[2026-03-20T17:00:13.677Z] [STEP 1] calls: tripletex_post({"path":"/customer","body":{"name":"Oakwood Ltd","organizationNumber":"927790629","email":"post@oakwood.no","isCustomer":true,"postalAddress":{"addressLine1":"Solveien 71","postalCode":"5003","city":"Bergen"}}})
+[2026-03-20T17:00:13.677Z] [STEP 1] results: tripletex_post→{"validation_error":"Unknown fields for /customer: isCustomer. Valid fields: id, version, name, organizationNumber, globalLocationNumber, supplierNumber, customerNumber, isSupplier, isInactive, accountManager, department, email, invoiceEmail, overdueNoticeEmail, bankAccounts, phoneNumber, phoneNumberMobile, description, language, displayName, isPrivateIndividual, singleCustomerInvoice, invoiceSendMethod, emailAttachmentType, postalAddress, physicalAddress, deliveryAddress, category1, category2, category3, invoicesDueIn, invoicesDueInType, currency, bankAccountPresentation, ledgerAccount, isFactoring, invoiceSendSMSNotification, invoiceSMSNotificationNumber, isAutomaticSoftReminderEnabled, isAutomaticReminderEnabled, isAutomaticNoticeOfDebtCollectionEnabled, discountPercentage, website","hint":"Fix the body and retry."}
+[2026-03-20T17:00:13.677Z] [STEP 1] text: 
+
+I'll create the customer Oakwood Ltd with the provided details in a single API call.
+[2026-03-20T17:00:13.677Z] [STEP 2] calls: tripletex_post({"path":"/customer","body":{"name":"Oakwood Ltd","organizationNumber":"927790629","email":"post@oakwood.no","postalAddress":{"addressLine1":"Solveien 71","postalCode":"5003","city":"Bergen"}}})
+[2026-03-20T17:00:13.677Z] [STEP 2] results: tripletex_post→{"value":{"id":108249512,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/customer/108249512","name":"Oakwood Ltd","organizationNumber":"927790629","globalLocationNumber":0,"supplierNumber":0,"customerNumber":10001,"isSupplier":false,"isCustomer":true,"isInactive":false,"accountManager":null,"department":null,"email":"post@oakwood.no","invoiceEmail":"","overdueNoticeEmail":"","phoneNumber":"","phoneNumberMobile":"","description":"","language":"NO","displayName":"Oakwood Ltd (10001)","isPrivateIndividual":false,"singleCustomerInvoice":false,"invoiceSendMethod":"EMAIL","emailAttachmentType":"ATTACHMENT","postalAddress":{"id":405350407,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/address/405350407","addressLine1":"Solveien 71","addressLine2":"","postalCode":"5003","city":"Bergen","country":{"id":161,"url":"kkpqfuj-amager.tripletex.dev/v2/country/161"},"displayName":"Oakwood Ltd, Solveien 71, 5003 Bergen, Norge","addressAsString":"Solveien 71, 5003 Bergen, Norge","displayNameInklMatrikkel":"Oakwood Ltd, Solveien 71, 5003 Bergen, Norge","knr":0,"gnr":0,"bnr":0,"fnr":0,"snr":0,"unitNumber":""},"physicalAddress":{"id":405350406,"url":"kkpqfuj-amager.tripletex.dev/v2/address/405350406"},"deliveryAddress":null,"category1":null,"category2":null,"category3":null,"invoicesDueIn":14,"invoicesDueInType":"DAYS","currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"bankAccountPresentation":[],"ledgerAccount":{"id":350036998,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/350036998"},"isFactoring":false,"invoiceSendSMSNotification":false,"invoiceSMSNotificationNumber":"","isAutomaticSoftReminderEnabled":false,"isAutomaticReminderEnabled":false,"isAutomaticNoticeOfDebtCollectionEnabled":false,"discountPercentage":0,"website":""}}
+[2026-03-20T17:00:13.677Z] [STEP 2] text: The `/customer` endpoint doesn't accept `isCustomer` directly. Let me retry without that field — customers created via `/customer` are customers by default.
+[2026-03-20T17:00:13.677Z] [STEP 3] text: The customer **Oakwood Ltd** has been successfully created with the following details:
+
+- **Customer ID:** 108249512
+- **Customer Number:** 10001
+- **Name:** Oakwood Ltd
+- **Organization Number:** 927790629
+- **Email:** post@oakwood.no
+- **Postal Address:** Solveien 71, 5003 Bergen, Norge
+[2026-03-20T17:00:13.677Z] [AGENT] DONE elapsed=11.9s steps=3 apiCalls=1 errors=0
+[2026-03-20T17:00:13.677Z] [AGENT] apiLog: [{"method":"POST","path":"/customer","status":201}]
+[2026-03-20T17:00:13.677Z] [AGENT] response: The customer **Oakwood Ltd** has been successfully created with the following details:
+
+- **Customer ID:** 108249512
+- **Customer Number:** 10001
+- **Name:** Oakwood Ltd
+- **Organization Number:** 927790629
+- **Email:** post@oakwood.no
+- **Postal Address:** Solveien 71, 5003 Bergen, Norge
+[2026-03-20T17:00:13.677Z] ---

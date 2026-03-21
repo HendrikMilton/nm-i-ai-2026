@@ -1,0 +1,20 @@
+{
+  "description": "Create employee with admin role",
+  "checks": [
+    {
+      "endpoint": "/employee",
+      "params": {"firstName": "Petter", "lastName": "Svendsen", "fields": "id,firstName,lastName,email,userType,department"},
+      "expect": {
+        "minResults": 1,
+        "fields": {
+          "firstName": "Petter",
+          "lastName": "Svendsen",
+          "email": "petter.svendsen77@firma.no",
+          "userType": "STANDARD"
+        }
+      }
+    }
+  ],
+  "maxApiCalls": 3,
+  "maxErrors": 0
+}

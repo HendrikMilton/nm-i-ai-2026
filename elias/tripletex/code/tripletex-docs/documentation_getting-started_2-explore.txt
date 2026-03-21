@@ -1,0 +1,32 @@
+# 2. Explore – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/getting-started/2-explore
+
+2. Explore
+
+To explore what is possible within Tripletex we encourage you to check how things look and To explore what is possible within Tripletex, we encourage you to examine the user interface (GUI) for a practical understanding, followed by a review of our documentation. If you do not have a test account yet, refer to Step 1: Creating a Test Account in this section. Anyone can sign up for a test account in the test environment at any time.
+
+Our documentation is interactive, enabling you to test endpoints directly in your web browser. This feature is also invaluable for troubleshooting. Before reporting issues to support, we recommend using the OpenAPI documentation to eliminate any potential issues with your code.
+
+We maintain separate instances for testing and production:
+
+Test Environment: https://api-test.tripletex.tech/v2-docs/
+Production Environment: https://tripletex.no/v2-docs/
+
+Please remember that credentials for the test environment are not valid in production, and vice versa. Once your integration is approved by us, you will receive a consumer token for production. For more details on getting ready for production, see Getting Ready for Production. To request a test account in production, please contact us.
+
+To authenticate in the OpenAPI documentation, you must use your consumer and employee tokens to generate a session token. More information is available in our authentication section here.
+
+Once your session token is established, you can authenticate by selecting “Authorize” at the top of the page or the padlocks next to different endpoints. Use “0” (zero) as the username and your session token as the password.
+
+For an example of authenticating and executing a request in the OpenAPI documentation, and for more information on how to use it, refer to our OpenAPI documentation.
+
+Use either the “Authorize” button or the padlock-icon to enter your credentials
+Enter 0 (zero) as your username and your session token as your password.
+Find the endpoint you want to test and click “Try it out”, for this test we’re running GET /customer
+Fill out any parameters you want to add to the request, in some cases some might be mandatory. Here we are just specifying that we do not want inactive customers in our response.
+Click “Execute” to run the request
+The response body is now displayed under the request URL together with a response code.
+Below the response you can see the model of the endpoint/method.
+Doc navigation
+← 1. Creating a test account
+3. Getting ready for production →

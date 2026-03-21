@@ -1,0 +1,42 @@
+# SupplierInvoice / Attestation – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/faq/supplierinvoice-attestation
+
+SupplierInvoice / Attestation
+What is approvalListElement?
+What does the organisationLevel value in approvalListElement represent?
+What does status in approvalListElement represent?
+What is approvalListElement?
+
+An approvalListElement object is a part of the attestation for a given voucher. This feature makes sure a voucher is approved for bookkeeping (unless a given company allows bookkeeping before approval in attestation).
+
+A voucher approvalListElement is in practice only a row in the attestation section of a given voucher that looks like this in the GUI:
+
+Most companies will have company as the last attestation level (organisationLevel) but this is no longer required and can be adjusted in their attestation settings.
+
+What does the organisationLevel value in approvalListElement represent?
+
+The different levels of approval is represented via organizationLevel. The different values here mean the following:
+
+In voucher reception = 0;
+Project = 1;
+Department = 2;
+Company = 3;
+Employee = 4;
+Bookkept = 5;
+
+Certain users may have privilege to attest for the whole company, in which case their attestation will complete the attestation process. This is only relevant if the user attesting has the privilege “The user is a company attestant (can attest for the company)” activated in their user settings. Attesting on a company level is not different from the other levels of attestation except from the order they approve, with the exception for users that have the above mentioned setting activated. What level that is required for each voucher is decided by the company and their attestation settings.
+
+What does status in approvalListElement represent?
+
+You may seem several identical voucherIds if you poll for instance GET supplierInvoice/forApproval with fields=approvalListElement(*). The different statuses represent:
+
+NONE = 0;
+APPROVED = 1;
+REJECTED = 2;
+NOT_RELEVANT = 3;
+
+None means the given organisation level has not yet approved or rejected the voucher. Not relevant means the organisation level is not relevant in the given voucher (mostly used for organisationLevel 0). Approved/rejected means the given organisationLevel has approved or rejected the given voucher on their level.
+
+Doc navigation
+← Postman
+Ledger/voucher →
