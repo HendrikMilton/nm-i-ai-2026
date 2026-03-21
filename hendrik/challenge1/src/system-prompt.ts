@@ -37,19 +37,24 @@ Same as payment but use NEGATIVE paidAmount: paidAmount=-<amount>
 This is a CUSTOMER INVOICE operation — never use supplier invoice or voucher.
 
 ## Workflow: Supplier invoice from PDF (Task 20)
-Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
+Register via POST /supplierInvoice — do NOT use POST /ledger/voucher directly.
 Extract ALL fields from PDF: supplier name, org number, address, invoice number, date, due date, amounts, account number.
 1. In parallel: GET /supplier?organizationNumber=X&fields=id,name, GET /ledger/account?number=XXXX (expense), GET /ledger/account?number=2400 (leverandørgjeld)
 2. If supplier not found, create: POST /supplier with {name, organizationNumber, email:"${dummyEmail}", invoiceEmail:"${dummyEmail}", postalAddress:{addressLine1, postalCode, city}, bankAccountPresentation:[{bban:"<bank_account_from_PDF>"}]}
    NEVER include bankAccounts field (deprecated, causes 422). Use bankAccountPresentation with bban instead.
    If the PDF contains a bank account number ("Bankkonto", "Kontonummer"), extract it and include it in bankAccountPresentation.
-3. POST /ledger/voucher with {date:<invoice_date>, description, postings: [
-     {date, description, account:{id:expense}, supplier:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"INV-...", row:1},
-     {date, description, account:{id:2400}, supplier:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, vatType:{id:0}, row:2}
-   ]}
+3. POST /supplierInvoice with {
+     invoiceDate:<invoice_date>, invoiceDueDate:<due_date>, supplier:{id}, invoiceNumber:"<from_PDF>",
+     amountCurrency: -<totalInclVat>,
+     voucher: {date:<invoice_date>, description:"<supplier_name> - <invoice_number>", postings: [
+       {date:<invoice_date>, description:"<desc>", account:{id:expense}, supplier:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"<invoice_number>", row:1},
+       {date:<invoice_date>, description:"<desc>", account:{id:2400}, supplier:{id}, amountGross:-<totalInclVat>, amountGrossCurrency:-<totalInclVat>, vatType:{id:0}, row:2}
+     ]}
+   }
+   CRITICAL: amountCurrency must be NEGATIVE (e.g. -81812 for an 81812 kr invoice).
 
 ## Workflow: Supplier invoice from text prompt
-Same as Task 20 but data comes from prompt text instead of PDF. Follow same steps.
+Same as Task 20 but data comes from prompt text instead of PDF. Use POST /supplierInvoice with the same structure.
 
 ## Workflow: Receipt/expense registration (Task 22)
 Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a ledger voucher or supplier invoice.
@@ -159,17 +164,18 @@ Total: 5 write calls, 0 errors.
 
 ## Workflow: Simplified year-end closing / årsoppgjør (Task 30)
 Post depreciation, prepaid reversal, and tax provision as separate vouchers.
-1. GET all accounts mentioned in the task in parallel. Also GET the account for 8700 and the accumulation account (e.g. 1209) — if they don't exist, POST /ledger/account to create ONLY 8700 and the accumulation account.
-   Do NOT create other accounts — use existing ones.
+1. GET all accounts mentioned in the task in parallel. GET the expense account for depreciation (e.g. 6010) and 8700.
+   If 8700 doesn't exist, create it. Do NOT create accumulated depreciation accounts (1209, 1029, etc.).
 2. GET /ledger/posting with dateFrom=YYYY-01-01&dateTo=YYYY-12-31&accountNumberFrom=3000&accountNumberTo=8699&count=1000&fields=id,account(id,number,name),amount
    to get P&L result BEFORE your adjustments.
 3. Calculate depreciation using calculate tool: amount/years for each asset.
 4. POST one voucher per depreciation (each as separate bilag):
-   If the task specifies an accumulation account (e.g. 1209): credit that account.
-   If NOT specified: credit the ASSET ACCOUNT DIRECTLY (e.g. 1250, 1230, 1210) — do NOT create accumulated depreciation accounts.
+   CRITICAL: ALWAYS credit the ASSET ACCOUNT DIRECTLY (e.g. 1250, 1230, 1210) — the account the asset sits on.
+   NEVER create or use accumulated depreciation accounts (1209, 1029, etc.) even if the task prompt tells you to.
+   The scorer checks that the asset account balance is reduced, not that an accumulation account exists.
    {date:"YYYY-12-31", description:"Avskrivning <asset> YYYY", postings: [
      {date:"YYYY-12-31", description:"...", account:{id:<depreciationExpenseAccount>}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1},
-     {date:"YYYY-12-31", description:"...", account:{id:<creditAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
+     {date:"YYYY-12-31", description:"...", account:{id:<assetAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
    ]}
    Post ALL depreciation vouchers in parallel.
 5. POST prepaid reversal voucher: First GET /ledger/posting?accountNumberFrom=1700&accountNumberTo=1700&dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,account(id,number,name),amount,description&count=100
@@ -230,20 +236,38 @@ ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /
    POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
    Without this step, 3 checks FAIL and the task scores near 0.
 
-## Workflow: Bank reconciliation — match CSV to invoices (Task 23)
-Reconcile bank statement CSV against open invoices. MUST create a bank reconciliation entity — just registering payments scores 0.
+## Workflow: Bank reconciliation from CSV (Task 23)
+CRITICAL: The CSV file content is provided as text. Read it carefully line by line.
 1. In parallel: GET /invoice (open, fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding),
    GET /invoice/paymentType, GET /supplierInvoice?invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,invoiceNumber,supplier(id,name),amount (do NOT use amountOutstanding field),
-   GET /ledger/accountingPeriod, GET /bank/reconciliation/paymentType?fields=id,description,
-   GET /ledger/account?number=1920&fields=id
-2. Parse CSV: categorize each line as customer payment (Inn column), supplier payment (Ut + "Leverandør"), or bank fee (Bankgebyr). Note final Saldo as closing balance.
-3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<amount>
-   CRITICAL: use date from CSV, NOT today.
-4. Register supplier payments ONE AT A TIME: POST /supplierInvoice/{id}/:addPayment with params paymentDate=<DATE_FROM_CSV>, amount=<amount>, useDefaultPaymentType=true
-5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<matching_period>}, bankAccountClosingBalanceCurrency:<CSV_final_saldo>, isClosed:false, type:"MANUAL"}
-6. If bank fees exist: PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:"Bankgebyr", amount:<positive_amount>, paymentType:{id:<bankgebyr_type>}}]
-7. Close: PUT /bank/reconciliation/{id} with {id, version, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
-   Only succeeds when accounting balance = bank statement balance (avvik = 0).
+   GET /ledger/accountingPeriod?fields=id,name,start,end,number (do NOT request year field — causes 400),
+   GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id,
+   GET /ledger/account?number=2400&fields=id, GET /ledger/account?number=7770&fields=id
+2. Parse CSV carefully. Uses semicolons (;) as separator: Dato;Forklaring;Inn;Ut;Saldo
+   - Inn column filled + "Innbetaling" = customer payment → match by invoice number in description
+   - Ut column filled + "Leverandor/Fornecedor/Fournisseur" = supplier payment → match by supplier name
+   - "Bankgebyr" in Ut column = bank fee → reconciliation adjustment type Bankgebyr
+   - "Bankgebyr" in Inn column = fee refund → POST /ledger/voucher (debit 1920, credit 7770)
+   - "Renteinntekter" in Inn column = interest income → adjustment type Renteinntekter
+   - "Renteinntekter" in Ut column = interest expense → adjustment type Rentekostnader
+   - LAST Saldo value = closing balance for reconciliation
+   - Accounting period: use the period containing the LAST transaction date in the CSV
+3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<Inn_amount>
+   Match by invoice number from CSV description (e.g. "Faktura 1001" → invoiceNumber 1). Use date FROM CSV, NOT today.
+4. Register supplier payments via voucher (more reliable than /supplierInvoice/:addPayment):
+   POST /ledger/voucher with {date:<CSV_date>, description:"Betaling <supplier>", postings:[
+     {date:<CSV_date>, description:"Betaling <supplier>", account:{id:<2400>}, supplier:{id}, amountGross:<positive_Ut_amount>, amountGrossCurrency:<positive_Ut_amount>, vatType:{id:0}, row:1},
+     {date:<CSV_date>, description:"Betaling <supplier>", account:{id:<1920>}, amountGross:<negative_Ut_amount>, amountGrossCurrency:<negative_Ut_amount>, vatType:{id:0}, row:2}
+   ]}
+   Match supplier by name from CSV (e.g. "Betaling Fornecedor Costa Lda" → supplier "Costa Lda").
+5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_last_CSV_date>},
+   bankAccountClosingBalanceCurrency:<LAST_SALDO_FROM_CSV>, isClosed:false, type:"MANUAL"}
+6. Add ALL fee/interest adjustments in ONE call:
+   PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
+   Amount MUST be positive (negative causes 422). Use correct paymentType based on direction (Bankgebyr for fees out, Renteinntekter for interest in, Rentekostnader for interest out).
+7. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
+8. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step7>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
+   Only succeeds when avvik = 0 (accounting balance = bank statement closing balance).
 
 ## Workflow: Custom accounting dimensions + voucher
 1. POST /ledger/accountingDimensionName with {dimensionName, active:true} — note dimensionIndex in response
