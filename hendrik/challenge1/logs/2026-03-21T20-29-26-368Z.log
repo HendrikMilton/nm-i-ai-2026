@@ -1,0 +1,86 @@
+[2026-03-21T20:29:26.369Z] [AGENT] model=claude-opus-4-6 prompt="Create a custom accounting dimension "Produktlinje" with the values "Avansert" and "Premium". Then post a voucher on account 6300 for 25750 NOK, linked to the dimension value "Premium"."
+[2026-03-21T20:29:32.421Z] [API] POST /ledger/accountingDimensionName → 201 body={"dimensionName":"Produktlinje","active":true}
+[2026-03-21T20:29:32.421Z] [API] ← {"value":{"id":2445,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionName/2445","dimensionName":"Produktlinje","description":null,"dimensionIndex":1,"active":true}}
+[2026-03-21T20:29:39.158Z] [API] POST /ledger/accountingDimensionValue → 201 body={"displayName":"Avansert","dimensionIndex":1,"active":true}
+[2026-03-21T20:29:39.158Z] [API] ← {"value":{"id":18831,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionValue/18831","displayName":"Avansert","nameAndNumber":"Avansert","dimensionIndex":1,"active":true,"number":null,"showInVoucherRegistration":true,"position":1}}
+[2026-03-21T20:29:39.159Z] [API] GET /ledger/account?number=6300&fields=id%2Cnumber%2Cname → 200
+[2026-03-21T20:29:39.159Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":374926759,"number":6300,"name":"Leie lokale"}]}
+[2026-03-21T20:29:39.251Z] [API] POST /ledger/accountingDimensionValue → 201 body={"displayName":"Premium","dimensionIndex":1,"active":true}
+[2026-03-21T20:29:39.251Z] [API] ← {"value":{"id":18832,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionValue/18832","displayName":"Premium","nameAndNumber":"Premium","dimensionIndex":1,"active":true,"number":null,"showInVoucherRegistration":true,"position":1}}
+[2026-03-21T20:29:48.070Z] [API] POST /ledger/voucher → 201 body={"date":"2026-03-21","description":"Produktlinje - Premium","postings":[{"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759},"amountGross":25750,"amountGrossCurrency":25750,"vatType":{"id":0},"freeAccountingDimension1":{"id":18832},"row":1},{"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759},"amountGross":-25750,"amountGrossCurrency":-25750,"vatType":{"id":0},"row":2}]}
+[2026-03-21T20:29:48.070Z] [API] ← {"value":{"id":609137264,"version":5,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609137264","date":"2026-03-21","number":1,"tempNumber":0,"year":2026,"description":"Produktlinje - Premium","voucherType":null,"reverseVoucher":null,"postings":[{"id":3845767939,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845767939","voucher":{"id":609137264,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609137264"},"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/374926759"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":null,"employee":null,"project":null,"product":null,"department":null,"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":25750.00,"amountCurrency":25750.00,"amountGross":25750,"amountGrossCurrency":25750,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":1,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":false,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":{"id":18832,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionValue/18832"},"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null},{"id":3845767941,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845767941","voucher":{"id":609137264,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609137264"},"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/374926759"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":null,"employee":null,"project":null,"product":null,"department":null,"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":-25750.00,"amountCurrency":-25750.00,"amountGross":-25750.00,"amountGrossCurrency":-25750.00,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":2,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":false,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null}],"document":null,"attachment":null,"externalVoucherNumber":"","ediDocument":null,"supplierVoucherType":null,"wasAutoMatched":false,"vendorInvoiceNumber":null,"numberAsString":"1-2026"}}
+[2026-03-21T20:29:53.410Z] [STEP 1] calls: tripletex_post({"path":"/ledger/accountingDimensionName","body":{"dimensionName":"Produktlinje","active":true}})
+[2026-03-21T20:29:53.410Z] [STEP 1] results: tripletex_post→{"value":{"id":2445,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionName/2445","dimensionName":"Produktlinje","description":null,"dimensionIndex":1,"active":true}}
+[2026-03-21T20:29:53.410Z] [STEP 1] text: 
+
+Following workflow: **Custom accounting dimensions + voucher**
+
+Let me start by creating the custom accounting dimension "Produktlinje".
+
+**Step 1: Create the dimension name**
+[2026-03-21T20:29:53.410Z] [STEP 2] calls: tripletex_post({"path":"/ledger/accountingDimensionValue","body":{"displayName":"Avansert","dimensionIndex":1,"active":true}}), tripletex_post({"path":"/ledger/accountingDimensionValue","body":{"displayName":"Premium","dimensionIndex":1,"active":true}}), tripletex_get({"path":"/ledger/account","params":{"number":"6300","fields":"id,number,name"}})
+[2026-03-21T20:29:53.410Z] [STEP 2] results: tripletex_post→{"value":{"id":18831,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionValue/18831","displayName":"Avansert","nameAndNumber":"Avansert","dimensionIndex":1,"active":true,"number":null,"showInVoucherRegistration":true,"position":1}}, tripletex_post→{"value":{"id":18832,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionValue/18832","displayName":"Premium","nameAndNumber":"Premium","dimensionIndex":1,"active":true,"number":null,"showInVoucherRegistration":true,"position":1}}, tripletex_get→{"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":374926759,"number":6300,"name":"Leie lokale"}]}
+[2026-03-21T20:29:53.410Z] [STEP 2] text: The dimension was created with `dimensionIndex: 1`. Now I'll create both dimension values in parallel.
+
+**Step 2: Create dimension values "Avansert" and "Premium"**
+[2026-03-21T20:29:53.410Z] [STEP 3] calls: tripletex_post({"path":"/ledger/voucher","body":{"date":"2026-03-21","description":"Produktlinje - Premium","postings":[{"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759},"amountGross":25750,"amountGrossCurrency":25750,"vatType":{"id":0},"freeAccountingDimension1":{"id":18832},"row":1},{"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759},"amountGross":-25750,"amountGrossCurrency":-25750,"vatType":{"id":0},"row":2}]}})
+[2026-03-21T20:29:53.410Z] [STEP 3] results: tripletex_post→{"value":{"id":609137264,"version":5,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609137264","date":"2026-03-21","number":1,"tempNumber":0,"year":2026,"description":"Produktlinje - Premium","voucherType":null,"reverseVoucher":null,"postings":[{"id":3845767939,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845767939","voucher":{"id":609137264,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609137264"},"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/374926759"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":null,"employee":null,"project":null,"product":null,"department":null,"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":25750,"amountCurrency":25750,"amountGross":25750,"amountGrossCurrency":25750,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":1,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":false,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":{"id":18832,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/accountingDimensionValue/18832"},"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null},{"id":3845767941,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845767941","voucher":{"id":609137264,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609137264"},"date":"2026-03-21","description":"Produktlinje - Premium","account":{"id":374926759,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/374926759"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":null,"employee":null,"project":null,"product":null,"department":null,"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":-25750,"amountCurrency":-25750,"amountGross":-25750,"amountGrossCurrency":-25750,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":2,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":false,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null}],"document":null,"attachment":null,"externalVoucherNumber":"","ediDocument":null,"supplierVoucherType":null,"wasAutoMatched":false,"vendorInvoiceNumber":null,"numberAsString":"1-2026"}}
+[2026-03-21T20:29:53.410Z] [STEP 3] text: I have all the IDs I need:
+- **Premium** dimension value ID: `18832`
+- **Account 6300** (Leie lokale) ID: `374926759`
+
+**Step 3: Post the voucher linked to "Premium"**
+
+Since `dimensionIndex` is 1, I'll use `freeAccountingDimension1` on the posting.
+[2026-03-21T20:29:53.410Z] [STEP 4] text: Everything has been completed successfully! Here's a summary:
+
+### ✅ Custom Accounting Dimension Created
+- **Dimension name:** "Produktlinje" (index 1)
+- **Values:** "Avansert" (ID 18831) and "Premium" (ID 18832)
+
+### ✅ Voucher Posted
+- **Voucher #1-2026** dated 2026-03-21
+- **Account:** 6300 (Leie lokale) — 25,750 NOK
+- **Linked to dimension value:** "Premium" via `freeAccountingDimension1`
+
+The voucher's debit posting on row 1 is correctly tagged with the "Premium" dimension value, as confirmed in the API response.
+[2026-03-21T20:29:53.410Z] [AGENT] DONE elapsed=27.0s steps=4 apiCalls=5 errors=0
+[2026-03-21T20:29:53.410Z] [AGENT] apiLog: [{"method":"POST","path":"/ledger/accountingDimensionName","status":201},{"method":"POST","path":"/ledger/accountingDimensionValue","status":201},{"method":"GET","path":"/ledger/account","status":200},{"method":"POST","path":"/ledger/accountingDimensionValue","status":201},{"method":"POST","path":"/ledger/voucher","status":201}]
+[2026-03-21T20:29:53.410Z] [AGENT] response: Everything has been completed successfully! Here's a summary:
+
+### ✅ Custom Accounting Dimension Created
+- **Dimension name:** "Produktlinje" (index 1)
+- **Values:** "Avansert" (ID 18831) and "Premium" (ID 18832)
+
+### ✅ Voucher Posted
+- **Voucher #1-2026** dated 2026-03-21
+- **Account:** 6300 (Leie lokale) — 25,750 NOK
+- **Linked to dimension value:** "Premium" via `freeAccountingDimension1`
+
+The voucher's debit posting on row 1 is correctly tagged with the "Premium" dimension value, as confirmed in the API response.
+[2026-03-21T20:29:53.410Z] ---
+
+[LEADERBOARD] Task 17 scored
+[LEADERBOARD] Total: 71.30 → 71.30 (0.00)
+
+[SCORING] {
+  "id": "09a0703b-c0cb-4e30-b843-f13cf12d5d3e",
+  "status": "completed",
+  "queued_at": "2026-03-21T20:29:25.703665+00:00",
+  "completed_at": "2026-03-21T20:29:59.145262+00:00",
+  "score_raw": 13,
+  "score_max": 13,
+  "normalized_score": 3.5,
+  "duration_ms": 33370,
+  "feedback": {
+    "comment": "6/6 checks passed.",
+    "checks": [
+      "Check 1: passed",
+      "Check 2: passed",
+      "Check 3: passed",
+      "Check 4: passed",
+      "Check 5: passed",
+      "Check 6: passed"
+    ]
+  }
+}
