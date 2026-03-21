@@ -1,0 +1,415 @@
+"""
+Auto-submit loop for Challenge 3: Astar Island.
+
+Flow per iteration:
+1. Fetch rounds, check for new active round
+2. Run queries (9 tiled viewports × 5 seeds = 45 queries)
+3. Estimate hidden params from observations
+4. Predict with LightGBM model
+5. Submit predictions
+6. If previous round completed: retrain model
+   a. Holdout eval (train on all except latest, compare with actual score)
+   b. Full retrain (train on all rounds with GT)
+7. Wait 1 hour, repeat
+
+Usage:
+    python3 auto_loop.py                # run loop
+    python3 auto_loop.py --once         # single iteration, no loop
+    python3 auto_loop.py --interval 1800  # 30 min interval
+"""
+
+import sys
+import os
+import json
+import time
+import math
+import logging
+import numpy as np
+from pathlib import Path
+from datetime import datetime
+
+# Set API token before any imports
+TOKEN = "REDACTED_TOKEN"
+os.environ["AINM_TOKEN"] = TOKEN
+
+sys.path.insert(0, str(Path(__file__).parent / "../../elias"))
+from shared.utils import get_active_round, get_round, simulate, submit, get_budget
+
+logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
+log = logging.getLogger(__name__)
+
+SCRIPT_DIR = Path(__file__).parent
+LOG_DIR = SCRIPT_DIR / "logs" / "auto_loop"
+ROUND_DATA_DIR = SCRIPT_DIR / "round_data"
+CHECKPOINT_DIR = SCRIPT_DIR / "checkpoints"
+
+GRID_SIZE = 40
+VIEWPORT = 15
+N_SEEDS = 5
+TERRAIN_TO_CLASS = {0: 0, 10: 0, 11: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
+
+
+# ============================================================
+# State tracking
+# ============================================================
+def load_state():
+    state_file = SCRIPT_DIR / "auto_state.json"
+    if state_file.exists():
+        with open(state_file) as f:
+            return json.load(f)
+    return {"last_submitted_round": None, "last_trained_round": None}
+
+
+def save_state(state):
+    with open(SCRIPT_DIR / "auto_state.json", "w") as f:
+        json.dump(state, f, indent=2)
+
+
+# ============================================================
+# Query logic (same tiling as Elias)
+# ============================================================
+def build_tiling():
+    def tile_positions(map_size, vp_size):
+        n_tiles = -(-map_size // vp_size)
+        if n_tiles <= 1: return [0]
+        step = (map_size - vp_size) / (n_tiles - 1)
+        return sorted(set(int(i * step + 0.5) for i in range(n_tiles)))
+    xs = [x + 1 for x in tile_positions(GRID_SIZE - 2, VIEWPORT)]
+    ys = [y + 1 for y in tile_positions(GRID_SIZE - 2, VIEWPORT)]
+    return [(x, y) for y in ys for x in xs]
+
+
+def run_queries(round_id, seed_idx, viewports):
+    obs_counts = np.zeros((GRID_SIZE, GRID_SIZE, 6), dtype=np.int32)
+    n_obs = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.int32)
+    query_grids = []
+
+    for vp_x, vp_y in viewports:
+        try:
+            result = simulate(round_id, seed_idx, vp_x, vp_y, VIEWPORT, VIEWPORT)
+            grid = result.get("grid") or result.get("terrain_grid")
+            if grid is None: continue
+            grid = np.array(grid)
+            query_grids.append({"viewport": {"x": vp_x, "y": vp_y, "w": VIEWPORT, "h": VIEWPORT}, "grid": grid.tolist()})
+            for dr in range(min(VIEWPORT, grid.shape[0])):
+                for dc in range(min(VIEWPORT, grid.shape[1])):
+                    r, c = vp_y + dr, vp_x + dc
+                    if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                        cls = TERRAIN_TO_CLASS.get(int(grid[dr, dc]), 0)
+                        obs_counts[r, c, cls] += 1
+                        n_obs[r, c] += 1
+            time.sleep(0.15)
+        except Exception as e:
+            log.warning(f"Query error seed={seed_idx} vp=({vp_x},{vp_y}): {e}")
+
+    obs_probs = np.zeros((GRID_SIZE, GRID_SIZE, 6), dtype=np.float32)
+    mask = n_obs > 0
+    if mask.any():
+        obs_probs[mask] = obs_counts[mask] / n_obs[mask, None]
+
+    return obs_probs, n_obs, query_grids
+
+
+# ============================================================
+# Save round data (merge, never overwrite obs)
+# ============================================================
+def save_round_data(round_number, round_id, seed_grids, seed_obs):
+    save_path = ROUND_DATA_DIR / f"round_{round_number:02d}_submit.json"
+
+    existing = {}
+    if save_path.exists():
+        try:
+            with open(save_path) as f:
+                existing = json.load(f)
+        except: pass
+
+    save_data = {
+        "round_id": round_id,
+        "round_number": round_number,
+        "timestamp": datetime.now().isoformat(),
+        "seeds": {},
+    }
+
+    for seed_idx in range(N_SEEDS):
+        existing_seed = existing.get("seeds", {}).get(str(seed_idx), {})
+        seed_save = dict(existing_seed)
+        seed_save["initial_grid"] = seed_grids[seed_idx].tolist()
+
+        if seed_idx in seed_obs:
+            obs_probs, n_obs, query_grids = seed_obs[seed_idx]
+            if obs_probs is not None and query_grids:
+                seed_save["query_grids"] = query_grids
+                seed_save["observed_probs"] = obs_probs.tolist()
+                seed_save["n_observations"] = n_obs.tolist()
+
+        save_data["seeds"][str(seed_idx)] = seed_save
+
+    with open(save_path, "w") as f:
+        json.dump(save_data, f)
+    log.info(f"Saved to {save_path}")
+
+
+# ============================================================
+# Fetch latest round data (for retraining)
+# ============================================================
+def fetch_round_data():
+    """Run fetch_rounds.ts to update round_data with GT from completed rounds."""
+    import subprocess
+    try:
+        result = subprocess.run(
+            ["npx", "tsx", str(SCRIPT_DIR / "fetch_rounds.ts")],
+            cwd=str(SCRIPT_DIR), capture_output=True, text=True, timeout=120
+        )
+        if result.returncode == 0:
+            log.info("Fetched latest round data")
+        else:
+            log.warning(f"fetch_rounds failed: {result.stderr[:200]}")
+    except Exception as e:
+        log.warning(f"fetch_rounds error: {e}")
+
+
+# ============================================================
+# Retrain model
+# ============================================================
+def retrain_model(exclude_round=None):
+    """Retrain LightGBM model on all available data."""
+    import solve
+    # Force reimport to pick up any code changes
+    import importlib
+    importlib.reload(solve)
+
+    samples = solve.load_v2_data(exclude_rounds=[exclude_round] if exclude_round else None)
+    if not samples:
+        log.error("No training data!")
+        return None
+
+    X, Y = solve.build_training_arrays(samples)
+    log.info(f"Training: {len(samples)} samples, X={X.shape}")
+    models = solve.train_models(X, Y)
+    return models
+
+
+def holdout_eval(holdout_round):
+    """Train on all except holdout_round, eval on it."""
+    log.info(f"Holdout eval: excluding R{holdout_round}")
+    models = retrain_model(exclude_round=holdout_round)
+    if models is None:
+        return
+
+    import solve
+
+    # Load holdout round
+    rd_path = ROUND_DATA_DIR / f"round_{holdout_round:02d}.json"
+    if not rd_path.exists():
+        log.warning(f"No round data for R{holdout_round}")
+        return
+
+    with open(rd_path) as f:
+        rd = json.load(f)
+
+    seeds = rd.get("seeds", [])
+    if isinstance(seeds, dict): seeds = list(seeds.values())
+
+    actual_score = rd.get("round_score")
+    seed_scores = []
+
+    for s in seeds:
+        gt = s.get("ground_truth")
+        if gt is None: continue
+        gt = np.array(gt, dtype=np.float32)
+        ig = np.array(s.get("initial_grid", rd.get("initial_grid")), dtype=np.int32)
+        pred = solve.predict_grid(models, ig, True, 0.15)
+        sc = solve.score_prediction(pred, gt)
+        seed_scores.append(sc)
+
+    if seed_scores:
+        our_mean = np.mean(seed_scores)
+        log.info(f"Holdout R{holdout_round}: ours={our_mean:.1f}, actual={actual_score}")
+        log.info(f"  seeds: [{' '.join(f'{s:.1f}' for s in seed_scores)}]")
+    return models
+
+
+def full_retrain():
+    """Train on everything, save to checkpoints."""
+    import solve
+    log.info("Full retrain on all data...")
+    models = retrain_model()
+    if models:
+        solve.save_models(models)
+        solve._models = models
+        log.info("Full retrain complete, checkpoints saved")
+
+
+# ============================================================
+# Submit round
+# ============================================================
+def submit_round(round_id, round_number, seed_grids, seed_obs):
+    """Predict and submit for all seeds."""
+    import solve
+    solve._ensure_models()
+
+    for seed_idx in range(N_SEEDS):
+        grid = seed_grids[seed_idx]
+        pred = solve.predict_grid(solve._models, grid, True, 0.15)
+
+        try:
+            result = submit(round_id, seed_idx, pred.tolist())
+            log.info(f"Seed {seed_idx}: SUBMITTED — {result.get('status', result)}")
+        except Exception as e:
+            log.error(f"Seed {seed_idx}: SUBMIT ERROR — {e}")
+
+
+# ============================================================
+# Main loop iteration
+# ============================================================
+def run_iteration(state):
+    """Single iteration of the auto loop."""
+
+    # 1. Find active round
+    log.info("Checking for active round...")
+    active = get_active_round()
+    if active is None:
+        log.info("No active round. Waiting.")
+        return state
+
+    round_id = active["id"]
+    round_number = active.get("round_number", 0)
+    log.info(f"Active round: R{round_number} ({round_id})")
+
+    # 2. Check if already submitted
+    if state.get("last_submitted_round") == round_number:
+        log.info(f"Already submitted R{round_number}. Checking for completed rounds...")
+
+        # Check if previous round completed (for retraining)
+        prev_round = round_number - 1
+        if prev_round > 0 and state.get("last_trained_round") != prev_round:
+            log.info(f"Fetching latest data to check if R{prev_round} completed...")
+            fetch_round_data()
+
+            rd_path = ROUND_DATA_DIR / f"round_{prev_round:02d}.json"
+            if rd_path.exists():
+                with open(rd_path) as f:
+                    rd = json.load(f)
+                seeds = rd.get("seeds", [])
+                if isinstance(seeds, dict): seeds = list(seeds.values())
+                has_gt = any(s.get("ground_truth") is not None for s in seeds if isinstance(s, dict))
+
+                if has_gt and rd.get("round_score") is not None:
+                    log.info(f"R{prev_round} completed! Score: {rd.get('round_score')}")
+
+                    # Holdout eval
+                    holdout_eval(prev_round)
+
+                    # Full retrain
+                    full_retrain()
+
+                    state["last_trained_round"] = prev_round
+                    save_state(state)
+        return state
+
+    # 3. Fetch per-seed grids
+    log.info("Fetching per-seed grids...")
+    round_data = get_round(round_id)
+    initial_states = round_data.get("initial_states", [])
+
+    seed_grids = {}
+    for i, st in enumerate(initial_states[:N_SEEDS]):
+        grid = st.get("grid") or st.get("terrain")
+        if grid is not None:
+            seed_grids[i] = np.array(grid, dtype=np.int32)
+    for i in range(N_SEEDS):
+        if i not in seed_grids:
+            fallback = round_data.get("initial_grid") or active.get("initial_grid")
+            seed_grids[i] = np.array(fallback, dtype=np.int32) if fallback else np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.int32)
+
+    log.info(f"Loaded {len(seed_grids)} per-seed grids")
+
+    # 4. Run queries
+    budget = get_budget()
+    queries_remaining = budget.get("queries_max", 50) - budget.get("queries_used", 0)
+    tiling = build_tiling()
+    needed = len(tiling) * N_SEEDS
+
+    if queries_remaining < needed:
+        log.warning(f"Only {queries_remaining} queries remaining (need {needed})")
+        tiling = tiling[:max(1, queries_remaining // N_SEEDS)]
+
+    seed_obs = {}
+    if queries_remaining > 0:
+        for seed_idx in range(N_SEEDS):
+            log.info(f"Querying seed {seed_idx} ({len(tiling)} viewports)...")
+            obs_probs, n_obs, query_grids = run_queries(round_id, seed_idx, tiling)
+            seed_obs[seed_idx] = (obs_probs, n_obs, query_grids)
+            coverage = (n_obs > 0).sum()
+            log.info(f"  Coverage: {coverage}/{GRID_SIZE*GRID_SIZE}")
+    else:
+        log.warning("No query budget remaining!")
+
+    # 5. Save round data
+    save_round_data(round_number, round_id, seed_grids, seed_obs)
+
+    # 6. Submit predictions
+    log.info("Submitting predictions...")
+    submit_round(round_id, round_number, seed_grids, seed_obs)
+
+    state["last_submitted_round"] = round_number
+    save_state(state)
+
+    # 7. Git commit
+    try:
+        import subprocess
+        submit_file = ROUND_DATA_DIR / f"round_{round_number:02d}_submit.json"
+        subprocess.run(["git", "add", str(submit_file)], cwd=str(SCRIPT_DIR))
+        subprocess.run(["git", "commit", "-m", f"auto: submitted R{round_number}"], cwd=str(SCRIPT_DIR))
+        subprocess.run(["git", "pull", "--no-rebase"], cwd=str(SCRIPT_DIR))
+        subprocess.run(["git", "push"], cwd=str(SCRIPT_DIR))
+    except Exception as e:
+        log.warning(f"Git error: {e}")
+
+    return state
+
+
+# ============================================================
+# Main
+# ============================================================
+def main():
+    args = sys.argv[1:]
+    once = "--once" in args
+    interval = 3600  # default 1 hour
+    for i, a in enumerate(args):
+        if a == "--interval" and i + 1 < len(args):
+            interval = int(args[i + 1])
+
+    LOG_DIR.mkdir(parents=True, exist_ok=True)
+    log_file = LOG_DIR / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
+    file_handler = logging.FileHandler(log_file)
+    file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    logging.getLogger().addHandler(file_handler)
+
+    log.info(f"Auto-loop started (interval={interval}s, once={once})")
+
+    state = load_state()
+    log.info(f"State: {state}")
+
+    while True:
+        try:
+            state = run_iteration(state)
+        except Exception as e:
+            log.error(f"Iteration error: {e}", exc_info=True)
+
+        if once:
+            log.info("Single iteration complete (--once)")
+            break
+
+        log.info(f"Sleeping {interval}s...")
+        remaining = interval
+        while remaining > 300:
+            time.sleep(300)
+            remaining -= 300
+            log.info(f"  [heartbeat] {remaining}s remaining")
+        if remaining > 0:
+            time.sleep(remaining)
+
+
+if __name__ == "__main__":
+    main()
