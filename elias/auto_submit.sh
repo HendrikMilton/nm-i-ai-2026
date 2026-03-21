@@ -11,7 +11,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$SCRIPT_DIR/logs/auto_submit"
 mkdir -p "$LOG_DIR"
 
-INTERVAL="${1:-300}"
+INTERVAL="${1:-3600}"
 echo "Auto-submit loop started (interval: ${INTERVAL}s)"
 
 while true; do
