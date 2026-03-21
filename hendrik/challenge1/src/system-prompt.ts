@@ -97,15 +97,18 @@ Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a led
 Total: 4 write calls.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002
-2. GET /employee/{id}?fields=* — check dateOfBirth, bankAccountNumber, employment
-   CRITICAL: Employee MUST have BOTH dateOfBirth AND bankAccountNumber set (non-empty). If EITHER is missing/empty, PUT /employee/{id} with ALL of: id, version, firstName, lastName, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}", email (keep existing).
-   The PUT body MUST include bankAccountNumber — payroll WILL FAIL silently without it (0 points).
-3. GET /employee/employment?employeeId=X&fields=id,startDate,division
-   If no employment: ensure division exists (GET /division, if empty: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
-   Then POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, shiftDurationHours:7.5}]}
-4. POST /salary/transaction?generateTaxDeduction=true with {date, year, month, isHistorical:false, payslips:[{employee:{id}, date, year, month, specifications:[{salaryType:{id}, rate:<amount>, count:1, amount:<amount>, year, month, employee:{id}}]}]}
-   NEVER use /ledger/voucher for payroll.
+Use manual voucher on 5000-series accounts. The salary API finalization is blocked (403), so use ledger voucher instead.
+The prompt itself says: "Dersom lønns-API-et ikke fungerer, kan du bruke manuelle bilag på lønnskontoer (5000-serien)".
+1. GET /employee?email=X&fields=id,firstName,lastName (or use firstName/lastName from prompt)
+2. POST /ledger/voucher with {date:<today>, description:"Lønn <month> 2026 - <employee_name>",
+     postings: [
+       {date:<today>, account:{id:<5000_id>}, employee:{id}, amountGross:+<base_salary>, amountGrossCurrency:+<base_salary>, description:"Fastlønn", vatType:{id:0}},
+       {date:<today>, account:{id:<5000_id>}, employee:{id}, amountGross:+<bonus>, amountGrossCurrency:+<bonus>, description:"Bonus", vatType:{id:0}},
+       {date:<today>, account:{id:<2930_id>}, employee:{id}, amountGross:-<gross>, amountGrossCurrency:-<gross>, description:"Skyldig lønn", vatType:{id:0}}
+     ]}
+   Where gross = base_salary + bonus. Look up account IDs: GET /ledger/account?number=5000 and GET /ledger/account?number=2930 (in parallel with step 1).
+   The voucher auto-posts immediately (gets bilag number). No sendToLedger needed.
+   Total: 1 write call.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
