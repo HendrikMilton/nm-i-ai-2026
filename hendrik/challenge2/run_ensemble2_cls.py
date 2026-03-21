@@ -51,7 +51,7 @@ def nms(boxes, scores, iou_threshold=0.5):
 
 
 def postprocess(output: np.ndarray, scale: float, pad: tuple[int, int],
-                conf_threshold: float = 0.01, iou_threshold: float = 0.5):
+                conf_threshold: float = 0.001, iou_threshold: float = 0.5):
     output = output[0]
     if output.shape[0] < output.shape[1]:
         output = output.T
@@ -171,7 +171,7 @@ def main():
             cx2, cy2 = min(w, int(x2)), min(h, int(y2))
             det_data.append((x1, y1, x2, y2, float(score), int(yolo_label)))
 
-            if float(score) < 0.9 and cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
+            if float(score) < 0.7 and cx2 - cx1 >= 5 and cy2 - cy1 >= 5:
                 crop = img_pil.crop((cx1, cy1, cx2, cy2))
                 crop_tensors.append(cls_transform(crop))
                 crop_indices.append(i)
@@ -187,7 +187,7 @@ def main():
                     confs, idxs = probs.max(1)
                     for j in range(len(chunk)):
                         det_idx = crop_indices[start + j]
-                        if confs[j].item() > 0.5:
+                        if confs[j].item() > 0.9:
                             cls_results[det_idx] = idx_to_cat.get(idxs[j].item(), det_data[det_idx][5])
 
         for i, (x1, y1, x2, y2, score, yolo_label) in enumerate(det_data):
