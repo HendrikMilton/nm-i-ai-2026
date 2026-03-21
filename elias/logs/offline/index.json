@@ -3552,8 +3552,8 @@
       "id": "v2_R12",
       "round_id": "795bfb1f-54bd-4f39-a526-9868b36f7ebd",
       "round_number": 12,
-      "timestamp": "2026-03-21T08:46:28.416291+00:00",
-      "round_score": 51.3127,
+      "timestamp": "2026-03-21T09:06:17.743746+00:00",
+      "round_score": 52.6725,
       "n_sims": 500,
       "config": {
         "mode": "abc",
