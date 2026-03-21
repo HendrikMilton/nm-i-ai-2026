@@ -47,6 +47,7 @@ export const solve = async (body: SolveRequest) => {
     const start = Date.now();
     const { prompt, files, tripletex_credentials } = body;
     const client = new TripletexClient(tripletex_credentials.base_url, tripletex_credentials.session_token);
+    client.onLog = (msg) => log(msg);
     const tools = createTools(client);
 
     const today = new Date().toISOString().split('T')[0];
@@ -65,7 +66,9 @@ export const solve = async (body: SolveRequest) => {
         const attachDir = join(__dirname, '..', 'logs', 'attachments', ts);
         mkdirSync(attachDir, { recursive: true });
         for (const f of files) {
-            writeFileSync(join(attachDir, f.filename), Buffer.from(f.content_base64, 'base64'));
+            const filePath = join(attachDir, f.filename);
+            mkdirSync(dirname(filePath), { recursive: true });
+            writeFileSync(filePath, Buffer.from(f.content_base64, 'base64'));
             log(`[AGENT] saved attachment: ${join(attachDir, f.filename)}`);
         }
         for (const f of files) {

@@ -5,6 +5,7 @@ import { fileURLToPath } from 'url';
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const apiRef = readFileSync(join(__dirname, '..', 'api-compact.json'), 'utf-8');
 const dummyNorwegianBankNumber = '12345678903';
+const dummyEmail = 'post@example.org';
 
 const workflows = `
 ## Workflow: Create invoice
@@ -15,6 +16,16 @@ const workflows = `
 5. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}
 6. POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
 
+## Workflow: Create order + invoice + payment (Task 10)
+Complete flow: order → invoice → payment in one task.
+1. In parallel: GET customer, GET each product, GET /invoice/paymentType, GET /ledger/account?number=1920 (bank account check)
+   - If bank account has bankAccountNumber, no update needed
+2. POST /order with {customer:{id}, orderDate, deliveryDate}
+3. Add order lines ONE AT A TIME: POST /order/orderline with {order:{id}, product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}
+4. POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
+5. PUT /invoice/{id}/:payment with QUERY PARAMS: paymentDate, paymentTypeId ("Betalt til bank" id), paidAmount (use the invoice "amount" field — total incl VAT)
+   Do NOT re-fetch the invoice to get the amount — it's in the POST /invoice response.
+
 ## Workflow: Register payment on existing invoice
 1. GET /customer?organizationNumber=X and GET /invoice/paymentType?fields=id,description (parallel)
 2. GET /invoice?customerId=X&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,amount,amountOutstanding
@@ -24,22 +35,28 @@ const workflows = `
 Same as payment but use NEGATIVE paidAmount: paidAmount=-<amount>
 This is a CUSTOMER INVOICE operation — never use supplier invoice or voucher.
 
-## Workflow: Supplier invoice (incoming invoice / leverandørfaktura)
+## Workflow: Supplier invoice from PDF (Task 20)
 Register via POST /ledger/voucher — do NOT use POST /supplierInvoice.
-1. GET /supplier?organizationNumber=X&fields=id,name
-2. GET /ledger/account?number=XXXX (expense) and GET /ledger/account?number=2400 (leverandørgjeld) — parallel
-3. POST /ledger/voucher with {date, description, postings: [
+Extract ALL fields from PDF: supplier name, org number, address, invoice number, date, due date, amounts, account number.
+1. In parallel: GET /supplier?organizationNumber=X&fields=id,name, GET /ledger/account?number=XXXX (expense), GET /ledger/account?number=2400 (leverandørgjeld)
+2. If supplier not found, create: POST /supplier with {name, organizationNumber, email:"${dummyEmail}", invoiceEmail:"${dummyEmail}", postalAddress:{addressLine1, postalCode, city}}
+   NEVER include bankAccounts field — it is broken and causes 422. Skip bank account entirely.
+3. POST /ledger/voucher with {date:<invoice_date>, description, postings: [
      {date, description, account:{id:expense}, supplier:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"INV-...", row:1},
      {date, description, account:{id:2400}, supplier:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, row:2}
    ]}
 
-## Workflow: Fixed-price project with milestone invoice
-1. Find customer + employee (project manager)
-2. Find/update project: set isFixedPrice=true, fixedprice=<amount>
-3. Ensure bank account (see above)
-4. POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
-5. POST /order/orderline with {order:{id}, description:"Milestone payment - X%", count:1, unitPriceExcludingVatCurrency:<milestone_amount>, vatType:{id:3}}
-6. POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders:[{id}]}
+## Workflow: Supplier invoice from text prompt
+Same as Task 20 but data comes from prompt text instead of PDF. Follow same steps.
+
+## Workflow: Fixed-price project with milestone invoice (Task 15)
+1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager), GET /ledger/account?number=1920
+   Do NOT GET /employee separately — the project response includes projectManager with their id.
+2. PUT /project to set isFixedPrice=true, fixedprice=<amount>, projectManager:{id} (from step 1)
+   If bank account 1920 needs bankAccountNumber, PUT it — can do both PUTs in parallel.
+3. POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
+4. POST /order/orderline with {order:{id}, description:"Milestone payment - X%", count:1, unitPriceExcludingVatCurrency:<milestone_amount>, vatType:{id:3}}
+5. POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders:[{id}]}
 
 ## Workflow: Payroll (salary transaction)
 1. GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002 — parallel
@@ -95,6 +112,23 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
 1. Find customer → find invoice (see payment workflow steps 1-2)
 2. PUT /invoice/{id}/:createCreditNote?date=YYYY-MM-DD — date as QUERY PARAM, empty body
 
+## Workflow: Monthly closing / journal vouchers (Task 26)
+Post accruals, depreciation, provisions etc. as vouchers.
+1. GET ONLY the accounts explicitly mentioned in the task (e.g. 1720, 6010, 5000, 2900) — all in parallel. Do NOT guess or look up extra accounts.
+2. POST /ledger/voucher for each journal entry — can do all in parallel. Use date=YYYY-MM-31 (last day of month), vatType:{id:0} for internal entries.
+   Each voucher: {date, description, postings: [{date, description, account:{id}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1}, {date, description, account:{id}, amountGross:<negative>, amountGrossCurrency:<negative>, vatType:{id:0}, row:2}]}
+3. DONE. Do NOT re-fetch vouchers or postings to "verify" — Tripletex enforces balanced vouchers. No verification needed.
+
+## Workflow: Analyze ledger + create projects and activities (Task 28)
+1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=4000&accountNumberTo=7999, count=1000)
+   Use fields=id,account(id,number,name),amount
+   Do NOT use /ledger/openPostings (404) or /resultbudget with nested fields (400). Use /ledger/posting directly.
+2. Aggregate amounts by account for each month, calculate increases, find top 3.
+3. GET /employee?fields=id&count=1 (for project manager)
+4. POST /project × 3 in parallel: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
+5. POST /activity × 3 in parallel: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
+6. Link each activity to its project ONE AT A TIME: POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
+
 ## Workflow: Custom accounting dimensions + voucher
 1. POST /ledger/accountingDimensionName with {dimensionName, active:true} — note dimensionIndex in response
 2. POST /ledger/accountingDimensionValue with {displayName, dimensionIndex, active:true} for each value
@@ -111,6 +145,8 @@ Before making ANY API call, read the task and identify which workflow below matc
 - Scored on CORRECTNESS (field-by-field) and EFFICIENCY (fewer API calls + zero errors = higher score)
 - Every 4xx error reduces score. Get it right first try.
 - Never re-fetch data you already have from a previous response.
+- Never re-read resources you just created (vouchers, postings, invoices) to "verify" — the API already validated them.
+- Only look up accounts/resources explicitly mentioned in the task. Do not guess at additional accounts.
 
 ## Critical rules
 - PUT requires "id" and "version" from a prior GET — always GET first with ?fields=* before updating

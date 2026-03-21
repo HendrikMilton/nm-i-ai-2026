@@ -2,6 +2,7 @@ export class TripletexClient {
     private baseUrl: string;
     private auth: string;
     public callLog: { method: string; path: string; status: number }[] = [];
+    public onLog?: (msg: string) => void;
 
     constructor(baseUrl: string, sessionToken: string) {
         this.baseUrl = baseUrl.replace(/\/$/, '');
@@ -29,20 +30,26 @@ export class TripletexClient {
 
         const status = res.status;
         this.callLog.push({ method, path, status });
-        console.log(`[API] ${method} ${path} → ${status}`);
+        const qs = url.search ? url.search : '';
+        const logLine = `[API] ${method} ${path}${qs} → ${status}${body ? ' body=' + JSON.stringify(body) : ''}`;
+        console.log(logLine);
+        this.onLog?.(logLine);
 
         const text = await res.text();
         if (!text) {
+            this.onLog?.(`[API] ← (empty)`);
             return { status };
         }
 
         try {
             const json = JSON.parse(text);
+            this.onLog?.(`[API] ← ${text}`);
             if (status >= 400) {
                 console.error(`[API] Error: ${text.slice(0, 500)}`);
             }
             return json;
         } catch {
+            this.onLog?.(`[API] ← ${text}`);
             return { status, body: text };
         }
     }
