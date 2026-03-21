@@ -135,9 +135,11 @@ async function main() {
       await sleep(30_000);
       continue;
     }
-    if (dailyUsed >= MAX_DAILY_SUBMISSIONS) {
+    // After 3 AM, enforce daily limit so we save 150 for morning tuning
+    const hour = new Date().getHours();
+    if (hour >= 3 && dailyUsed >= MAX_DAILY_SUBMISSIONS) {
       console.log(`  [${ts()}] daily limit reached (${dailyUsed}/${MAX_DAILY_SUBMISSIONS}), stopping.`);
-      break;
+      process.exit(0);
     }
 
     // 3. Wait for score
