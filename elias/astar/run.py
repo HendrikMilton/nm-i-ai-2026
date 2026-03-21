@@ -45,7 +45,7 @@ PRIOR_WEIGHT = 4.0
 OBS_WEIGHT = 0.5
 SIM_WEIGHT_WARM = 0.3
 SIM_WEIGHT_COLD = 0.0
-SIM_SAFETY_THRESHOLD = 0.90  # disable sim below this agreement rate
+SIM_SAFETY_THRESHOLD = 0.72  # disable sim below this agreement rate
 
 # ABC-based blending
 ABC_PRIOR_WEIGHT = 0.80
@@ -605,42 +605,146 @@ def aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w):
 
 
 # ---------------------------------------------------------------------------
+# Observation strategy constants
+# ---------------------------------------------------------------------------
+
+# How many seeds to observe deeply (the rest get 0 direct observations)
+N_DEEP_SEEDS = 3
+# Queries per deep seed: coverage (9) + repeated observations for depth
+# With budget=50 and 3 deep seeds: ~16 queries per seed
+# That gives ~1.8 observations per cell on average (9 tiles cover ~90%)
+# Plus ~7 extra queries for repeat coverage of dynamic areas
+
+# ---------------------------------------------------------------------------
 # Observation phase runner
 # ---------------------------------------------------------------------------
 
-def run_observation_phases(seed_grids, seed_viewports, total_budget, map_w, map_h,
+def _pick_deep_seeds(seed_grids, n_deep, map_h, map_w):
+    """Pick which seeds to observe deeply based on map diversity.
+
+    Selects seeds whose initial maps are most different from each other,
+    maximizing the variety of terrain configurations we learn from.
+    """
+    if len(seed_grids) <= n_deep:
+        return list(range(len(seed_grids)))
+
+    # Compute pairwise terrain difference between seeds
+    def terrain_diff(g1, g2):
+        diff = 0
+        for r in range(min(len(g1), len(g2))):
+            for c in range(min(len(g1[0]), len(g2[0]))):
+                if g1[r][c] != g2[r][c]:
+                    diff += 1
+        return diff
+
+    # Greedy: start with seed 0, then pick the seed most different from selected set
+    selected = [0]
+    remaining = set(range(1, N_SEEDS))
+    while len(selected) < n_deep and remaining:
+        best_seed = max(remaining, key=lambda s: min(
+            terrain_diff(seed_grids.get(s, []), seed_grids.get(sel, []))
+            for sel in selected
+        ))
+        selected.append(best_seed)
+        remaining.discard(best_seed)
+
+    return sorted(selected)
+
+
+def _build_depth_viewports(tiling, n_extra, map_w, map_h, seed_grid=None):
+    """Build viewport list: full tiling + extra viewports targeting dynamic areas.
+
+    Extra viewports are placed over areas near initial settlements (distance 1-4)
+    where the most uncertain dynamics happen.
+    """
+    viewports = list(tiling)  # base coverage
+
+    if n_extra <= 0 or seed_grid is None:
+        return viewports
+
+    # Score each possible viewport by how many "interesting" cells it covers
+    # Interesting = land cells near settlements (distance 1-4)
+    dist_map = compute_settlement_distances(seed_grid, map_h, map_w)
+
+    scored_vps = []
+    for vy in range(1, map_h - VIEWPORT + 1):
+        for vx in range(1, map_w - VIEWPORT + 1):
+            score = 0
+            for r in range(vy, min(vy + VIEWPORT, map_h)):
+                for c in range(vx, min(vx + VIEWPORT, map_w)):
+                    d = dist_map[r][c]
+                    terrain = seed_grid[r][c]
+                    if terrain in (10, 5):  # ocean, mountain — static
+                        continue
+                    if 1 <= d <= 4:
+                        score += 4 - d + 1  # closer to settlement = higher score
+            scored_vps.append((score, vx, vy))
+
+    scored_vps.sort(reverse=True)
+
+    # Pick top viewports, avoiding too much overlap with already selected
+    for score, vx, vy in scored_vps:
+        if len(viewports) >= len(tiling) + n_extra:
+            break
+        # Check overlap with existing viewports — allow some but not full overlap
+        too_close = False
+        for evx, evy in viewports[len(tiling):]:  # only check extra vps
+            if abs(vx - evx) < VIEWPORT // 2 and abs(vy - evy) < VIEWPORT // 2:
+                too_close = True
+                break
+        if not too_close:
+            viewports.append((vx, vy))
+
+    return viewports
+
+
+def run_observation_phases(seed_grids, total_budget, map_w, map_h,
                            observe_fn, print_fn=print):
-    """Run Phase 1 (coverage) + Phase 2 (surprise-targeted) observations.
+    """Depth-over-breadth observation strategy.
+
+    Instead of spreading 50 queries across all 5 seeds (9 each, ~1 obs/cell),
+    observe N_DEEP_SEEDS seeds deeply with multiple observations per cell.
+    The remaining seeds get 0 direct observations and rely on learned parameters
+    + priors + MC simulation.
 
     Returns: (seed_counts, expansion_rate, dist_multipliers, prior_table,
               port_ratio, ruin_ratio, warmth)
     """
-    # Phase 1 — observe every seed once
+    tiling = build_tiling(map_w, map_h)
+    n_tiles = len(tiling)  # typically 9
+
+    # Pick which seeds to observe deeply
+    deep_seeds = _pick_deep_seeds(seed_grids, N_DEEP_SEEDS, map_h, map_w)
+    print_fn(f"  Deep observation seeds: {deep_seeds} ({N_DEEP_SEEDS} of {N_SEEDS})")
+
+    # Allocate budget across deep seeds
+    budget_per_seed = total_budget // len(deep_seeds)
+    leftover = total_budget - budget_per_seed * len(deep_seeds)
+
     seed_counts = {}
     budget_spent = 0
+
     for seed_idx in range(N_SEEDS):
-        dvps = seed_viewports.get(seed_idx, [])
-        if not dvps or budget_spent >= total_budget:
+        if seed_idx not in deep_seeds:
             seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
             continue
-        queries_to_use = dvps[:max(0, total_budget - budget_spent)]
-        if not queries_to_use:
-            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-            continue
-        print_fn(f"  Seed {seed_idx} Phase 1 ({len(queries_to_use)} queries)")
-        seed_counts[seed_idx] = observe_fn(seed_idx, queries_to_use)
-        budget_spent += len(queries_to_use)
 
-    # Phase 2 — allocate remaining budget to most surprising seeds
-    remaining = total_budget - budget_spent
-    if remaining > 0:
-        phase2_queries = pick_phase2_viewports(seed_grids, seed_counts, remaining, map_w, map_h)
-        for seed_idx, vx, vy in phase2_queries:
-            print_fn(f"  Seed {seed_idx} Phase 2 viewport ({vx},{vy})")
-            extra = observe_fn(seed_idx, [(vx, vy)])
-            merge_counts(seed_counts[seed_idx], extra, map_w, map_h)
+        # This seed gets deep observations
+        seed_budget = budget_per_seed + (1 if leftover > 0 else 0)
+        if leftover > 0:
+            leftover -= 1
 
-    # Aggregate stats
+        n_extra = seed_budget - n_tiles
+        grid = seed_grids.get(seed_idx)
+        viewports = _build_depth_viewports(tiling, n_extra, map_w, map_h, seed_grid=grid)
+        viewports = viewports[:seed_budget]  # cap to budget
+
+        print_fn(f"  Seed {seed_idx}: {len(viewports)} queries "
+                 f"({n_tiles} coverage + {len(viewports) - n_tiles} depth)")
+        seed_counts[seed_idx] = observe_fn(seed_idx, viewports)
+        budget_spent += len(viewports)
+
+    # Aggregate stats from observed seeds
     avg_expansion, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth = \
         aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w)
 
@@ -772,12 +876,16 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
     equiv_samples = EQUIV_COLD_POOLED if is_cold else EQUIV_WARM_PER_SEED
 
     # Validate MC against observations — skip if it disagrees too much
+    # If no observations exist for this seed, trust MC (it was fitted on other seeds)
     mc_w = 0.0
-    if mc_pred is not None and obs_counts is not None:
-        agreement, n_compared = validate_mc_against_obs(mc_pred, obs_counts, map_h, map_w)
-        if agreement >= SIM_SAFETY_THRESHOLD:
-            mc_w = ABC_MC_WEIGHT
-        # else: mc_w stays 0, prior-only blend
+    if mc_pred is not None:
+        if obs_counts is not None:
+            agreement, n_compared = validate_mc_against_obs(mc_pred, obs_counts, map_h, map_w)
+            if n_compared == 0 or agreement >= SIM_SAFETY_THRESHOLD:
+                mc_w = ABC_MC_WEIGHT
+            # else: mc_w stays 0, prior-only blend
+        else:
+            mc_w = ABC_MC_WEIGHT  # no obs to validate against, use MC
     prior_w = ABC_PRIOR_WEIGHT
 
     prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
