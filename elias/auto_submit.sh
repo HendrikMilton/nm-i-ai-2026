@@ -1,27 +1,30 @@
 #!/bin/bash
-# Auto-submit script for NM I AI — runs every hour via cron.
-# First run uses query budget; subsequent runs reuse cached queries.
+# Auto-submit script for NM I AI — runs continuously.
+# Submits predictions, waits, then tries again.
+# If no active round, waits and retries.
 #
-# Setup cron (every hour):
-#   crontab -e
-#   0 * * * * /path/to/nmiai/elias/auto_submit.sh
-#
-# Or run in a loop:
-#   ./auto_submit.sh --loop
+# Usage:
+#   ./auto_submit.sh              # default interval: 1 hour
+#   ./auto_submit.sh 1800         # custom interval: 30 minutes
 
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 LOG_DIR="$SCRIPT_DIR/logs/auto_submit"
 mkdir -p "$LOG_DIR"
 
-TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-LOG_FILE="$LOG_DIR/$TIMESTAMP.log"
+INTERVAL="${1:-300}"
+echo "Auto-submit loop started (interval: ${INTERVAL}s)"
 
-run_once() {
+while true; do
+    TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
+    LOG_FILE="$LOG_DIR/$TIMESTAMP.log"
+
     echo "=== Auto-submit started at $(date) ===" | tee -a "$LOG_FILE"
 
     cd "$SCRIPT_DIR/astar" || {
         echo "ERROR: Could not cd to $SCRIPT_DIR/astar" | tee -a "$LOG_FILE"
-        return 1
+        echo "Sleeping ${INTERVAL}s until next run..."
+        sleep "$INTERVAL"
+        continue
     }
 
     python3 run.py 2>&1 | tee -a "$LOG_FILE"
@@ -34,19 +37,6 @@ run_once() {
     # Keep only last 48 log files
     ls -t "$LOG_DIR"/*.log 2>/dev/null | tail -n +49 | xargs rm -f 2>/dev/null
 
-    return $EXIT_CODE
-}
-
-if [ "$1" = "--loop" ]; then
-    INTERVAL="${2:-3600}"  # default 1 hour
-    echo "Running in loop mode (interval: ${INTERVAL}s)"
-    while true; do
-        TIMESTAMP=$(date +"%Y-%m-%d_%H-%M-%S")
-        LOG_FILE="$LOG_DIR/$TIMESTAMP.log"
-        run_once
-        echo "Sleeping ${INTERVAL}s until next run..."
-        sleep "$INTERVAL"
-    done
-else
-    run_once
-fi
+    echo "Sleeping ${INTERVAL}s until next run..."
+    sleep "$INTERVAL"
+done

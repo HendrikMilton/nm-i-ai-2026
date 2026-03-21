@@ -763,7 +763,7 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
 
 ABC_PRIOR_WEIGHT = 0.85
 ABC_MC_WEIGHT = 0.15
-MC_EQUIV_SAMPLES = 60
+MC_EQUIV_SAMPLES = 18
 MC_TOTAL_RUNS = 500
 
 
@@ -804,11 +804,11 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
             mc_pred = None
         # Adaptive equiv samples: high agreement → trust model more
         if agreement > 0.80:
-            equiv_samples = 100
+            equiv_samples = 30
         elif agreement < 0.60:
-            equiv_samples = 20
+            equiv_samples = 8
         else:
-            equiv_samples = 20 + (agreement - 0.60) / 0.20 * 80
+            equiv_samples = 8 + (agreement - 0.60) / 0.20 * 22
     else:
         equiv_samples = MC_EQUIV_SAMPLES
 
