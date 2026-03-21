@@ -53,8 +53,22 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
    }
    CRITICAL: amountCurrency must be NEGATIVE (e.g. -81812 for an 81812 kr invoice).
 
-## Workflow: Supplier invoice from text prompt
-Same as Task 20 but data comes from prompt text instead of PDF. Use POST /supplierInvoice with the same structure.
+## Workflow: Supplier invoice from text prompt (Task 11)
+Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
+1. In parallel: GET /supplier?organizationNumber=X&fields=id,name,
+   GET /ledger/account?number=XXXX (expense account from prompt),
+   GET /ledger/account?number=2400 (leverandørgjeld)
+2. If supplier not found: POST /supplier with {name, organizationNumber, email:"${dummyEmail}", invoiceEmail:"${dummyEmail}"}
+3. POST /supplierInvoice with {
+     invoiceDate:<today>, invoiceDueDate:<today + 30 days>, supplier:{id}, invoiceNumber:"<from_prompt>",
+     amountCurrency: -<totalInclVat>,
+     voucher: {date:<today>, description:"<supplier_name> - <invoice_number>", postings: [
+       {date:<today>, description:"<desc>", account:{id:<expense_acct>}, supplier:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"<inv_num>", row:1},
+       {date:<today>, description:"<desc>", account:{id:<2400>}, supplier:{id}, amountGross:-<totalInclVat>, amountGrossCurrency:-<totalInclVat>, vatType:{id:0}, row:2}
+     ]}
+   }
+   CRITICAL: amountCurrency MUST be NEGATIVE. Expense account number varies per prompt — always use the account from the task.
+   Total: 1 write call.
 
 ## Workflow: Receipt/expense registration (Task 22)
 Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a ledger voucher or supplier invoice.
