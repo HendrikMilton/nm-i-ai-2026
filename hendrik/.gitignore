@@ -16,4 +16,5 @@ frontend/src/compiled.css
 bun.lock
 *.pt
 *.onnx
+*.joblib
 runs/
