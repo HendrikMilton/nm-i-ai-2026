@@ -16,6 +16,11 @@ Usage:
 
 import sys
 import os
+
+# Set token BEFORE any imports that load shared.utils
+TOKEN = "REDACTED_TOKEN"
+os.environ["AINM_TOKEN"] = TOKEN
+
 import json
 import time
 import math
@@ -40,10 +45,6 @@ N_SEEDS = 5
 GRID_SIZE = 40
 VIEWPORT = 15
 TERRAIN_TO_CLASS = {0: 0, 10: 0, 11: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
-
-# Token - same as in fetch_rounds.ts
-TOKEN = "REDACTED_TOKEN"
-os.environ["AINM_TOKEN"] = TOKEN
 
 
 # ============================================================
@@ -154,9 +155,13 @@ def main():
         return
     round_id = active["id"]
     round_number = active.get("round_number", "?")
+    budget_info = get_budget()
+    queries_used = budget_info.get("queries_used", 0)
+    queries_max = budget_info.get("queries_max", 50)
+    queries_remaining = queries_max - queries_used
     print(f"  Round {round_number} ({round_id})")
     print(f"  Map: {active.get('map_width')}x{active.get('map_height')}")
-    print(f"  Budget: {active.get('queries_max', 50)} queries")
+    print(f"  Budget: {queries_used}/{queries_max} used, {queries_remaining} remaining")
 
     # Step 2: Fetch per-seed grids
     print("\n[2] Fetching round details (per-seed grids)...")
@@ -182,7 +187,13 @@ def main():
     # Step 3: Run queries — Phase 1 (tiled coverage) + Phase 2 (remaining budget)
     tiling = build_tiling()  # 9 viewports
     phase1_total = len(tiling) * N_SEEDS  # 45
-    phase2_total = TOTAL_BUDGET - phase1_total  # 5
+    phase2_total = max(0, queries_remaining - phase1_total)
+    if queries_remaining < phase1_total:
+        print(f"  WARNING: Only {queries_remaining} queries remaining, need {phase1_total} for Phase 1")
+        print(f"  Reducing to {queries_remaining // N_SEEDS} viewports per seed")
+        tiling = tiling[:queries_remaining // N_SEEDS]
+        phase1_total = len(tiling) * N_SEEDS
+        phase2_total = max(0, queries_remaining - phase1_total)
     print(f"\n[3] Query plan:")
     print(f"  Phase 1: {len(tiling)} viewports x {N_SEEDS} seeds = {phase1_total} queries")
     print(f"  Phase 2: {phase2_total} remaining queries (spread across seeds)")
