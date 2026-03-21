@@ -68,7 +68,8 @@ async function main() {
     };
 
     const filename = `${outputDir}/round_${String(roundNumber).padStart(2, '0')}.json`;
-    await Bun.write(filename, JSON.stringify(output, null, 2));
+    const { writeFileSync } = await import('fs');
+    writeFileSync(filename, JSON.stringify(output, null, 2));
     console.log(`  -> ${filename}`);
   }
 
