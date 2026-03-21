@@ -50,13 +50,14 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
 Same as Task 20 but data comes from prompt text instead of PDF. Follow same steps.
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
-1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager), GET /ledger/account?number=1920
+1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
    The project response includes projectManager with their id — no need for a separate employee GET.
 2. PUT /project to set isFixedPrice=true, fixedprice=<amount>, projectManager:{id} (from step 1)
-   If bank account 1920 needs bankAccountNumber, PUT it — can do both PUTs in parallel.
+   Do NOT check or update bank account 1920 — invoices work without it.
 3. POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
 4. POST /order/orderline with {order:{id}, description:"Milestone payment - X%", count:1, unitPriceExcludingVatCurrency:<milestone_amount>, vatType:{id:3}}
 5. POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders:[{id}]}
+Total: 4 write calls.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
 1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002, GET /ledger/paymentTypeOut?fields=id,description
@@ -97,24 +98,26 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
    Per diem/daily allowance: use costCategory "Mat", set rate=<daily_rate>, amountCurrencyIncVat=<total>, comments="Diett <N> dager x <rate> NOK"
 5. After all costs added: PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
 
-## Workflow: Timesheet + project invoice
-1. Find employee, customer, project (GET in parallel)
-2. If employee userType is not STANDARD: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-3. GET /activity?fields=id,name — find matching activity
-4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
-5. Ensure bank account (GET /ledger/account?number=1920, PUT if bankAccountNumber empty), then POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
+## Workflow: Timesheet + project invoice (Task 16)
+1. Find employee, customer, project, activity (GET all in parallel)
+2. If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+3. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
+4. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
+   Do NOT check or update bank account 1920 — invoices work without it.
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
-1. In parallel: GET customer, supplier, all employees, project (fields=*), activity, ledger accounts (4300 expense + 2400 payable), bank account 1920
+1. In parallel: GET customer, supplier, all employees, project (fields=id,name,version,projectManager(id),isInternal), activity, ledger accounts (4300 expense + 2400 payable), bank account 1920
+   Do NOT use fields=budget on project (causes 400).
 2. If the project budget is not set or differs from the task amount: GET /project/{id}?fields=* then PUT /project/{id} with the full object + budget amount field.
 3. For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
 4. Ensure bank account 1920 has bankAccountNumber.
 5. Log timesheet entries ONE AT A TIME sequentially (parallel causes 409): POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
 6. Register supplier cost via POST /ledger/voucher with postings that INCLUDE project:{id} on the debit posting:
+   The supplier cost amount in the task is EXCL VAT. Use calculate tool: grossAmount = supplierCost * 1.25
    {date, description, postings: [
-     {date, description, account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<totalInclVat>, amountGrossCurrency:<totalInclVat>, vatType:{id:1}, invoiceNumber:"SUP-001", row:1},
-     {date, description, account:{id:2400}, supplier:{id}, amountGross:<-totalInclVat>, amountGrossCurrency:<-totalInclVat>, vatType:{id:0}, row:2}
+     {date, description, account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<grossAmount>, amountGrossCurrency:<grossAmount>, vatType:{id:1}, invoiceNumber:"SUP-001", row:1},
+     {date, description, account:{id:2400}, supplier:{id}, amountGross:<-grossAmount>, amountGrossCurrency:<-grossAmount>, vatType:{id:0}, row:2}
    ]}
    CRITICAL: credit posting (row 2) MUST include vatType:{id:0} explicitly.
 7. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
@@ -160,6 +163,19 @@ Post depreciation, prepaid reversal, and tax provision as separate vouchers.
 7. Post all remaining vouchers (prepaid + tax) in parallel with depreciation vouchers if possible.
 CRITICAL: Do NOT re-query /ledger/posting after posting vouchers. Calculate tax from the ORIGINAL P&L query.
 CRITICAL: Do NOT use /resultbudget — it often returns wrong fields. Use /ledger/posting directly.
+
+## Workflow: Correct ledger errors (Task 24)
+The task tells you exactly what the errors are. For each error, post ONE correction voucher.
+1. GET /ledger/voucher?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,number,date,description&count=100
+   Then for each error, GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&voucherId=<id>&fields=id,account(id,number),amount,amountGross,supplier(id),department(id),customer(id),vatType(id)
+   CRITICAL: you MUST read the original postings to copy supplier, department, customer, vatType to your corrections. Missing supplier on 2400 = 422 error.
+2. For each error, create a simple correction voucher. Keep it minimal:
+   - Wrong account: reverse the wrong posting (negate amount), post the correct one.
+   - Duplicate voucher: reverse it entirely (negate all postings).
+   - Missing VAT: add the missing VAT posting. Use calculate tool for VAT amount.
+   - Wrong amount: post the difference (correct - wrong) as adjustment.
+   Copy supplier:{id}, department:{id}, vatType:{id} from original postings to ALL correction postings.
+3. POST all correction vouchers in parallel.
 
 ## Workflow: Monthly closing / journal vouchers (Task 26)
 Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new accounts — use only existing ones.

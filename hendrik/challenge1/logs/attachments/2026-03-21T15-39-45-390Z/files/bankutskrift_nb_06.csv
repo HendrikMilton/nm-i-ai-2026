@@ -1,0 +1,12 @@
+Dato;Forklaring;Inn;Ut;Saldo
+2026-01-18;Innbetaling fra Moe AS / Faktura 1001;8187.50;;108187.50
+2026-01-19;Innbetaling fra Haugen AS / Faktura 1002;9525.00;;117712.50
+2026-01-21;Innbetaling fra Nilsen AS / Faktura 1003;16562.50;;134275.00
+2026-01-22;Innbetaling fra Ødegård AS / Faktura 1004;21750.00;;156025.00
+2026-01-25;Innbetaling fra Johansen AS / Faktura 1005;15500.00;;171525.00
+2026-01-28;Betaling Leverandor Haugen AS;;-17550.00;153975.00
+2026-01-31;Betaling Leverandor Haugen AS;;-6750.00;147225.00
+2026-02-01;Betaling Leverandor Larsen AS;;-11000.00;136225.00
+2026-02-03;Skattetrekk;;-844.47;135380.53
+2026-02-04;Skattetrekk;1271.66;;136652.19
+2026-02-05;Renteinntekter;926.65;;137578.84
