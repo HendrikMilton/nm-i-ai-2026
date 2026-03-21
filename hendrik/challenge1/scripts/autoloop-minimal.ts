@@ -15,7 +15,7 @@ const ENDPOINT_URL = process.env.ENDPOINT_URL ?? "https://challenge1.hycapital.i
 const SUBMIT_URL = "https://api.ainm.no/tasks/cccccccc-cccc-cccc-cccc-cccccccccccc/submissions";
 const LEADERBOARD_URL = "https://api.ainm.no/tripletex/leaderboard";
 const SUBMISSIONS_URL = "https://api.ainm.no/tripletex/my/submissions";
-const MAX_DAILY_SUBMISSIONS = Number(process.env.MAX_DAILY_SUBMISSIONS ?? 150);
+const LIMIT_START = new Date("2026-03-22T03:00:00Z");
 
 if (!ACCESS_TOKEN) {
   console.error("ERROR: ACCESS_TOKEN env var required");
@@ -63,18 +63,19 @@ async function waitQueueClear(): Promise<void> {
   }
 }
 
-async function submit(): Promise<{ id: string | null; dailyUsed: number }> {
+async function submit(): Promise<{ id: string | null; dailyUsed: number; dailyMax: number }> {
   try {
     const res = (await fetchJson(SUBMIT_URL, {
       method: "POST",
       body: JSON.stringify({ endpoint_url: ENDPOINT_URL, endpoint_api_key: null }),
     })) as any;
     const used = res.daily_submissions_used ?? 0;
-    console.log(`  [${ts()}] submitted: ${res.id?.slice(0, 8)} (${used}/${res.daily_submissions_max} today, limit=${MAX_DAILY_SUBMISSIONS})`);
-    return { id: res.id, dailyUsed: used };
+    const max = res.daily_submissions_max ?? 300;
+    console.log(`  [${ts()}] submitted: ${res.id?.slice(0, 8)} (${used}/${max} today)`);
+    return { id: res.id, dailyUsed: used, dailyMax: max };
   } catch (e: any) {
     console.error(`  [${ts()}] submit failed: ${e.message}`);
-    return { id: null, dailyUsed: 0 };
+    return { id: null, dailyUsed: 0, dailyMax: 300 };
   }
 }
 
@@ -129,17 +130,15 @@ async function main() {
     await waitQueueClear();
 
     // 2. Submit
-    const { id, dailyUsed } = await submit();
+    const { id, dailyUsed, dailyMax } = await submit();
     if (!id) {
       console.log(`  [${ts()}] submit failed, retrying in 30s...`);
       await sleep(30_000);
       continue;
     }
-    // Enforce daily limit starting 2026-03-22 03:00 UTC
-    const now = new Date();
-    const limitStart = new Date("2026-03-22T03:00:00Z");
-    if (now >= limitStart && dailyUsed >= MAX_DAILY_SUBMISSIONS) {
-      console.log(`  [${ts()}] daily limit reached (${dailyUsed}/${MAX_DAILY_SUBMISSIONS}), stopping.`);
+    const half = Math.floor(dailyMax / 2);
+    if (new Date() >= LIMIT_START && dailyUsed >= half) {
+      console.log(`  [${ts()}] daily limit reached (${dailyUsed}/${dailyMax}, saving ${dailyMax - half} for tuning), stopping.`);
       process.exit(0);
     }
 
