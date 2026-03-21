@@ -52,6 +52,10 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
      ]}
    }
    CRITICAL: amountCurrency must be NEGATIVE (e.g. -81812 for an 81812 kr invoice).
+4. PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {}
+   Use voucher.id from the POST /supplierInvoice response. This books the voucher so postings
+   are visible in ledger queries. WITHOUT THIS STEP, ledger posting checks WILL FAIL.
+   Total: 2 write calls (3 if supplier created).
 
 ## Workflow: Supplier invoice from text prompt (Task 11)
 Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
