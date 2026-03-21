@@ -40,6 +40,8 @@ log = logging.getLogger(__name__)
 
 SCRIPT_DIR = Path(__file__).parent
 LOG_DIR = SCRIPT_DIR / "logs" / "auto_loop"
+TRAIN_LOG_DIR = SCRIPT_DIR / "logs" / "training"
+EVAL_LOG_DIR = SCRIPT_DIR / "logs" / "eval"
 ROUND_DATA_DIR = SCRIPT_DIR / "round_data"
 CHECKPOINT_DIR = SCRIPT_DIR / "checkpoints"
 
@@ -233,8 +235,13 @@ def retrain_model(exclude_round=None):
 
 
 def holdout_eval(holdout_round):
-    """Train on all except holdout_round, eval on it."""
+    """Train on all except holdout_round, eval on it. Writes detailed eval log."""
+    EVAL_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    eval_log_path = EVAL_LOG_DIR / f"holdout_R{holdout_round:02d}_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+
     log.info(f"Holdout eval: excluding R{holdout_round}")
+    lines = [f"=== Holdout Eval: R{holdout_round} ===", f"Timestamp: {datetime.now().isoformat()}", ""]
+
     models = retrain_model(exclude_round=holdout_round)
     if models is None:
         return
@@ -254,34 +261,110 @@ def holdout_eval(holdout_round):
     if isinstance(seeds, dict): seeds = list(seeds.values())
 
     actual_score = rd.get("round_score")
-    seed_scores = []
+    actual_seed_scores = rd.get("seed_scores", [])
+    lines.append(f"Actual round score: {actual_score}")
+    lines.append(f"Actual seed scores: {actual_seed_scores}")
+    lines.append("")
+
+    seed_scores_default = []
+    seed_scores_obs = []
 
     for s in seeds:
+        if not isinstance(s, dict): continue
         gt = s.get("ground_truth")
         if gt is None: continue
         gt = np.array(gt, dtype=np.float32)
         ig = np.array(s.get("initial_grid", rd.get("initial_grid")), dtype=np.int32)
-        # Use default params for holdout (same as inference)
-        pred = solve.predict_grid(models, ig)
-        sc = solve.score_prediction(pred, gt)
-        seed_scores.append(sc)
+        sid = s.get("seed_index", "?")
 
-    if seed_scores:
-        our_mean = np.mean(seed_scores)
-        log.info(f"Holdout R{holdout_round}: ours={our_mean:.1f}, actual={actual_score}")
-        log.info(f"  seeds: [{' '.join(f'{s:.1f}' for s in seed_scores)}]")
+        # Approach A: default params
+        pred_default = solve.predict_grid(models, ig)
+        sc_default = solve.score_prediction(pred_default, gt)
+        seed_scores_default.append(sc_default)
+
+        # Approach B: obs-derived params (if available)
+        obs_p = np.array(s["observed_probs"], dtype=np.float32) if s.get("observed_probs") else None
+        n_obs_arr = np.array(s["n_observations"], dtype=np.float32) if s.get("n_observations") else None
+        sett_stats = s.get("settlement_stats")
+
+        if obs_p is not None:
+            pred_obs = solve.predict_grid(models, ig, obs_probs=obs_p, n_obs=n_obs_arr, settlement_stats=sett_stats)
+            sc_obs = solve.score_prediction(pred_obs, gt)
+        else:
+            sc_obs = sc_default
+        seed_scores_obs.append(sc_obs)
+
+        actual_s = actual_seed_scores[sid] if isinstance(actual_seed_scores, list) and sid < len(actual_seed_scores) else "?"
+        lines.append(f"  Seed {sid}: default={sc_default:.1f}  obs={sc_obs:.1f}  actual={actual_s}")
+
+    mean_default = np.mean(seed_scores_default) if seed_scores_default else 0
+    mean_obs = np.mean(seed_scores_obs) if seed_scores_obs else 0
+    lines.append("")
+    lines.append(f"Mean: default={mean_default:.1f}  obs={mean_obs:.1f}  actual={actual_score}")
+    lines.append(f"Delta vs actual: default={mean_default - (actual_score or 0):+.1f}  obs={mean_obs - (actual_score or 0):+.1f}")
+
+    log.info(f"Holdout R{holdout_round}: default={mean_default:.1f}, obs={mean_obs:.1f}, actual={actual_score}")
+    log.info(f"  seeds: [{' '.join(f'{s:.1f}' for s in seed_scores_default)}]")
+
+    # Write eval log
+    with open(eval_log_path, "w") as f:
+        f.write("\n".join(lines))
+    log.info(f"Eval log: {eval_log_path}")
+
     return models
 
 
 def full_retrain():
-    """Train on everything, save to checkpoints."""
+    """Train on everything, save to checkpoints. Writes training log."""
     import solve
+    TRAIN_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    train_log_path = TRAIN_LOG_DIR / f"full_retrain_{datetime.now().strftime('%Y%m%d_%H%M%S')}.txt"
+
     log.info("Full retrain on all data...")
+    lines = [f"=== Full Retrain ===", f"Timestamp: {datetime.now().isoformat()}", ""]
+
+    t0 = time.time()
     models = retrain_model()
+    train_time = time.time() - t0
+
     if models:
         solve.save_models(models)
         solve._models = models
-        log.info("Full retrain complete, checkpoints saved")
+
+        # Log feature importances
+        lines.append(f"Training time: {train_time:.1f}s")
+        lines.append(f"Features: {len(solve.FEATURE_NAMES)}")
+        lines.append("")
+        for k, model in enumerate(models):
+            imp = model.feature_importances_
+            pairs = sorted(zip(solve.FEATURE_NAMES, imp), key=lambda x: -x[1])
+            top = ", ".join(f"{n}={v:.0f}" for n, v in pairs[:8])
+            lines.append(f"Class {k}: {top}")
+
+        # Quick train-on-all eval
+        lines.append("")
+        lines.append("=== Train-on-all scores (sanity check) ===")
+        samples = solve.load_v2_data()
+        rounds = {}
+        for s in samples:
+            rounds.setdefault(s["round"], []).append(s)
+        all_scores = []
+        for rn in sorted(rounds):
+            seed_scores = []
+            for s in rounds[rn]:
+                pred = solve.predict_grid(models, s["grid"], s["ss"], s["st"], s["pa"],
+                                          settlement_stats=s.get("settlement_stats"))
+                seed_scores.append(solve.score_prediction(pred, s["gt"]))
+            mean = np.mean(seed_scores)
+            all_scores.append(mean)
+            lines.append(f"  R{rn:2d}: {mean:.1f}  seeds=[{' '.join(f'{s:.1f}' for s in seed_scores)}]")
+        lines.append(f"\n  Train-on-all mean: {np.mean(all_scores):.1f}")
+
+        log.info(f"Full retrain complete: {train_time:.1f}s, {len(solve.FEATURE_NAMES)} features")
+
+        with open(train_log_path, "w") as f:
+            f.write("\n".join(lines))
+        log.info(f"Training log: {train_log_path}")
 
 
 # ============================================================
@@ -438,6 +521,8 @@ def main():
             interval = int(args[i + 1])
 
     LOG_DIR.mkdir(parents=True, exist_ok=True)
+    TRAIN_LOG_DIR.mkdir(parents=True, exist_ok=True)
+    EVAL_LOG_DIR.mkdir(parents=True, exist_ok=True)
     log_file = LOG_DIR / f"{datetime.now().strftime('%Y-%m-%d_%H-%M-%S')}.log"
     file_handler = logging.FileHandler(log_file)
     file_handler.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
