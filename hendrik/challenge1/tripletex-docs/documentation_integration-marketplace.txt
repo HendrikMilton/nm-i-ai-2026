@@ -1,0 +1,163 @@
+# Integration marketplace – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/documentation/integration-marketplace
+
+Integration marketplace
+
+Table of Contents
+
+What is “Integration Marketplace”?
+What’s the redirect URL?
+How to test your redirect URL? 
+What should the landing page look like? 
+How to get your integration into the Tripletex “Integrations”
+Part 1 : Getting started
+Part 2 : Making your first integration 
+Part 3 : Tripletex reviewing your integration
+Part 4: Customers adding your integration
+FAQ
+Will it be possible to get the Employee Token with the “old” method?
+How do we store the employee token we recieve?
+What is “Integration Marketplace”?
+
+The “Integration Marketplace” is a marketplace for established commercial integrations and is visible to Tripletex customers in the menu “Integrations” when logged on to their Tripletex account. In “Integrations”, customers can see integrations that have been approved by Tripletex to be presented here. One main difference is that these integrations have a seamless activation process for the customer.
+
+There are some prerequisites to have your integration approved and presented in the “Integration Marketplace” in Tripletex. One prerequisite is that only existing integrations with Tripletex that are currently in production, with Tripletex customers who are currently using it and are satisfied with the solution will be considered and presented here.
+
+Please note that this is not the same as obtaining a consumer name and consumer token for production. If you are looking to get API consumer details for production, please follow the instructions found here – Getting ready for production.
+
+If you are only interested to get your commercial integration published on our public integration page, please follow the link you received in the email you received when you were granted access to production.
+
+In the Integration Marketplace may customers search for specific integrations, filter integrations by categories or simply browse through the whole catalog of integrations.
+When customers want to activate an integration via the Integration Marketplace, they click “Activate” on the integration’s card. This action will send an API employee token together with some basic company information to a landing page set up by the integration partner.
+The integration partner will capture the employee token and the basic company sent during activation. This information is used to complete the setup of the integration between the systems.
+
+What’s the redirect URL?
+
+First, a few notes about the redirect URL. When you, the integration partner, onboard your integration in the Tripletex “Integrations”, you’re asked to provide something called a redirect URL. The redirect URL is used for two things: 
+
+Send information from Tripletex to your integration. 
+Send the user to your integration’s landing page.
+
+
+Every time a user in Tripletex connects to your integration, Tripletex will generate an employee API-token, gather some essential information about the customer, and send this information as application/x-www-form-urlencoded in a POST request to your designated endpoint. Unlike the typical JSON format, this information is sent specifically as form data with content type x-www-form-urlencoded. This will include the necessary details to successfully set up a sync between your system and Tripletex. Additionally, we’ll redirect the user to your landing page.
+
+Your integration will need to process the information provided as form data to the redirect URL, and you’re responsible for assisting the user in completing the integration process on your end.
+Maybe the user must log in to your system, or create a new account in your system? Maybe you need the user to provide some more information? 
+
+Let’s look at an example:
+
+You provide us with this redirect URL:
+https://myTripletexIntegration.example.com/
+When a user wants to connect to your integration, we call your redirect URL and POST this data: 
+
+companyId: 123456
+companyName: Ola Nordmann AS
+orgNumber: 123456789
+token: 28375joi3928as933==
+
+
+CompanyId: The id of the Tripletex account.
+Company name: The name of the account.
+orgNumber: The organization number.
+Token: The API employee token that you will use together with you API consumer token to make calls to the Tripletex API.
+
+
+Example:
+https://mytripletexintegration.example.com/?companyId=56007191&companyName=TestCompany&orgNumber=123456789&token=abcd0000efgh0000ijkl0000mnop0000
+
+How to test your redirect URL? 
+
+You can test your redirect URL when you register a new integration in the Tripletex Integration partner account. 
+
+In step 3, “Preview”, you’ll be able to click the redirect link you provided. This will simulate customers activating your integration. Tripletex attaches some dummy data when you click it, so that you can test that your landing page is able to recognize the call and store the data provided in the POST request.
+
+What should the landing page look like? 
+
+It’s really up to you, but we suggest you keep it simple.
+Our developers suggested something like this. (Our designers and UXers were not involved in sketching this).
+
+How to get your integration into the Tripletex “Integrations”
+Part 1 : Getting started
+
+Please note that this is not the same as obtaining a consumer name and consumer token for production. If you are looking to get API consumer details for production, please follow the instructions found here – Getting ready for production.
+
+Read the brief summary in the top of this page and understand the difference between Getting started for production and the Integration Marketplace this article is explaining.
+If you are still unsure please send us a support inquiry via our Contact form.
+Send Tripletex API support/Partner Manager a message letting us know that you would like to request an “Integration partner account”, if you have an established integration Tripletex users are using and are satisfied with.
+You will get an email from us welcoming you to Tripletex and asking you to log into your Integration-partner account.
+Log in to your Integration-partner account.
+Deal with any pop-ups.
+You end up on this page:
+Part 2 : Making your first integration 
+Click “Add new integration”. 
+Enter the name of your integration. The naming convention is “[System] av [Company]”.
+– Unless you own the integrated system.
+
+Make sure to checkmark “Allow users to use the integration”, and click “Create”.
+You’ll now see your new integration on your page: 
+Click on “Details” on the card to continue to add more info about your integration. 
+Remember to click “Save” throughout the process.
+Here you add your logo (max-width: 150px, max-height: 200px, max bytes 300000) and tag your integration with categories in step 1:
+Write your sales pitch to potential customers in step 2 and provide us with your redirect link. The redirect link is the link Tripletex will use to send information to your integration. When a customer adds your integration from the Tripletex “Integrations”, we will send the customer’s employee API tokens to you using the redirect link. 
+Here you will get a preview of how your integration will look in the “Integrations” in step 3: 
+In step 4 you will make an important decision: 
+If you want to edit more, click “Back”. 
+If you want to stop editing and come back later, click “Cancel”.
+If you want to send it to Tripletex for approval, click “Send”. This action will lock your integration. You’ll no longer be able to edit the info. 
+Part 3 : Tripletex reviewing your integration
+After you click “Send”, the status on your integration card will change to “Pending approval”.
+Tripletex will review your integration by these criteria.
+The integration is working and a demo is shown to Tripletex.
+The integration uses the following naming convention:
+“[System] av [Company]”
+e.g. “Webshop av Partner AS”
+– Unless you own the integrated system’s brand name.
+Your redirect link is working, and you capture the token & other information we send during activation.
+The redirect link points to a landing page that will onboard the customer in a good way. Both existing and new customers.
+The description should not be longer than 65 words. Keep in mind that it is not possible to format the text with fonts, styles, line breaks etc.
+For more description/information, add a webpage link.
+That you use categories relevant for your solution.
+The integration must have existing customers who are satisfied with the solution.
+Part 4: Customers adding your integration
+If Tripletex approves your integration, you will receive an email telling you the integration has been approved. 
+Log into your Integration partner account. 
+Notice that your integration got status “Approved”.
+Notice that a new page called “Integrations API Consumer“ has become available.
+Go to “Integrations API Consumer”. 
+Click “Administrate”
+Click “New row”.
+Click “Save”.
+Copy and save the consumer token.
+The integration is now available in the Tripletex “Integrations”. 
+When a customer adds your integration, Tripletex will send the customer’s companyID and employee token to the redirect URL you provided in step 2 in the integration wizard. Make sure you capture the tokens, save them and use them to complete the integration between your system and Tripletex. 
+
+All done! 
+
+FAQ
+Will it be possible to get the Employee Token with the “old” method?
+
+Yes, the Tripletex user can still generate a new Employee Token at  “API Access” (API Tilgang).
+https://hjelp.tripletex.no/hc/no/articles/4409557117713
+
+How do we store the employee token we recieve?
+
+An example on how to store the token: 
+
+@app.route('/redirect/')
+def redirect_url():
+    companyId = request.args.get('companyId')
+    companyName = request.args.get('companyName')
+    token = request.args.get('token')
+    with open('config.txt', 'w') as config_file:
+        config_file.write(f'companyId:{companyId}\n')
+        config_file.write(f'companyName:{companyName}\n')
+        config_file.write(f'employeeToken:{token}')
+    return redirect('/login')
+
+
+This script says:
+Everytime anyone makes a request to my redirect url, then read the fields: companyID, companyName and EmployeeToken and save these values in a file called config.txt. 
+
+Doc navigation
+← Support
+Webhooks →

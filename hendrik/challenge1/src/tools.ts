@@ -1,6 +1,7 @@
 import { tool } from 'ai';
 import { z } from 'zod';
 import { TripletexClient } from './tripletex';
+import { validatePost, validatePut } from './validators';
 
 export const createTools = (client: TripletexClient) => ({
     tripletex_get: tool({
@@ -19,7 +20,11 @@ export const createTools = (client: TripletexClient) => ({
             body: z.record(z.unknown()).describe('JSON body to send'),
             params: z.record(z.string()).optional().describe('Query parameters'),
         }),
-        execute: async ({ path, body, params }) => client.post(path, body, params),
+        execute: async ({ path, body, params }) => {
+            const err = validatePost(path, body);
+            if (err) return { validation_error: err, hint: "Fix the body and retry." };
+            return client.post(path, body, params);
+        },
     }),
 
     tripletex_put: tool({
@@ -29,7 +34,11 @@ export const createTools = (client: TripletexClient) => ({
             body: z.record(z.unknown()).describe('JSON body with updated fields'),
             params: z.record(z.string()).optional().describe('Query parameters'),
         }),
-        execute: async ({ path, body, params }) => client.put(path, body, params),
+        execute: async ({ path, body, params }) => {
+            const err = validatePut(path, body);
+            if (err) return { validation_error: err, hint: "Fix the body and retry." };
+            return client.put(path, body, params);
+        },
     }),
 
     tripletex_delete: tool({

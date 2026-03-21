@@ -29,7 +29,6 @@ async def predict_endpoint(request: Request):
     result = predict(body)
     elapsed = time.time() - t0
 
-    # Log request + response for offline replay
     with open(LOG_FILE, "a") as f:
         f.write(json.dumps({"ts": t0, "elapsed": elapsed, "request": body, "response": result}) + "\n")
 

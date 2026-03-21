@@ -1,0 +1,155 @@
+
+=== TIMESHEET + PROJECT INVOICE VALIDATION (Miguel pattern) uid=mmz713ud ===
+
+POST /customer → 201
+Customer: 108252103
+GET /department → 200
+POST /employee → 201
+Employee: 18568663
+GET /token/session/>whoAmI → 200
+Admin employee: 18450014
+POST /project → 201
+Project: 401963424
+GET /activity/>forTimeSheet → 200
+Activities for timesheet: ["5604608:Fakturerbart arbeid","5604607:Prosjektadministrasjon"]
+Using activity: 5604608 (Fakturerbart arbeid)
+POST /timesheet/entry → 201
+Timesheet entry: 175904880
+
+=== Checking project invoicing ===
+
+GET /project/401963424 → 200
+Project: {
+  "id": 401963424,
+  "version": 0,
+  "url": "kkpqfuj-amager.tripletex.dev/v2/project/401963424",
+  "name": "DataMigration mmz713ud",
+  "number": "85",
+  "displayName": "85 DataMigration mmz713ud",
+  "description": "",
+  "projectManager": {
+    "id": 18450014,
+    "url": "kkpqfuj-amager.tripletex.dev/v2/employee/18450014"
+  },
+  "department": null,
+  "mainProject": null,
+  "startDate": "2026-01-01",
+  "endDate": null,
+  "customer": {
+    "id": 108252103,
+    "url": "kkpqfuj-amager.tripletex.dev/v2/customer/108252103"
+  },
+  "isClosed": false,
+  "isReadyForInvoicing": false,
+  "isInternal": false,
+  "isOffer": false,
+  "isFixedPrice": false,
+  "projectCategory": null,
+  "deliveryAddress": null,
+  "boligmappaAddress": null,
+  "displayNameFormat": "NAME_STANDARD",
+  "reference": "",
+  "externalAccountsNumber": "",
+  "discountPercentage": 0,
+  "vatType": {
+    "id": 6,
+    "url": "kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/6"
+  },
+  "fixedprice": 0,
+  "contributionMarginPercent": 0,
+ 
+GET /project/hourlyRates → 200
+Project hourly rates: {
+  "fullResultSize": 1,
+  "from": 0,
+  "count": 1,
+  "versionDigest": "'If-None-Match' header not specified",
+  "values": [
+    {
+      "id": 11070219,
+      "version": 0,
+      "url": "kkpqfuj-amager.tripletex.dev/v2/project/hourlyRates/11070219",
+      "project": {
+        "id": 401963424,
+        "url": "kkpqfuj-amager.tripletex.dev/v2/project/401963424"
+      },
+      "startDate": "2026-01-01",
+      "showInProjectOrder": false,
+      "hourlyRateModel": "TYPE_FIXED_HOURLY_RATE",
+      "projectSpecificRates": [],
+      "fixedRate": 0
+    }
+  ]
+}
+
+--- Setting hourly rate ---
+POST /project/hourlyRates → 422
+  ERR: {"status":422,"code":16000,"message":"Request mapping failed","link":"https://tripletex.no/v2-docs/","developerMessage":null,"validationMessages":[{"field":"hourlyRatePrices","message":"Feltet eksisterer ikke i objektet.","path":null,"rootId":null}],"requestId":"c3b47ead-c7e4-4a8d-8cb0-544b5e0fb3a3"}
+Rate set result: {
+  "status": 422,
+  "code": 16000,
+  "message": "Request mapping failed",
+  "link": "https://tripletex.no/v2-docs/",
+  "developerMessage": null,
+  "validationMessages": [
+    {
+      "field": "hourlyRatePrices",
+      "message": "Feltet eksisterer ikke i objektet.",
+      "path": null,
+      "rootId": null
+    }
+  ],
+  "requestId": "c3b47ead-c7e4-4a8d-8cb0-544b5e0fb3a3"
+}
+
+--- Creating project invoice ---
+GET /ledger/account → 200
+POST /order → 201
+POST /order/orderline → 422
+  ERR: {"status":422,"code":18000,"message":"Validering feilet.","link":"https://tripletex.no/v2-docs/","developerMessage":"VALIDATION_ERROR","validationMessages":[{"field":"vatType.id","message":"Ugyldig mva-kode.","path":null,"rootId":null}],"requestId":"32b0ff3d-7caa-4729-bf15-0b991ca9354b"}
+POST /invoice → 201
+Invoice: {
+  "id": 2147534869,
+  "version": 3,
+  "url": "kkpqfuj-amager.tripletex.dev/v2/invoice/2147534869",
+  "invoiceNumber": 29,
+  "invoiceDate": "2026-03-20",
+  "customer": {
+    "id": 108252103,
+    "url": "kkpqfuj-amager.tripletex.dev/v2/customer/108252103"
+  },
+  "creditedInvoice": 0,
+  "isCredited": false,
+  "invoiceDueDate": "2026-04-03",
+  "kid": "",
+  "invoiceComment": "",
+  "comment": "",
+  "orders": [
+    {
+      "id": 401963425,
+      "url": "kkpqfuj-amager.tripletex.dev/v2/order/401963425
+GET /timesheet/entry → 422
+  ERR: {"status":422,"code":15000,"message":"Validation failed","link":"https://tripletex.no/v2-docs/","developerMessage":null,"validationMessages":[{"field":"dateFrom","message":"Kan ikke være null.","path":null,"rootId":null},{"field":"dateTo","message":"Kan ikke være null.","path":null,"rootId":null}],"requestId":"89ef9487-ba43-4c08-bfc0-1098bdefb03b"}
+
+Timesheet entries: {
+  "status": 422,
+  "code": 15000,
+  "message": "Validation failed",
+  "link": "https://tripletex.no/v2-docs/",
+  "developerMessage": null,
+  "validationMessages": [
+    {
+      "field": "dateFrom",
+      "message": "Kan ikke være null.",
+      "path": null,
+      "rootId": null
+    },
+    {
+      "field": "dateTo",
+      "message": "Kan ikke være null.",
+      "path": null,
+      "rootId": null
+    }
+  ],
+  "requestId": "89ef9487-ba43-4c08-bfc0-1098bdefb03b"
+}

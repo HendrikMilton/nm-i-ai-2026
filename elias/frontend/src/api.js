@@ -17,3 +17,7 @@ export async function fetchRound(roundId) {
 export async function fetchLeaderboard() {
   return apiFetch('/leaderboard')
 }
+
+export async function fetchAnalysis(roundId, seedIndex) {
+  return apiFetch(`/analysis/${roundId}/${seedIndex}`)
+}

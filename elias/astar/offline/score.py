@@ -1,17 +1,25 @@
 """
-Scoring utility — compute Astar Island scores locally.
+Astar Island v2 — Scoring with unified floors.
 
-Can score against:
-  1. Real ground truth from the analysis API (completed rounds)
-  2. Simulator-generated ground truth (offline testing)
+Uses CLASS_FLOORS consistently in KL computation (v2 fix: v1 used 1e-10).
 """
 
 import math
+import sys
+import os
+
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+from run import CLASS_FLOORS
 
 
 def kl_divergence(p, q):
-    """KL(p || q) for single cell probability vectors."""
-    return sum(pi * math.log(pi / max(qi, 1e-10)) for pi, qi in zip(p, q) if pi > 0)
+    """KL(p || q) using CLASS_FLOORS as minimum for q (not 1e-10)."""
+    total = 0.0
+    for i, (pi, qi) in enumerate(zip(p, q)):
+        if pi > 0:
+            qi_floor = max(qi, CLASS_FLOORS[i])
+            total += pi * math.log(pi / qi_floor)
+    return total
 
 
 def cell_entropy(p):
@@ -22,12 +30,7 @@ def cell_entropy(p):
 def score_prediction(prediction, ground_truth):
     """Score a prediction tensor against ground truth.
 
-    Args:
-        prediction: H x W x 6 probability tensor
-        ground_truth: H x W x 6 probability tensor
-
-    Returns:
-        dict with score, weighted_kl, scored_cells, per_cell details
+    Returns dict with score, weighted_kl, scored_cells, worst_cells.
     """
     h = len(ground_truth)
     w = len(ground_truth[0])
@@ -50,7 +53,6 @@ def score_prediction(prediction, ground_truth):
             total_kl += ent * kl
             total_entropy += ent
             scored_cells += 1
-
             worst_cells.append((r, c, ent * kl, kl, ent))
 
     weighted_kl = total_kl / total_entropy if total_entropy > 0 else 0
@@ -68,15 +70,7 @@ def score_prediction(prediction, ground_truth):
 
 
 def score_all_seeds(predictions, ground_truths):
-    """Score predictions for multiple seeds.
-
-    Args:
-        predictions: dict of seed_index -> H x W x 6 tensor
-        ground_truths: dict of seed_index -> H x W x 6 tensor
-
-    Returns:
-        dict with per-seed scores and round average
-    """
+    """Score predictions for multiple seeds."""
     seed_results = {}
     scores = []
 
@@ -94,38 +88,3 @@ def score_all_seeds(predictions, ground_truths):
         "seed_scores": {k: v["score"] for k, v in seed_results.items()},
         "seed_details": seed_results,
     }
-
-
-if __name__ == "__main__":
-    # Quick test: score priors against Round 4
-    import sys, os
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-    from utils import get_round, get_analysis, floor_and_normalize
-    from run import TERRAIN_PRIORS, parse_initial_grid, extract_map_dimensions
-
-    round_id = "8e839974-b13b-407b-a5e7-fc749d877195"
-    rd = get_round(round_id)
-    map_w, map_h = extract_map_dimensions(rd)
-
-    predictions = {}
-    ground_truths = {}
-
-    for seed in range(5):
-        analysis = get_analysis(round_id, seed)
-        ground_truths[seed] = analysis["ground_truth"]
-        ig = analysis["initial_grid"]
-
-        pred = []
-        for r in range(map_h):
-            row = []
-            for c in range(map_w):
-                prior = list(TERRAIN_PRIORS.get(ig[r][c], [1/6]*6))
-                row.append(prior)
-            pred.append(row)
-        pred = floor_and_normalize(pred)
-        predictions[seed] = pred
-
-    results = score_all_seeds(predictions, ground_truths)
-    print(f"Round score: {results['round_score']}")
-    for seed, score in results["seed_scores"].items():
-        print(f"  Seed {seed}: {score}")

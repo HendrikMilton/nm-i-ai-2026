@@ -1,14 +1,12 @@
 """
-Astar Island — Offline Simulator
-
-Implements the 5-phase Norse civilisation simulation based on documented mechanics.
-Hidden parameters are configurable via a params dict for calibration against real API data.
+Astar Island v2 — Simulator (self-contained, unified floors).
 """
 
-import copy
 import math
+import os
 import random
-from dataclasses import dataclass, field
+import sys
+from dataclasses import dataclass
 
 # Terrain codes (internal)
 OCEAN = 10
@@ -26,7 +24,7 @@ TERRAIN_TO_CLASS = {
     SETTLEMENT: 1, PORT: 2, RUIN: 3, FOREST: 4, MOUNTAIN: 5,
 }
 
-# Default hidden parameters — tune these against real observations
+# Default hidden parameters
 DEFAULT_PARAMS = {
     # Growth
     "base_food_production": 0.3,
@@ -93,13 +91,6 @@ class Simulator:
     """Runs a single stochastic simulation of the Astar Island world."""
 
     def __init__(self, grid, settlements_data, params=None, seed=None):
-        """
-        Args:
-            grid: 2D list of terrain codes (H x W)
-            settlements_data: list of dicts with settlement info from initial state
-            params: dict of simulation parameters (defaults used if None)
-            seed: random seed for this simulation run
-        """
         self.params = {**DEFAULT_PARAMS, **(params or {})}
         self.rng = random.Random(seed)
         self.height = len(grid)
@@ -107,7 +98,6 @@ class Simulator:
         self.grid = [row[:] for row in grid]
         self.settlements: list[Settlement] = []
 
-        # Build settlements from initial data
         for s in settlements_data:
             self.settlements.append(Settlement(
                 x=s["x"], y=s["y"],
@@ -121,13 +111,12 @@ class Simulator:
                 tech_level=s.get("tech_level", self.rng.random() * 0.2),
             ))
 
-        # Sync grid with settlement positions
         for s in self.settlements:
             if s.alive:
                 self.grid[s.y][s.x] = PORT if s.has_port else SETTLEMENT
 
     def _dist(self, x1, y1, x2, y2):
-        return math.sqrt((x1 - x2) ** 2 + (y1 - y2) ** 2)
+        return max(abs(x1 - x2), abs(y1 - y2))
 
     def _adjacent_cells(self, x, y):
         for dx in (-1, 0, 1):
@@ -160,46 +149,39 @@ class Simulator:
     def _is_buildable(self, x, y):
         """Check if a cell can have a new settlement."""
         t = self.grid[y][x]
-        return t in (PLAINS, EMPTY, RUIN)
+        return t in (PLAINS, EMPTY, RUIN, FOREST)
 
     # --- Phase 1: Growth ---
     def _phase_growth(self):
         p = self.params
         for s in self._alive_settlements():
-            # Food production
             forest_adj = self._adjacent_terrain_count(s.x, s.y, FOREST)
             food_prod = p["base_food_production"] + forest_adj * p["forest_food_bonus"]
             food_prod *= (1 + s.tech_level * 0.5)
             s.food += food_prod
 
-            # Population growth
             if s.food > p["population_food_threshold"]:
                 s.population += p["population_growth_rate"] * s.population
                 s.population = min(s.population, 5.0)
 
-            # Defense grows with population
             s.defense = min(s.defense + 0.02 * s.population, 2.0)
 
-            # Port development
             if not s.has_port and self._is_coastal(s.x, s.y):
                 if s.wealth > p["port_development_threshold"]:
                     if self.rng.random() < p["port_development_chance"]:
                         s.has_port = True
                         self.grid[s.y][s.x] = PORT
 
-            # Longship building
             if s.has_port and not s.has_longship:
                 if s.wealth > p["longship_build_threshold"]:
                     if self.rng.random() < p["longship_build_chance"]:
                         s.has_longship = True
 
-            # Expansion — found new settlement nearby
             if s.population > p["expansion_threshold"]:
                 if self.rng.random() < p["expansion_chance"]:
                     self._try_expand(s)
 
     def _try_expand(self, parent):
-        """Try to found a new settlement near a prosperous parent."""
         p = self.params
         radius = p["expansion_radius"]
         candidates = []
@@ -250,7 +232,6 @@ class Simulator:
             if self.rng.random() > raid_chance:
                 continue
 
-            # Find targets in range from different factions
             targets = [
                 t for t in alive
                 if t.alive and t.owner_id != attacker.owner_id
@@ -260,12 +241,10 @@ class Simulator:
                 continue
 
             defender = self.rng.choice(targets)
-            # Raid outcome based on relative strength
             attack_power = attacker.population * (1 + attacker.tech_level) * attacker.defense
             defend_power = defender.population * (1 + defender.tech_level) * defender.defense
 
             if attack_power > defend_power * self.rng.uniform(0.5, 1.5):
-                # Successful raid
                 loot_food = defender.food * p["raid_loot_fraction"]
                 loot_wealth = defender.wealth * p["raid_loot_fraction"]
                 attacker.food += loot_food
@@ -275,7 +254,6 @@ class Simulator:
                 defender.defense -= p["raid_damage"]
                 defender.population *= (1 - p["raid_damage"] * 0.5)
 
-                # Conquest
                 if self.rng.random() < p["conquest_chance"]:
                     defender.owner_id = attacker.owner_id
 
@@ -287,7 +265,6 @@ class Simulator:
         for i, a in enumerate(ports):
             for b in ports[i + 1:]:
                 if a.owner_id == b.owner_id or self.rng.random() < 0.5:
-                    # Same faction or random chance to trade
                     dist = self._dist(a.x, a.y, b.x, b.y)
                     if dist <= p["trade_range"]:
                         a.food += p["trade_food_bonus"]
@@ -295,7 +272,6 @@ class Simulator:
                         a.wealth += p["trade_wealth_bonus"]
                         b.wealth += p["trade_wealth_bonus"]
 
-                        # Tech diffusion
                         tech_diff = abs(a.tech_level - b.tech_level)
                         transfer = tech_diff * p["tech_diffusion_rate"]
                         if a.tech_level > b.tech_level:
@@ -314,11 +290,9 @@ class Simulator:
             s.food -= food_loss
             s.food = max(s.food, 0)
 
-            # Population loss from starvation
             if s.food <= 0:
                 s.population *= 0.7
 
-            # Check for collapse
             should_collapse = False
             if s.food < p["collapse_food_threshold"]:
                 if self.rng.random() < p["collapse_chance_base"] * (1 + severity):
@@ -331,11 +305,9 @@ class Simulator:
                 self._collapse_settlement(s)
 
     def _collapse_settlement(self, s):
-        """Settlement collapses into a ruin, dispersing population."""
         s.alive = False
         self.grid[s.y][s.x] = RUIN
 
-        # Disperse population to nearby friendly settlements
         nearby = [
             t for t in self._alive_settlements()
             if t.owner_id == s.owner_id
@@ -349,13 +321,16 @@ class Simulator:
     # --- Phase 5: Environment ---
     def _phase_environment(self):
         p = self.params
-        ruins = [(s.x, s.y) for s in self.settlements if not s.alive]
+        ruins = []
+        for r in range(self.height):
+            for c in range(self.width):
+                if self.grid[r][c] == RUIN:
+                    ruins.append((c, r))
 
         for rx, ry in ruins:
             if self.grid[ry][rx] != RUIN:
                 continue
 
-            # Check if a nearby thriving settlement reclaims it
             reclaimed = False
             for s in self._alive_settlements():
                 dist = self._dist(s.x, s.y, rx, ry)
@@ -378,7 +353,6 @@ class Simulator:
                         break
 
             if not reclaimed:
-                # Nature reclaims: forest or plains
                 if self._adjacent_terrain_count(rx, ry, FOREST) > 0:
                     if self.rng.random() < p["ruin_forest_reclaim_chance"]:
                         self.grid[ry][rx] = FOREST
@@ -387,7 +361,6 @@ class Simulator:
 
     # --- Run simulation ---
     def step(self):
-        """Run one year (all 5 phases)."""
         self._phase_growth()
         self._phase_conflict()
         self._phase_trade()
@@ -395,91 +368,59 @@ class Simulator:
         self._phase_environment()
 
     def run(self, years=50):
-        """Run the full simulation."""
         for _ in range(years):
             self.step()
         return self.grid
 
     def get_class_grid(self):
-        """Return grid mapped to prediction classes (H x W)."""
         return [
             [TERRAIN_TO_CLASS.get(cell, 0) for cell in row]
             for row in self.grid
         ]
 
 
-def run_monte_carlo(grid, settlements_data, n_sims=200, params=None, base_seed=None):
-    """
-    Run many stochastic simulations and return per-cell probability distributions.
+def _run_single_sim(args):
+    """Worker function for parallel Monte Carlo. Returns flattened class grid."""
+    grid, settlements_data, params, seed = args
+    sim = Simulator(grid, settlements_data, params=params, seed=seed)
+    sim.run()
+    cg = sim.get_class_grid()
+    return [cg[r][c] for r in range(len(cg)) for c in range(len(cg[0]))]
 
-    Returns: H x W x 6 probability tensor
-    """
+
+def run_monte_carlo(grid, settlements_data, n_sims=200, params=None, base_seed=None):
+    """Run MC simulations. Uses unified CLASS_FLOORS."""
+    from concurrent.futures import ProcessPoolExecutor
+
+    sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+    from run import CLASS_FLOORS
+
     h = len(grid)
     w = len(grid[0]) if h > 0 else 0
-    counts = [[[0] * 6 for _ in range(w)] for _ in range(h)]
 
+    tasks = []
     for i in range(n_sims):
         seed = (base_seed or 0) + i if base_seed is not None else None
-        sim = Simulator(grid, settlements_data, params=params, seed=seed)
-        sim.run()
-        class_grid = sim.get_class_grid()
+        tasks.append((grid, settlements_data, params, seed))
 
-        for r in range(h):
-            for c in range(w):
-                counts[r][c][class_grid[r][c]] += 1
+    n_workers = min(n_sims, max(1, os.cpu_count() - 1))
+    counts = [[[0] * 6 for _ in range(w)] for _ in range(h)]
 
-    # Convert counts to probabilities with floor
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        for flat_grid in pool.map(_run_single_sim, tasks):
+            idx = 0
+            for r in range(h):
+                for c in range(w):
+                    counts[r][c][flat_grid[idx]] += 1
+                    idx += 1
+
     prediction = [[[0.0] * 6 for _ in range(w)] for _ in range(h)]
-    floor = 0.01
     for r in range(h):
         for c in range(w):
             for k in range(6):
-                prediction[r][c][k] = max(counts[r][c][k] / n_sims, floor)
+                prediction[r][c][k] = max(counts[r][c][k] / n_sims, CLASS_FLOORS[k])
             total = sum(prediction[r][c])
             for k in range(6):
                 prediction[r][c][k] /= total
 
     return prediction
-
-
-if __name__ == "__main__":
-    # Quick test with a small map
-    test_grid = [
-        [OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN],
-        [OCEAN, FOREST, PLAINS, PLAINS, PLAINS, PLAINS, FOREST, PLAINS, PLAINS, OCEAN],
-        [OCEAN, PLAINS, PLAINS, FOREST, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, OCEAN],
-        [OCEAN, PLAINS, PLAINS, PLAINS, PLAINS, MOUNTAIN, PLAINS, PLAINS, PLAINS, OCEAN],
-        [OCEAN, FOREST, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, FOREST, PLAINS, OCEAN],
-        [OCEAN, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, OCEAN],
-        [OCEAN, PLAINS, PLAINS, MOUNTAIN, PLAINS, PLAINS, FOREST, PLAINS, PLAINS, OCEAN],
-        [OCEAN, PLAINS, FOREST, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, OCEAN],
-        [OCEAN, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, PLAINS, OCEAN],
-        [OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN, OCEAN],
-    ]
-    test_settlements = [
-        {"x": 2, "y": 2, "has_port": False, "alive": True, "owner_id": 0},
-        {"x": 7, "y": 4, "has_port": False, "alive": True, "owner_id": 1},
-        {"x": 4, "y": 7, "has_port": False, "alive": True, "owner_id": 2},
-    ]
-
-    print("Running single simulation...")
-    sim = Simulator(test_grid, test_settlements, seed=42)
-    final_grid = sim.run()
-    for row in sim.get_class_grid():
-        print([str(c) for c in row])
-
-    print(f"\nSettlements: {sum(1 for s in sim.settlements if s.alive)} alive, "
-          f"{sum(1 for s in sim.settlements if not s.alive)} dead")
-
-    print("\nRunning Monte Carlo (100 sims)...")
-    probs = run_monte_carlo(test_grid, test_settlements, n_sims=100, base_seed=0)
-    # Show entropy of dynamic cells
-    dynamic = 0
-    for r in range(len(probs)):
-        for c in range(len(probs[0])):
-            p = probs[r][c]
-            entropy = -sum(pi * math.log(pi) for pi in p if pi > 0)
-            if entropy > 0.1:
-                dynamic += 1
-    print(f"Dynamic cells (entropy > 0.1): {dynamic}")
-    print("Done.")

@@ -1,0 +1,49 @@
+{
+  "started_at": "2026-03-20T23:51:24.072276+00:00",
+  "map_width": 40,
+  "map_height": 40,
+  "queries": [],
+  "submissions": [],
+  "actions": [
+    {
+      "timestamp": "2026-03-20T23:51:24.072376+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-20T23:51:47.176223+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-21T00:09:31.524031+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-21T00:10:01.682048+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-21T00:10:12.845522+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-21T00:15:13.008409+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-21T00:17:04.809906+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    },
+    {
+      "timestamp": "2026-03-21T06:13:59.163857+00:00",
+      "action": "no_active_round_found",
+      "details": {}
+    }
+  ]
+}

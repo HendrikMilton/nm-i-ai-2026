@@ -1,0 +1,172 @@
+=== Auto-submit started at Sat Mar 21 03:57:21 UTC 2026 ===
+Fetching active round...
+Active round: 795bfb1f-54bd-4f39-a526-9868b36f7ebd
+Map: 40x40
+Seeds with grids: 5
+Dynamic cells (seed 0): 45
+Budget: 50 remaining (0 used / 50 max)
+Full-coverage tiling: 9 viewports/seed × 5 seeds = 45 queries
+Phase 2: 5 queries (extra on hardest)
+  Seed 0 Phase 1 (9 queries)
+
+--- Seed 0 (9 queries) ---
+  simulate seed=0 viewport=(1,1)
+    budget remaining: 49
+  simulate seed=0 viewport=(13,1)
+    budget remaining: 48
+  simulate seed=0 viewport=(24,1)
+    budget remaining: 47
+  simulate seed=0 viewport=(1,13)
+    budget remaining: 46
+  simulate seed=0 viewport=(13,13)
+    budget remaining: 45
+  simulate seed=0 viewport=(24,13)
+    budget remaining: 44
+  simulate seed=0 viewport=(1,24)
+    budget remaining: 43
+  simulate seed=0 viewport=(13,24)
+    budget remaining: 42
+  simulate seed=0 viewport=(24,24)
+    budget remaining: 41
+  Seed 1 Phase 1 (9 queries)
+
+--- Seed 1 (9 queries) ---
+  simulate seed=1 viewport=(1,1)
+    budget remaining: 40
+  simulate seed=1 viewport=(13,1)
+    budget remaining: 39
+  simulate seed=1 viewport=(24,1)
+    budget remaining: 38
+  simulate seed=1 viewport=(1,13)
+    budget remaining: 37
+  simulate seed=1 viewport=(13,13)
+    budget remaining: 36
+  simulate seed=1 viewport=(24,13)
+    budget remaining: 35
+  simulate seed=1 viewport=(1,24)
+    budget remaining: 34
+  simulate seed=1 viewport=(13,24)
+    budget remaining: 33
+  simulate seed=1 viewport=(24,24)
+    budget remaining: 32
+  Seed 2 Phase 1 (9 queries)
+
+--- Seed 2 (9 queries) ---
+  simulate seed=2 viewport=(1,1)
+    budget remaining: 31
+  simulate seed=2 viewport=(13,1)
+    budget remaining: 30
+  simulate seed=2 viewport=(24,1)
+    budget remaining: 29
+  simulate seed=2 viewport=(1,13)
+    budget remaining: 28
+  simulate seed=2 viewport=(13,13)
+    budget remaining: 27
+  simulate seed=2 viewport=(24,13)
+    budget remaining: 26
+  simulate seed=2 viewport=(1,24)
+    budget remaining: 25
+  simulate seed=2 viewport=(13,24)
+    budget remaining: 24
+  simulate seed=2 viewport=(24,24)
+    budget remaining: 23
+  Seed 3 Phase 1 (9 queries)
+
+--- Seed 3 (9 queries) ---
+  simulate seed=3 viewport=(1,1)
+    budget remaining: 22
+  simulate seed=3 viewport=(13,1)
+    budget remaining: 21
+  simulate seed=3 viewport=(24,1)
+    budget remaining: 20
+  simulate seed=3 viewport=(1,13)
+    budget remaining: 19
+  simulate seed=3 viewport=(13,13)
+    budget remaining: 18
+  simulate seed=3 viewport=(24,13)
+    budget remaining: 17
+  simulate seed=3 viewport=(1,24)
+    budget remaining: 16
+  simulate seed=3 viewport=(13,24)
+    budget remaining: 15
+  simulate seed=3 viewport=(24,24)
+    budget remaining: 14
+  Seed 4 Phase 1 (9 queries)
+
+--- Seed 4 (9 queries) ---
+  simulate seed=4 viewport=(1,1)
+    budget remaining: 13
+  simulate seed=4 viewport=(13,1)
+    budget remaining: 12
+  simulate seed=4 viewport=(24,1)
+    budget remaining: 11
+  simulate seed=4 viewport=(1,13)
+    budget remaining: 10
+  simulate seed=4 viewport=(13,13)
+    budget remaining: 9
+  simulate seed=4 viewport=(24,13)
+    budget remaining: 8
+  simulate seed=4 viewport=(1,24)
+    budget remaining: 7
+  simulate seed=4 viewport=(13,24)
+    budget remaining: 6
+  simulate seed=4 viewport=(24,24)
+    budget remaining: 5
+  Phase 2: 5 queries, priority: [3, 2, 4, 0, 1]
+
+--- Seed 3 (5 queries) ---
+  simulate seed=3 viewport=(1,1)
+    budget remaining: 4
+  simulate seed=3 viewport=(13,1)
+    budget remaining: 3
+  simulate seed=3 viewport=(24,1)
+    budget remaining: 2
+  simulate seed=3 viewport=(1,13)
+    budget remaining: 1
+  simulate seed=3 viewport=(13,13)
+    budget remaining: 0
+  Expansion rate: 0.166 → warm round
+  Dist multipliers: d1=2.42 d2=0.62 d3=0.02 d4=0.00 d5=0.00 d6=0.00 d7=0.00
+  Port ratio: 0.059, Ruin ratio: 0.055
+
+Expansion rate estimate: 0.166 (warm)
+
+Building prediction for seed 0...
+  Prediction built in 1.6s
+  Submitting seed 0...
+  Submit result: {'status': 'accepted', 'round_id': '795bfb1f-54bd-4f39-a526-9868b36f7ebd', 'seed_index': 0}
+
+Building prediction for seed 1...
+  Prediction built in 1.1s
+  Submitting seed 1...
+  Submit result: {'status': 'accepted', 'round_id': '795bfb1f-54bd-4f39-a526-9868b36f7ebd', 'seed_index': 1}
+
+Building prediction for seed 2...
+  Prediction built in 2.2s
+  Submitting seed 2...
+  Submit result: {'status': 'accepted', 'round_id': '795bfb1f-54bd-4f39-a526-9868b36f7ebd', 'seed_index': 2}
+
+Building prediction for seed 3...
+  Prediction built in 2.2s
+  Submitting seed 3...
+  Submit result: {'status': 'accepted', 'round_id': '795bfb1f-54bd-4f39-a526-9868b36f7ebd', 'seed_index': 3}
+
+Building prediction for seed 4...
+  Prediction built in 1.6s
+  Submitting seed 4...
+  Submit result: {'status': 'accepted', 'round_id': '795bfb1f-54bd-4f39-a526-9868b36f7ebd', 'seed_index': 4}
+
+Done! All 5 seeds submitted.
+
+=== Finished at Sat Mar 21 03:59:01 UTC 2026 (exit code: 0) ===
+  [heartbeat] Sat Mar 21 04:04:01 UTC 2026 — 3300s remaining
+  [heartbeat] Sat Mar 21 04:09:01 UTC 2026 — 3000s remaining
+  [heartbeat] Sat Mar 21 04:14:01 UTC 2026 — 2700s remaining
+  [heartbeat] Sat Mar 21 04:19:01 UTC 2026 — 2400s remaining
+  [heartbeat] Sat Mar 21 04:24:01 UTC 2026 — 2100s remaining
+  [heartbeat] Sat Mar 21 04:29:01 UTC 2026 — 1800s remaining
+  [heartbeat] Sat Mar 21 04:34:01 UTC 2026 — 1500s remaining
+  [heartbeat] Sat Mar 21 04:39:01 UTC 2026 — 1200s remaining
+  [heartbeat] Sat Mar 21 04:44:01 UTC 2026 — 900s remaining
+  [heartbeat] Sat Mar 21 04:49:01 UTC 2026 — 600s remaining
+  [heartbeat] Sat Mar 21 04:54:01 UTC 2026 — 300s remaining

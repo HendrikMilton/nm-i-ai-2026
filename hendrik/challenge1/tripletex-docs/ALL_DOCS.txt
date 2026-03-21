@@ -1,0 +1,1400 @@
+================================================================================
+# Getting started – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/getting-started
+================================================================================
+
+Getting started
+
+In this section you will find useful resources and guides help you get started with testing and building your integration with Tripletex.
+
+Here is the Getting Started information summarized in a FAQ.
+
+Articles
+1. Creating a test account
+2. Explore
+3. Getting ready for production
+Doc navigation
+Authentication and tokens →
+
+================================================================================
+# Documentation – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation
+================================================================================
+
+Documentation
+Articles
+Getting started
+1. Creating a test account
+2. Explore
+3. Getting ready for production
+Authentication and tokens
+Integration best practices
+FAQ
+Getting Started
+General
+Invoice/order
+Customer
+Product/Inventory
+Postman
+SupplierInvoice / Attestation
+Ledger/voucher
+Departments
+Integration Marketplace
+Support
+Integration marketplace
+Webhooks
+Checksum
+Using vatTypes/VAT-codes
+Debt collection (voucher status)
+Useful resources
+GitHub
+OpenAPI Docs
+How-to guides
+OpenAPI Documentation
+
+================================================================================
+# 1. Creating a test account – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/getting-started/1-creating-a-test-account
+================================================================================
+
+1. Creating a test account
+The credentials you receive for the test environment will NOT work in the production environment (tripletex.no). You will only be able to sign in and authenticate via the API/GUI of api-test.tripletex.tech with these credentials. The production and test environments are two completely separate instances.
+
+The test environment is completely separated from the production environment in its own instance. This means there will not be any data from production in the test account. We do not have the capability to copy or mirror data from any existing account to a test account. All test data must be created by you within the test account.
+
+
+Please note that we do not send any emails from the test environment. For example emails related to orders, invoices or purchase orders.
+
+
+
+Creating a test account in our test environment to explore the API is simple, and free of charge, all you need to do is to fill out this form as shown below.
+
+
+Fill out your basic contact info and a valid e-mail address.
+Read and approve the ToS and confirm that you are not a robot.
+At this screen it is important that you copy and save both tokens and the application name.
+We can not recover this information for you!
+
+Filling out this form grants you almost instant access to the API test environment at api-test.tripletex.tech with both a consumer and employee token. You’ll just need to verify your email address and set a password.
+Test accounts expires after 6 months, but we can extend this period when it has expired, or is about to expire. Just contact us and we will extend the test period for your account. We do not offer test accounts in the test environment without a expiration date.
+If you have a commercial integration and find a need for a test account in production (only after receiving a consumer token for production) due to limitations in the test environment we can’t amend, feel free to contact us explaining your needs for a test account in production.
+
+Doc navigation
+2. Explore →
+
+================================================================================
+# 2. Explore – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/getting-started/2-explore
+================================================================================
+
+2. Explore
+
+To explore what is possible within Tripletex we encourage you to check how things look and To explore what is possible within Tripletex, we encourage you to examine the user interface (GUI) for a practical understanding, followed by a review of our documentation. If you do not have a test account yet, refer to Step 1: Creating a Test Account in this section. Anyone can sign up for a test account in the test environment at any time.
+
+Our documentation is interactive, enabling you to test endpoints directly in your web browser. This feature is also invaluable for troubleshooting. Before reporting issues to support, we recommend using the OpenAPI documentation to eliminate any potential issues with your code.
+
+We maintain separate instances for testing and production:
+
+Test Environment: https://api-test.tripletex.tech/v2-docs/
+Production Environment: https://tripletex.no/v2-docs/
+
+Please remember that credentials for the test environment are not valid in production, and vice versa. Once your integration is approved by us, you will receive a consumer token for production. For more details on getting ready for production, see Getting Ready for Production. To request a test account in production, please contact us.
+
+To authenticate in the OpenAPI documentation, you must use your consumer and employee tokens to generate a session token. More information is available in our authentication section here.
+
+Once your session token is established, you can authenticate by selecting “Authorize” at the top of the page or the padlocks next to different endpoints. Use “0” (zero) as the username and your session token as the password.
+
+For an example of authenticating and executing a request in the OpenAPI documentation, and for more information on how to use it, refer to our OpenAPI documentation.
+
+Use either the “Authorize” button or the padlock-icon to enter your credentials
+Enter 0 (zero) as your username and your session token as your password.
+Find the endpoint you want to test and click “Try it out”, for this test we’re running GET /customer
+Fill out any parameters you want to add to the request, in some cases some might be mandatory. Here we are just specifying that we do not want inactive customers in our response.
+Click “Execute” to run the request
+The response body is now displayed under the request URL together with a response code.
+Below the response you can see the model of the endpoint/method.
+Doc navigation
+← 1. Creating a test account
+3. Getting ready for production →
+
+================================================================================
+# 3. Getting ready for production – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/getting-started/3-getting-ready-for-production
+================================================================================
+
+3. Getting ready for production
+
+Once you have tested your integration in our test environment and planned out the scope of your integration it is time to think about progressing to production.
+
+To gain access to the API in production you will need to send an application to us. This is a screening process and is mandatory for all integrators, even if the integration is for internal use only.
+
+To apply for access to production you can fill out this form. Usually you will get a response within 2-3 weeks. We have no way to speed up this process for individual applications. The response will be sent to the e-mail address given as technical contact in the form.
+
+In the approval e-mail you will find some basic info, consumer token and application name, and how to reach us. If it is a commercial integration you will also find a link to a form where you can apply to have your integration published on Tripletex.no. If you haven’t received a response within the estimated time or need to change your application name, please contact us.
+
+Once you receive your consumer token, your end users can start using your integration by selecting “Adapted setup” when creating an employee token and providing your application name. They will also need to choose what entitlements the API key should have: All entitlements, copy the user’s entitlements, or assign them manually. Your customers can find a how-to guide on this process in our help center.
+
+Doc navigation
+← 2. Explore
+
+================================================================================
+# Authentication and tokens – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/authentication-and-tokens
+================================================================================
+
+Authentication and tokens
+
+Authentication is done via Basic access authentication.
+
+Username is used to specify what company to access.
+0 (zero) or blank means the company of the employee, employee here meaning the owner of the employee token.
+Any other value for user name means accountant clients. Use /company/>withLoginAccess to get a list of those. More info about these tokens can be found here.
+Password is the sessionToken.
+
+In Tripletex you authenticate using two tokens to create a session token. These two tokens are employee tokens and consumer tokens. For the test environment at api-test.tripletex.tech, you will be given both tokens as well as an email for user activation, once you sign up. For production you will need to apply for access via this form. The consumer token for production is given to each developer once you are approved via email together with your application name within Tripletex. You will use the same token for each end user of the integration.
+
+Please note:
+Credentials/tokens for test (api-test.tripletex.tech) will not work in production (tripletex.no), and vice versa.
+
+The employee token is created by the end user within the GUI and can be either a regular employee token or an accountants employee token. The latter requires some extra steps for authentication, please see further down in this article for information about this.
+
+For your customer to create a regular employee token they log in, activate the integrations-service if they have not already, and then head to the API-access tab for the user they want to own the token. 
+
+From here they click “New token”. If you have submitted an access template to us then your integration will be available from the application dropdown, the end user only has to select your integration, give it a name to associate with the token and click “Create token”.
+
+If your integration is not available in the dropdown, then you need to provide the end user with your application name, the user then clicks “Adapted setup”, and enters it in the application name field (case sensitive). 
+
+For adapted setup the user also decides to give the token all entitlements, the same entitlements as the owner or no entitlements, these can always be tweaked later on. If the end-user sets “All entitlements” on a token owned by a user that does not have all entitlements on their account, these will be activated but greyed out in the token’s entitlement list.
+
+Example showing the user, and in effect also the API key, only having access to customer reports for own department.
+
+Any entitlement given to the token but not the owner will be disabled. 
+
+For both setups the user gives the token a unique name that they will recognise in the last field. End users can find a how-to article here: https://hjelp.tripletex.no/hc/no/articles/4409557117713
+
+When the token is created it will appear once in a dialogue popup:
+
+If the user misplaces this they can generate a new token for the same integration, this invalidates the previous token. 
+
+The user can also click on the token name to adjust entitlements. Note that an employee token can not have an entitlement that the owner does not have.
+
+Once you have both your consumer and an employee token you are ready to authenticate towards the API. We will be using Postman in this example.
+
+First we will make a request to PUT token/session/:create, here we will pass my consumer and employee token as well as an expiration date. For this example we have set the expiration date to tomorrow’s date via a variable, but you are free to set your own. The token will expire when the server time (CET) crosses midnight and the date changes to the one provided here.
+
+In the response you receive our session token. This token is what you use in the authentication header. 
+
+Tip: You can assign the value of this response to a variable with the following test:
+
+var jsonData = JSON.parse(responseBody);
+postman.setEnvironmentVariable("token", jsonData.value.token);
+
+For the authentication settings we enter username 0 and set the password to be the session token. Then set authentication to Basic auth in Postman. Now when you create any new requests in this collection, set them to inherit this auth, and this means we are ready to make requests toward this Tripletex account.
+
+Accountant Clients & Tokens
+
+As mentioned earlier we have two different kinds of employee tokens. The second kind is an accountant token. To explain this we first have to briefly describe the accountant access feature in Tripletex.
+
+In Tripletex any given accountant that has access to Tripletex for their accounting office also has the possibility to create client access via their Tripletex account to their clients. This is done so that their clients won’t need to create individual user accounts for the accountant offices staff in each company. 
+
+Once client access is established the user admin of the accounting office adds their users to the client and assigns entitlements to them through their client access settings. After the client access is established, the accounting office has to be granted API access to the client. The entitlement “API access” is found under “Accountant” in the client’s Company settings.
+Accountant API tokens works the same way, once an accountant token is created it must be added to each client the token should have access to and be assigned entitlements. The accountant token does not have access to any data within the accounting office’s account.
+
+For the authentication this changes a few things. We still create a session token like before, but we can not use 0 as the username for any requests other than GET company/>withLoginAccess and GET token/session/>whoAmI. To be able to run any requests to the client account we have to run GET /company/>withLoginAccess. This will return a list of all clients that the token has been given access to. From here we then use the client’s ID from this list as a username in future requests, so if I want to access this company I will need to use the ID found here as the username, followed by my session token as the password. After this we can perform API calls like usual.
+
+Doc navigation
+← Getting started
+Integration best practices →
+
+================================================================================
+# Integration best practices – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/integration-best-practices
+================================================================================
+
+Integration best practices
+Minimize your requests
+
+To make your requests faster and more efficient, filter data using the available query parameters of endpoints.
+
+For example, a GET /order request can be fine-tuned with specific orderDateFrom and orderDateTo parameters to avoid retrieving unnecessary order history. The isClosed parameter can be specified with a true or false value, and a customer ID can be used with customerId to narrow down further.
+
+This reduces the number of objects requested, and reduces the data processed by the server’s SQL database query.
+
+Minimize the response
+
+To further improve efficiency, utilize the fields parameter to fetch only the necessary data, cutting down the response size.
+
+For instance, if you only need the order number and some customer details from a GET /order request, your fields query could be formatted like this: fields=number,customer(displayName).
+
+This method conserves bandwidth and processing power on both the server and client sides, resulting in quicker response times.
+
+Error Handling
+
+Proper error handling ensures smooth API integration. In addition to your system’s logging (e.g., request IDs, HTTP status codes), display crucial error information from the API response to users. Typically, just showing the error code and developer message suffices to help them identify issues.
+
+Include your own brief message and design errors so users can forward them to your support if needed. If the Tripletex API error details don’t help you solve the problem, the developer of the integration can contact us via the contact form for developers.
+
+Syncing data
+
+To minimize unnecessary traffic with your integration and reduce load on our API, begin with an initial data sync. After that, use webhooks to track updates and changes to objects instead of polling with GET requests. The checksum method is another option, particularly for smaller datasets or those that change infrequently, yielding similar results to webhooks.
+
+Doc navigation
+← Authentication and tokens
+FAQ →
+
+================================================================================
+# FAQ – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq
+================================================================================
+
+FAQ
+
+In this section you will find a list of frequently asked question and an answer. Categorized by endpoint.
+
+Articles
+Getting Started
+General
+Invoice/order
+Customer
+Product/Inventory
+Postman
+SupplierInvoice / Attestation
+Ledger/voucher
+Departments
+Integration Marketplace
+Doc navigation
+← Integration best practices
+Support →
+
+================================================================================
+# Getting Started – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/getting-started
+================================================================================
+
+Getting Started
+
+Table of Contents
+
+Step 1: Creating a Test Account
+Step 2: Explore
+Step 3: Getting ready for production
+Step 1: Creating a Test Account
+Where do I sign up for a test account?
+Fill out this form using a valid e-mail address to create your test account.
+Why do I need a test account for the Tripletex API?
+A test account allows you to explore and test Tripletex API functionalities in a controlled environment without affecting your production data or requiring production credentials.
+Can I use my test account credentials in the production environment?
+No, credentials for the test environment are not valid in the production environment; both environments are separate and require their specific credentials.
+How long is the test account active, and can it be extended?
+By default, the test account is active for six months. You can contact us to request renewed trial period if needed.
+What should I do if I lose my test account tokens?
+Unfortunately, we cannot recover lost tokens or application names, so be sure to save them securely upon creation. A new test account can be created for new credentials.
+What is the process to create a test account?
+You need to fill out a form with your contact details, verify your email, and set a password. Once done, you’ll immediately get access to our test environment.
+Can I get a test account for the production environment?
+Yes, if you have a commercial integration and your integration is approved for production. Then you can request a test account in production.
+Step 2: Explore
+How can I explore the functionalities of Tripletex?
+You can explore by using the GUI to understand how things look and feel, and by using our interactive documentation to test endpoints directly in your web browser.
+What’s the benefit of using the OpenAPI documentation for testing?
+The OpenAPI, “Swagger”, documentation allows you to interactively test API endpoints, which is beneficial for troubleshooting and ensuring the functionality of your integration before deploying it fully.
+How do I authenticate using our interactive documentation?
+First use your consumer and employee tokens to create a session token via /token/session/:create.
+When authenticating using the padlock icon, use “0” (zero) as your username and your session token as the password. More on this here.
+What is the difference between test and production instances?
+The test instance (api-test.tripletex.tech) is for development and trial purposes, while the production instance (tripletex.no) is for live operations. Credentials are not interchangeable between these two environments.
+Can I perform operations directly using the OpenAPI documentation before writing code?
+Yes, testing operations in the interactive using the OpenAPI documentation can help you pinpoint issues more efficiently and validate that your requests work as intended before developing your integration’s code.
+What should I do if I encounter an issue with the API?
+First, reproduce the issue using our using the OpenAPI documentation to determine if it’s related to your code or not. This will help you provide us more detailed information when contacting support.
+Step 3: Getting ready for production
+How do I start integrating with Tripletex?
+Begin by exploring our API documentation to understand the capabilities and setting up your integration in our test environment. This helps ensure everything functions as expected before moving to production.
+What are the steps to gain access to the production environment?
+After testing in the testing environment, submit an application for production access via this form. This mandatory screening ensures safe deployment and is required even for internal integrations.
+How long does it take to get approval for the production API access?
+The approval process typically takes 2-3 weeks, and this duration is standard for all applicants.
+Can I expedite my production access application?
+Currently, there’s no expedited process for individual applications; all submissions are treated equally to maintain fairness in evaluation.
+What should I do if I don’t receive a response within the estimated time for production access approval?
+If no response is given after the estimated time, please contact us using the details provided during your application to inquire about the status.
+How can my integration be featured on the Tripletex integration marketplace?
+A commercial integration that has passed approval for production can apply to be published in the integration marketplace in-app. Read more about the marketplace here.
+
+Not to be confused with the public integration overview, which commercial integrations receives a form to when production access is approved.
+What options do end users have when setting up an employee token manually?
+Users can choose from “All entitlements”, copy the user’s current entitlements, or assign them manually when generating an employee token with your application name. Entitlements may be changed later on.
+Doc navigation
+General →
+
+================================================================================
+# General – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/general
+================================================================================
+
+General
+During authentication I get an error “Company owned users(employeeToken) can only access /token/session/>whoAmI & /company/>withLoginAccess in their own company.” why?
+Why are there required fields in sub-objects in Swagger?
+I specified “Count” to be less than 10.000 but I still get “Result set too large. Limit of 10.000 reached.”, why?
+What does the error “An ID cannot be set when creating a new object.” mean?
+What does the response “Object not found” mean?
+According to swagger I am providing a valid value to an attribute, but I still get a validation error, why?
+How can I use the fields parameter to fetch data from related objects in GET requests?
+Can I get hidden fields for our internal ID’s or other information?
+How can I check entitlements for the employee token?
+During authentication I get an error “Company owned users(employeeToken) can only access /token/session/>whoAmI & /company/>withLoginAccess in their own company.” why?
+
+This error occurs when an accountants client access token is being used as a regular employee token. An accountants token requires a different authentication method than a regular one. If your integration only supports regular employee tokens please ask your end user to create a new token on an employee/contact in the account you want to access, and not via the accountant offices account. More info can be found in this article: https://developer.tripletex.no/docs/documentation/authentication-and-tokens/
+
+Why are there required fields in sub-objects in Swagger?
+
+This is due to how our DTOs are set up. When you open a sub-object in Swagger you may notice that some fields are mandatory, however this is only true if you are creating a new object, not when referencing an existing one. Let’s look at an example from POST ledger/voucher:
+
+If we want to add a posting to our voucher we need to specify the account to use, but in Swagger you will find that it looks like this:
+
+Understandably you might want to use the name and number in this request, however that will lead to errors (mostly of the “not found”-variety). To reference an existing object the general rule of thumb is to use ID, like so:
+
+    "postings":[
+       {
+        "row":1,
+        "date":"2022-10-06",
+        "amountGross":500,
+        "amountGrossCurrency":500,
+        "account":{
+            "id":53120749
+          },
+         "vatType":{
+            "id":3
+          }
+       }
+
+The reason our DTOs are set up like this is that it makes it a lot easier to work with generated clients, however we do understand this is confusing.
+
+I specified “Count” to be less than 10.000 but I still get “Result set too large. Limit of 10.000 reached.”, why?
+
+For many this might look like a bug, however the count parameter never really limits your request in terms of what you fetch from the database, only how many objects are returned in the response. Thus count does not limit you in terms of the object limit, only what is delivered in your response. You need to use other parameters (date, account etc) to make sure you fall below the 10K object limit.
+
+What does the error “An ID cannot be set when creating a new object.” mean?
+
+This error indicates that you can not set an ID when creating a new object (in case of POSTs). ID and version should never be defined in a POST requests as these values are defined by the system upon creation (also PUTs when it comes to version).
+
+What does the response “Object not found” mean?
+
+Most likely you are referring to an object without the internally assigned ID of the object. When you create i.e a customer and you want to post an order with this customer, you have to refer to the customer.Id. This relates to all objects in the Tripletex API. This can also occur if you refer to an ID that does not belong to the company that you are currently authorized as (where your employee token was created). You will only be able to see data that belongs to the company you are authorized as.
+
+If you want to know the ID of an object, GET the data from the relevant endpoint.
+
+According to swagger I am providing a valid value to an attribute, but I still get a validation error, why?
+
+As Tripletex is an accounting software certain validations are in place to prevent invalid data being passed. Let’s take the “organizationNumber” attribute from the customer endpoint as an example. Here you will see in Swagger that the expected value is a string with maxLength=100. If you try to pass a swedish organization number here (for example 123456-1234) without setting the customers location to Sweden you will get an error saying it is invalid. There are more examples of this, but a useful tip is to attempt the same action in the GUI to see if it is allowed there – If it is then please report the error to us.
+
+How can I use the fields parameter to fetch data from related objects in GET requests?
+
+This example is fetching orders via /v2/order. Without usage of fields you will get a dataset returned which includes information about the order objects, i.e our internal ID, order number, delivery date, ID of the customer on the order and a list of internal IDs of the order lines.
+
+This would suffice when you only want the data for the order. As an example, the API request is GET /v2/order?orderDateFrom=2024-01-01&orderDateTo=2024-01-02.
+
+If you want the order lines related to the order as well you can expand the API request by specifying fields like *,orderLines(*). This means get all fields on order (*), as well as all fields on every order line (orderLines(*)). This will return description, count, price etc on every order line in addition to the internal ID. This API request is: GET /v2/order?orderDateFrom=2024-01-01&orderDateTo=2024-01-02&fields=*,orderLines(*)
+
+Can I get hidden fields for our internal ID’s or other information?
+
+We inherently do not wish to support fields for this, we recommend that you instead save our ID’s for your system and make the relation that way if possible.
+
+How can I check entitlements for the employee token?
+
+Your employee token, and its owner user, will need the “User admin” entitlement as a minimum. Tokens will not benefit from entitlements which the owner does not have.
+
+Step 1: Perform a GET /token/session/>whoAmI request. Parse the response, and record the values for employeeId (the owner user) and actualEmployeeId (your token user).
+
+Step 2: Perform a GET /employee/entitlement?employeeId={id} request for each user ID, and compare the results. Only the entitlements given to both users will be in effect for the employee token.
+
+This is query is not supported for accountant tokens.
+
+Doc navigation
+← Getting Started
+Invoice/order →
+
+================================================================================
+# Invoice/order – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/invoice-order
+================================================================================
+
+Invoice/order
+Why is POST /order/ or POST /invoice/ giving the error “Enhetspris må være med mva siden enhetspris på ordre er med mva.” / “Enhetspris må være uten mva siden enhetspris på ordre er uten mva.”?
+How do I set the income account that order lines are posted to?
+How is the invoice send method determined?
+How do I check if an invoice has been paid?
+Is it possible to stop Tripletex from sending the invoice I create?
+How can I correct the validation message “The unit price must be exclusive VAT since the unit price on the order is exclusive VAT.”
+How can I find payment information for specific invoices via the API?
+How and when do you update currency values in Tripletex?
+Why is POST /order/ or POST /invoice/ giving the error “Enhetspris må være med mva siden enhetspris på ordre er med mva.” / “Enhetspris må være uten mva siden enhetspris på ordre er uten mva.”?
+
+This error usually means that you have defined unitPriceExcludingVatCurrency on the order lines where the order is set to show price including VAT, or unitPriceIncludingVatCurrency on the order lines where the order has been set to show prices excluding VAT. It may also happen if you define both unitPrice attributes on the order lines.
+
+The default setting is determined by the invoice settings of the account. You need to override the default in the order-object if you post values that do not match the Tripletex account configuration.
+
+To solve this you can use the attribute "isPrioritizeAmountsIncludingVat" to TRUE or FALSE.
+
+If “isPrioritizeAmountsIncludingVat"=TRUE then you define "unitPriceIncludingVatCurrency" on the orderlines.
+
+If "isPrioritizeAmountsIncludingVat"=FALSE then you define "unitPriceExcludingVatCurrency" on the orderlines.
+
+How do I set the income account that order lines are posted to?
+
+The income account for order lines is determined in one of two ways:
+
+Using a Product:
+If you specify a product for the order line, the product’s income account will be used, provided that the VAT type on the product matches the VAT type on the order line and the income account to which it is assigned.
+If any of these conditions are not met, the system will use the default income account.
+Using a Description Only:
+If you only use a description and do not define a product, the order lines will be posted to the default income account associated with the VAT type.
+You can also use a combination of a description and a product to add specific details to the order line without affecting the posting.
+
+The default settings can be managed in Tripletex by navigating to Accounts -> Settings -> Accounting Settings -> Posting Rules. Users have the option to change the default account settings according to their preferences.
+
+Please note that you cannot directly set or override an income account on the order line.
+
+Example:
+
+If a product has an income account specified, and this income account is set to VAT Type 3 ((25%) Output VAT, high rate), then:
+
+When you create an order line with this product and VAT Type 3, the income posting will use the account specified on the product once the order is invoiced.
+
+If you create another order line with the same product but set VAT Type 33 ((12%) Output VAT, low rate) for the order line, the posting will be assigned to the default income account for VAT Type 33.
+The default account for VAT Type 33 is 3002 and can be adjusted in the posting settings mentioned above.
+
+How is the invoice send method determined?
+
+The customer object of the order/invoice determines the send method for invoices. This value can be fetched via GET customer (invoiceSendMethod)
+
+How do I check if an invoice has been paid?
+
+GET invoice(/id) returns a value for amountOutstanding, if this is 0 then the invoice is paid/credited. If you need more details see “How can I find payment information for specific invoices via the API?” below.
+
+Is it possible to stop Tripletex from sending the invoice I create?
+
+Yes. Set sendToCustomer=FALSE (default TRUE) in both PUT order/id/:invoice and POST /invoice/ to create an invoice without Tripletex sending it to the customer automatically.
+
+How can I correct the validation message “The unit price must be exclusive VAT since the unit price on the order is exclusive VAT.”
+
+The order object can be set to either accept orderlines including VAT or excluding VAT with the optional boolean value isPrioritizeAmountsIncludingVat. If you encounter this issue it would be a good idea to provide the value directly when creating an order and then using the appropriate price value on orderlines for the order.
+
+Example: if order is set to isPrioritizeAmountsIncludingVat = true then you should provide orderlines with only unitPriceIncludingVatCurrency.
+
+How can I find payment information for specific invoices via the API?
+
+You can always check the value of amountOutstanding on any given invoice object (anything above 0 means there is an amount outstanding). If you need more details this method should work:
+
+find Invoice.customerId and invoice.number
+get all postings where customerId = Invoice.customerId
+locally find where invoiceNumber = invoice.number
+if any has closegroupId, then everything is paid or credited in full
+but you can sum all posts where invoiceNumber = invoice.number (betalinger)
+and if you have a closegroupId, you will have to get other postings with closegroupId to find related credit notes
+How and when do you update currency values in Tripletex?
+
+We fetch currency data at 06:10 and 18:10 every day from https://data.norges-bank.no/api/data/EXR/B..NOK.SP?format=csv&lastNObservations=14&locale=en
+
+Doc navigation
+← General
+Customer →
+
+================================================================================
+# Customer – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/customer
+================================================================================
+
+Customer
+How do I check a customers account balance (if the customer has any unpaid invoices) via the API?
+When creating a new customer I get a response that says postalAddress is required for EHF, why?
+I am providing a valid organizationNumber value, but I’m still getting an error, why?
+How do I check a customers account balance (if the customer has any unpaid invoices) via the API?
+
+You can use GET ledger/posting/openPost and specify date (keep in mind this is to and excluding, so to have todays posting you need to specify todays date+1 day), accountId (default for customer account is number 1500, fetch ID from GET ledger/account) as well as customer ID to bring up the open postings connected to this customers account. From here you can check for a closegroup. If closegroup=null then the posting is open (in case of invoice it has not been paid). If there is an object linked (an id) then you can use GET ledger/closeGroup to find the postings it is closed towards.
+
+When creating a new customer I get a response that says postalAddress is required for EHF, why?
+
+This validation is triggered whenever a new customer is created where isPrivateIndividual=FALSE and invoiceSendMethod=EHF. isPrivateIndividual=FALSE is the default value unless defined to =TRUE. Whenever a customer object is set to isPrivateIndividual=FALSE then the default invoiceSendMethod=EHF as well (unless changed by the end user in GUI). To send EHF invoices you are required to provide a postalAddress as specified in Peppol BIS billing 3.0: https://docs.peppol.eu/poacc/billing/3.0/rules/ubl-tc434/BR-10/.
+
+If your integration or end user intend to send EHF invoices you will need to provide a valid postalAddress. If another invoiceSendMethod will be used, or the end user does not have EHF invoicing active in Tripletex you can set the invoiceSendMethod parameter to EMAIL, for example.
+
+I am providing a valid organizationNumber value, but I’m still getting an error, why?
+
+Most of the times this happens it is due to the default value in physicalAddress for a customers country being set to Norway, and we will check wether or not the provided organization number is valid in the given country in physicalAddress. If you need to register an organizationNumber for a foreign customer then the physicalAddress attribute needs to be specified with the correct country for the given organization number.
+
+Doc navigation
+← Invoice/order
+Product/Inventory →
+
+================================================================================
+# Product/Inventory – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/product
+================================================================================
+
+Product/Inventory
+What is discountGroup used for?
+When I specify an inventoryLocationId to a productLine in stocktaking endpoints the API returns null, why?
+What is discountGroup used for?
+
+This endpoint is currently only in use internally in Tripletex as part of our wholesale integration and of no use to external developers.
+
+When I specify an inventoryLocationId to a productLine in stocktaking endpoints the API returns null, why?
+
+This field (location) is readOnly and for internal use only as of now, this is not shown in Swagger due to location being a subDTO. Changing inventory location is only supported via the Tripletex webapp. If your end user needs to change the location of product lines in a stocktaking for instance this needs to be done via GUI before the stocktaking is finalized/closed.
+
+This applies to all stocktaking endpoints in general.
+
+Doc navigation
+← Customer
+Postman →
+
+================================================================================
+# Postman – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/postman
+================================================================================
+
+Postman
+How do I create session tokens in Postman?
+How do I create session tokens in Postman?
+
+Postman treats :create as a “Postman parameter”, and not a part of the URL. Since the value has not been defined, the resolved URL will be /token/session/ rather than the intended /token/session/:create.
+
+A workaround is to manually specify create as a path variable with the value :create. The resolved URL will then be correct.
+
+Doc navigation
+← Product/Inventory
+SupplierInvoice / Attestation →
+
+================================================================================
+# SupplierInvoice / Attestation – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/supplierinvoice-attestation
+================================================================================
+
+SupplierInvoice / Attestation
+What is approvalListElement?
+What does the organisationLevel value in approvalListElement represent?
+What does status in approvalListElement represent?
+What is approvalListElement?
+
+An approvalListElement object is a part of the attestation for a given voucher. This feature makes sure a voucher is approved for bookkeeping (unless a given company allows bookkeeping before approval in attestation).
+
+A voucher approvalListElement is in practice only a row in the attestation section of a given voucher that looks like this in the GUI:
+
+Most companies will have company as the last attestation level (organisationLevel) but this is no longer required and can be adjusted in their attestation settings.
+
+What does the organisationLevel value in approvalListElement represent?
+
+The different levels of approval is represented via organizationLevel. The different values here mean the following:
+
+In voucher reception = 0;
+Project = 1;
+Department = 2;
+Company = 3;
+Employee = 4;
+Bookkept = 5;
+
+Certain users may have privilege to attest for the whole company, in which case their attestation will complete the attestation process. This is only relevant if the user attesting has the privilege “The user is a company attestant (can attest for the company)” activated in their user settings. Attesting on a company level is not different from the other levels of attestation except from the order they approve, with the exception for users that have the above mentioned setting activated. What level that is required for each voucher is decided by the company and their attestation settings.
+
+What does status in approvalListElement represent?
+
+You may seem several identical voucherIds if you poll for instance GET supplierInvoice/forApproval with fields=approvalListElement(*). The different statuses represent:
+
+NONE = 0;
+APPROVED = 1;
+REJECTED = 2;
+NOT_RELEVANT = 3;
+
+None means the given organisation level has not yet approved or rejected the voucher. Not relevant means the organisation level is not relevant in the given voucher (mostly used for organisationLevel 0). Approved/rejected means the given organisationLevel has approved or rejected the given voucher on their level.
+
+Doc navigation
+← Postman
+Ledger/voucher →
+
+================================================================================
+# Ledger/voucher – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/ledger-voucher
+================================================================================
+
+Ledger/voucher
+When posting a voucher I get “Kunde mangler”, “Leverandør mangler”, or “Ansatt mangler”, why?
+When posting a voucher I get “Kunde mangler”, “Leverandør mangler”, or “Ansatt mangler”, why?
+
+In these cases your request most likely contains a posting toward an account that is defined as a ledger (ledgerType is not GENERAL) and these require the posting to also contain the ID of an object that matches their ledgerType (customer, supplier, employee).
+
+For example:
+
+
+      "number": 1500,
+      "name": "Kundefordringer",
+      "description": "",
+      "type": "ASSETS",
+      "legalVatTypes": [
+        {
+          "id": 0,
+          "url": "tripletex.no/v2/ledger/vatType/0"
+        }
+      ],
+      "ledgerType": "CUSTOMER",
+      "vatType": {
+        "id": 0,
+        "url": "tripletex.no/v2/ledger/vatType/0"
+      },
+      "vatLocked": true,
+      "currency": null,
+
+The requests I want to run below contains an account that is defined as a customer ledger, thus I also need to refer to the customer that we want the posting to belong to.
+
+{
+   "row":3,
+   "date":"2021-11-01",
+   "amountGross":-500,
+   "amountGrossCurrency":-500,
+   "account":{
+      "id":53120823
+   },
+   "customer":{
+      "id":17788588
+   }
+}
+Doc navigation
+← SupplierInvoice / Attestation
+Departments →
+
+================================================================================
+# Departments – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/departments
+================================================================================
+
+Departments
+
+When is department required for creating employees?
+How to check if department functionality has been activated
+When is department required for creating employees?
+
+If department functionality has been activated at any point, then all new employees must be assigned a department. This persists even if the functionality is deactivated afterwards.
+
+How to check if department functionality has been activated
+
+The field departmentManager is excluded from the GET /department response, and only the default department called “Avdeling” is returned, if department functionality has not previously been activated in the target account. This can be enabled by checkmarking “Department costing”, under Accounts > Settings > Accounting rules > Modules, in GUI.
+
+Doc navigation
+← Ledger/voucher
+Integration Marketplace →
+
+================================================================================
+# Integration Marketplace – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/faq/integration-marketplace
+================================================================================
+
+Integration Marketplace
+What is the Tripletex Integration Marketplace?
+The Integration Marketplace is a platform within Tripletex where approved integrations are featured. It allows customers to browse, search, and activate readily available integrations that meet their business needs.
+How can I list my integration on the Marketplace?
+To list your integration, you must first ensure it is functioning correctly with existing customers and gather their feedback. Then, follow the application process to get your integration reviewed and approved by Tripletex.
+What is the role of a redirect URL in the integration process?
+The redirect URL is used to send essential data from Tripletex to your integration and direct users to your landing page for setup. It serves as a key component in automatically establishing the sync between Tripletex and your system.
+What criteria does Tripletex use to approve an integration?
+Integrations are reviewed based on their functionality, correct use of naming conventions, a working redirect link, a concise description, relevant categories, and satisfaction among existing customers.
+What should the landing page look like for our integration?
+While the design is flexible, the landing page should facilitate user onboarding effectively. Keeping it simple and informative ensures a smooth setup process for new users.
+How can I test my redirect URL?
+You can test the redirect URL by using the “Preview” function in your Integration partner account. This generates a dummy request to ensure your landing page can capture and process the transmitted data appropriately.
+Can customers still use the old method to acquire Employee Tokens?
+Yes, customers can continue using the traditional method to acquire Employee Tokens via “API Access” in Tripletex, using the old consumer token’s application name.
+
+Relevant customer-facing article is available here.
+
+Make sure not to mix different consumer tokens’ application names when asking customers to manually create employee tokens for you.
+Doc navigation
+← Departments
+
+================================================================================
+# Support – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/support
+================================================================================
+
+Support
+
+Avoid directing your end user to Tripletex customer support regarding an issue with your integration. The end user and the customer has little to no access to logs, and Tripletex support will most likely not be able to assist if the issue lies with the request or your integration. Having them request support on your behalf will most likely cause delays in resolving the issue.
+
+As an integration developer you should gather request ID, request body and response body if relevant and forward the request to us via the developer support pages here.
+
+Doc navigation
+← FAQ
+Integration marketplace →
+
+================================================================================
+# Integration marketplace – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/integration-marketplace
+================================================================================
+
+Integration marketplace
+
+Table of Contents
+
+What is “Integration Marketplace”?
+What’s the redirect URL?
+How to test your redirect URL? 
+What should the landing page look like? 
+How to get your integration into the Tripletex “Integrations”
+Part 1 : Getting started
+Part 2 : Making your first integration 
+Part 3 : Tripletex reviewing your integration
+Part 4: Customers adding your integration
+FAQ
+Will it be possible to get the Employee Token with the “old” method?
+How do we store the employee token we recieve?
+What is “Integration Marketplace”?
+
+The “Integration Marketplace” is a marketplace for established commercial integrations and is visible to Tripletex customers in the menu “Integrations” when logged on to their Tripletex account. In “Integrations”, customers can see integrations that have been approved by Tripletex to be presented here. One main difference is that these integrations have a seamless activation process for the customer.
+
+There are some prerequisites to have your integration approved and presented in the “Integration Marketplace” in Tripletex. One prerequisite is that only existing integrations with Tripletex that are currently in production, with Tripletex customers who are currently using it and are satisfied with the solution will be considered and presented here.
+
+Please note that this is not the same as obtaining a consumer name and consumer token for production. If you are looking to get API consumer details for production, please follow the instructions found here – Getting ready for production.
+
+If you are only interested to get your commercial integration published on our public integration page, please follow the link you received in the email you received when you were granted access to production.
+
+In the Integration Marketplace may customers search for specific integrations, filter integrations by categories or simply browse through the whole catalog of integrations.
+When customers want to activate an integration via the Integration Marketplace, they click “Activate” on the integration’s card. This action will send an API employee token together with some basic company information to a landing page set up by the integration partner.
+The integration partner will capture the employee token and the basic company sent during activation. This information is used to complete the setup of the integration between the systems.
+
+What’s the redirect URL?
+
+First, a few notes about the redirect URL. When you, the integration partner, onboard your integration in the Tripletex “Integrations”, you’re asked to provide something called a redirect URL. The redirect URL is used for two things: 
+
+Send information from Tripletex to your integration. 
+Send the user to your integration’s landing page.
+
+
+Every time a user in Tripletex connects to your integration, Tripletex will generate an employee API-token, gather some essential information about the customer, and send this information as application/x-www-form-urlencoded in a POST request to your designated endpoint. Unlike the typical JSON format, this information is sent specifically as form data with content type x-www-form-urlencoded. This will include the necessary details to successfully set up a sync between your system and Tripletex. Additionally, we’ll redirect the user to your landing page.
+
+Your integration will need to process the information provided as form data to the redirect URL, and you’re responsible for assisting the user in completing the integration process on your end.
+Maybe the user must log in to your system, or create a new account in your system? Maybe you need the user to provide some more information? 
+
+Let’s look at an example:
+
+You provide us with this redirect URL:
+https://myTripletexIntegration.example.com/
+When a user wants to connect to your integration, we call your redirect URL and POST this data: 
+
+companyId: 123456
+companyName: Ola Nordmann AS
+orgNumber: 123456789
+token: 28375joi3928as933==
+
+
+CompanyId: The id of the Tripletex account.
+Company name: The name of the account.
+orgNumber: The organization number.
+Token: The API employee token that you will use together with you API consumer token to make calls to the Tripletex API.
+
+
+Example:
+https://mytripletexintegration.example.com/?companyId=56007191&companyName=TestCompany&orgNumber=123456789&token=abcd0000efgh0000ijkl0000mnop0000
+
+How to test your redirect URL? 
+
+You can test your redirect URL when you register a new integration in the Tripletex Integration partner account. 
+
+In step 3, “Preview”, you’ll be able to click the redirect link you provided. This will simulate customers activating your integration. Tripletex attaches some dummy data when you click it, so that you can test that your landing page is able to recognize the call and store the data provided in the POST request.
+
+What should the landing page look like? 
+
+It’s really up to you, but we suggest you keep it simple.
+Our developers suggested something like this. (Our designers and UXers were not involved in sketching this).
+
+How to get your integration into the Tripletex “Integrations”
+Part 1 : Getting started
+
+Please note that this is not the same as obtaining a consumer name and consumer token for production. If you are looking to get API consumer details for production, please follow the instructions found here – Getting ready for production.
+
+Read the brief summary in the top of this page and understand the difference between Getting started for production and the Integration Marketplace this article is explaining.
+If you are still unsure please send us a support inquiry via our Contact form.
+Send Tripletex API support/Partner Manager a message letting us know that you would like to request an “Integration partner account”, if you have an established integration Tripletex users are using and are satisfied with.
+You will get an email from us welcoming you to Tripletex and asking you to log into your Integration-partner account.
+Log in to your Integration-partner account.
+Deal with any pop-ups.
+You end up on this page:
+Part 2 : Making your first integration 
+Click “Add new integration”. 
+Enter the name of your integration. The naming convention is “[System] av [Company]”.
+– Unless you own the integrated system.
+
+Make sure to checkmark “Allow users to use the integration”, and click “Create”.
+You’ll now see your new integration on your page: 
+Click on “Details” on the card to continue to add more info about your integration. 
+Remember to click “Save” throughout the process.
+Here you add your logo (max-width: 150px, max-height: 200px, max bytes 300000) and tag your integration with categories in step 1:
+Write your sales pitch to potential customers in step 2 and provide us with your redirect link. The redirect link is the link Tripletex will use to send information to your integration. When a customer adds your integration from the Tripletex “Integrations”, we will send the customer’s employee API tokens to you using the redirect link. 
+Here you will get a preview of how your integration will look in the “Integrations” in step 3: 
+In step 4 you will make an important decision: 
+If you want to edit more, click “Back”. 
+If you want to stop editing and come back later, click “Cancel”.
+If you want to send it to Tripletex for approval, click “Send”. This action will lock your integration. You’ll no longer be able to edit the info. 
+Part 3 : Tripletex reviewing your integration
+After you click “Send”, the status on your integration card will change to “Pending approval”.
+Tripletex will review your integration by these criteria.
+The integration is working and a demo is shown to Tripletex.
+The integration uses the following naming convention:
+“[System] av [Company]”
+e.g. “Webshop av Partner AS”
+– Unless you own the integrated system’s brand name.
+Your redirect link is working, and you capture the token & other information we send during activation.
+The redirect link points to a landing page that will onboard the customer in a good way. Both existing and new customers.
+The description should not be longer than 65 words. Keep in mind that it is not possible to format the text with fonts, styles, line breaks etc.
+For more description/information, add a webpage link.
+That you use categories relevant for your solution.
+The integration must have existing customers who are satisfied with the solution.
+Part 4: Customers adding your integration
+If Tripletex approves your integration, you will receive an email telling you the integration has been approved. 
+Log into your Integration partner account. 
+Notice that your integration got status “Approved”.
+Notice that a new page called “Integrations API Consumer“ has become available.
+Go to “Integrations API Consumer”. 
+Click “Administrate”
+Click “New row”.
+Click “Save”.
+Copy and save the consumer token.
+The integration is now available in the Tripletex “Integrations”. 
+When a customer adds your integration, Tripletex will send the customer’s companyID and employee token to the redirect URL you provided in step 2 in the integration wizard. Make sure you capture the tokens, save them and use them to complete the integration between your system and Tripletex. 
+
+All done! 
+
+FAQ
+Will it be possible to get the Employee Token with the “old” method?
+
+Yes, the Tripletex user can still generate a new Employee Token at  “API Access” (API Tilgang).
+https://hjelp.tripletex.no/hc/no/articles/4409557117713
+
+How do we store the employee token we recieve?
+
+An example on how to store the token: 
+
+@app.route('/redirect/')
+def redirect_url():
+    companyId = request.args.get('companyId')
+    companyName = request.args.get('companyName')
+    token = request.args.get('token')
+    with open('config.txt', 'w') as config_file:
+        config_file.write(f'companyId:{companyId}\n')
+        config_file.write(f'companyName:{companyName}\n')
+        config_file.write(f'employeeToken:{token}')
+    return redirect('/login')
+
+
+This script says:
+Everytime anyone makes a request to my redirect url, then read the fields: companyID, companyName and EmployeeToken and save these values in a file called config.txt. 
+
+Doc navigation
+← Support
+Webhooks →
+
+================================================================================
+# Webhooks – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/webhooks
+================================================================================
+
+Webhooks
+
+Tripletex WebHook’s supports a growing number of internal events for your integrations to subscribe to.
+
+You can see the API2 endpoints for managing your WebHook subscriptions under /event and /event/subscription in the OpenAPI doc.
+
+List currently available events
+
+The list of events you can subscribe to is currently limited to a select few, but we are very happy to expand based on use-cases. Let us know if you have any suggestions!
+
+To get the list of supported events from the API, make a request to GET https://tripletex.no/v2/event:
+
+curl -X GET --header 'Accept: application/json' --header 'Authorization: Basic ' 'https://tripletex.no/v2/event'
+
+The following events are available as of the time of writing:
+
+Event	Description
+invoice.charged	A new invoice has been created and charged.
+supplier.create/update/delete	A supplier has been created/updated/deleted.
+employee.create/update/delete	An employee has been created/updated/deleted
+order.create/update/delete	An order has been created/updated/deleted.
+product.create/update/delete	A product has been created/updated/deleted.
+account.create/update/delete	A booking account has been created/updated/deleted.
+project.create/update/delete	A project has been created/updated/deleted.
+customer.create/update/delete	A customer has been created/updated/deleted.
+contact.create/update/delete	A contact has been created/updated/deleted.
+archiverelation.create/update/delete	An document archiverelation has been created/updated/deleted. Read more here.
+notification.sent	A notification has been sent to the employee (owner of token)
+voucher.create/update/delete	A voucher has been created/updated/deleted.
+voucherstatus.ready	A new voucher is ready to be processed from the voucher reception.
+
+For the endpoints with several verbs you will need to subscribe to each individual event. For example if you want an event to trigger whenever an order is either created, updated or deleted you will need to subscribe to order.create, order.update and order.delete.
+
+Events are created in the format “object.verb”, and may include additional verbs other than create, update, delete. Webhook events will include optional fields, referencing the DTO model being sent. Events of type delete only include the object ID, and not the object itself.
+
+{
+  "value": {DTO},
+  "event": "product.create",
+  "subscriptionId": sub_id,
+  "id": created_object_id
+}
+---------------------------
+{
+  "value": null,
+  "event": "product.delete",
+  "subscriptionId": sub2_id,
+  "id": deleted_object_id
+}
+Delivery
+
+We now guarantee delivery of webhook payloads. In an event where we are unable to deliver the payload immediately we will retry several times, where we increase the time between attempts in a span of 30 hours.
+
+This means that if your callback URL becomes unresponsive for a time, you will still receive the payload once it responds again. If the delivery fails constantly over a week the event subscription will be disabled with status DISABLED_TOO_MANY_ERRORS. A successful delivery “resets” this counter. You can check the status of your event by running GET /event/subscription. You can also re-enable a disabled event via PUT /event/subscription/{id}.
+
+Subscribing to an event
+POST https://tripletex.no/v2/event/subscription
+{
+"event": "product.create",
+"targetUrl": "https://your.receiver",
+"fields": "(optional) fields from the triggering object to send",
+"authHeaderName": "(optional) custom header name, e.g. Authorization",
+"authHeaderValue": "(optional) custom header value, e.g. Bearer abc123"
+}
+
+“fields” is an optional parameter, and follows the same format as in API2. If you made a call to GET /v2/product/{id} with a fields parameter, you can use the same fields to get the same response from a subscription to product.
+
+Authentication for callback
+
+It is recommended to set up some form of authentication against the targetUrl callback, to prevent misuse. At the moment, three authentication mechanisms are supported:
+
+(Recommended) Custom authentication header. The fields authHeaderName and authHeaderValue allow for custom authentication headers. These will be sent as-is for every webhook POST callback. For example, if you specify the fields { “authHeaderName”: “Authorization”, “authHeaderValue”: “Bearer abc123”}, each webhook will have the Authorization header set with value Bearer abc123.
+Basic authentication as a part of the URL. Username and password specified as a part of the URL will be sent as an Authorization header when performing callbacks. Example: https://username:password@myintegration.example/tripletex. Username and password will here be sent following the basic authentication protocol.
+Include secret token as query/path parameters. Example: https://myintegration.example/tripletex?token=secret123. This is less recommended than basic authentication, but also supported.
+
+These are the supported mechanisms supported right now. If you have need for more complicated authentication, please let us know and we will consider adding additional mechanisms.
+
+Syncing
+
+If you set up a subscription, give it a few seconds to propagate to all servers, and then sync up all data from e.g. GET /v2/product.
+
+Remember to check the version number of objects loaded through bulk sync and webhooks. For now we recommend having a nightly sync to make sure everything is loaded. Note that if an object is modified several times in rapid succession, the webhook system might skip over a version number or two, but sends over the latest version.
+
+WebHook format
+POST <url specified in the subscription>
+{
+	"subscriptionId": ###,
+	"event": "object.verb",
+	"id": ###, // Event triggering object's id (Because if *.delete, then "value" below will be null)
+	"value": {... single object, optionally filtered by fields ...}
+}
+Subscription status
+GET /v2/event/subscription
+
+Subscription status
+GET /v2/event/subscription
+{
+	..........
+	"values": [
+		{
+			"id": 1,
+			"version": 0, // Simply shows how many times this record has been modified (using PUT)
+			"url": "https://tripletex.no/v2/event/subscription/1",
+			"event": "product.create",
+			"targetUrl": "http://webhook.target.io/foo",
+			"fields": "*,currency(*)",
+			"status": "ACTIVE"
+		}
+	]
+}
+
+The system might set a subscription’s status to DISABLED_TOO_MANY_ERRORS if delivery of an event payload has failed too many times. It is possible to change the status back to ACTIVE from this status.
+
+Doc navigation
+← Integration marketplace
+Checksum →
+
+================================================================================
+# Checksum – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/checksum
+================================================================================
+
+Checksum
+What problems are solved with checksum?
+Checksum can be used to quickly determine whether a previously known data set has been changed
+Requests to unchanged data sets are returned in a fraction of the original time
+Allows for higher frequency of polling
+What problems are not solved with checksum?
+Checksum does not speed up API calls when changes occur at a generally faster rate than the freqency of polling (in fact, most are actually slowed down a tiny bit)
+How do I take advantage of checksum?
+
+See example.sh for a simple use case, or follow the following steps:
+
+For any list endpoint (e.g. /project or /ledger/voucher), include the HTTP header If-None-Match set to any non-empty string.
+The response will contain a field versionDigest. This is your checksum (Note: this is only a checksum when specifying the If-None-Match header!)
+Perform the same request as in step 1, but now with the If-None-Match header set to the checksum from step 2
+If the data set has changed, you will receive the response as usual, but with a new versionDigest value.
+If there have not been any changes, you will (very quickly) receive a HTTP 304 Not Modified, indicating a checksum match.
+Limitations
+
+The current checksum implementation has a few limitations:
+
+False negatives: The checksum may change even when the data set is unchanged, as it may be based on a larger data set than what was requested from the API.
+False positives: The checksum should always change when the data set is changed, but there are a few legitimate exceptions:
+Changes to user privileges between requests. Roles are not taken into account when calculating the checksum, even though the data set returned could have been different.
+Changes to objects not directly related to the API endpoint, fetched through fields. For example, changes to the projectManager of a project (fetched with fields=projectManager(*)) will not update the checksum for the /project endpoint. Changes to directly related fields will, however, also provide an updated checksum. E.g. changing orderline will additionally update the checksum for order.
+Technical details
+
+Checksum is based on the HTTP standard for ETag caching. This is why the header If-None-Match is used for requesting a data set with a given checksum.
+
+Instead of using the ETag header to return the calculated checksum, the already existing property versionDigest is overwritten. This is a temporary solution to lower risk for existing integrations, and will be replaced with the ETag header in a later version.
+
+The checksum system is not enabled by default for all list requests as it will slow down all API requests not taking advantage of the feature. The current implementation will perform the checksum calculation as an extra overhead to the request. This is also done temporarily to prevent breaking existing integrations.
+
+Doc navigation
+← Webhooks
+Using vatTypes/VAT-codes →
+
+================================================================================
+# Using vatTypes/VAT-codes – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/using-vattypes-vat-codes
+================================================================================
+
+Using vatTypes/VAT-codes
+
+When using VAT-codes (in for example orderLines or postings) then you need to make sure that the VAT-codes you are attempting to use are…
+
+Valid to use with your current endpoint (voucher = incoming, orderLines = outgoing, for instance)
+Active in the Tripletex account (To enable VAT codes this is done via GUI in Accounts -> Settings -> VAT-settings)
+If you are also specifying an account with the vatType then you also need to make sure the account is not locked to a specific VAT-code (VAT locked) and that the vatType is allowed for that account type.
+Exists in Tripletex
+
+To validate wether or not these conditions are met you can do the following:
+
+Use GET ledger/account to fetch the legalVatTypes for a given account.
+Check GET ledger/vatType with typeOfVat defined as either incoming or outgoing. This endpoint only returns VAT-codes that are active in the Tripletex account.
+Check the accountId you are using via GET ledger/account to make sure the vatType is valid.
+What VatTypes should I use?
+
+In general this should be something you agree with (and map up) with your end user(s). The following table shows what codes are available (given that they are active in the Tripletex account) and wether they are inbound or outbound. Keep in mind that orderLine objects can only use inbound vatTypes. The database ID indicates the id-parameter in vatType, the number column indicate the VAT-code (shown in GUI)
+
+DatabaseID	Number (In GUI)	Name	Inbound or outbound (sales) VAT Type	Basis precentage	Tax percentage
+(2022-08-16)
+1	1	Deduction of input tax, high rate	Inbound	100%	25%
+11	11	Deduction of input tax, medium rate	Inbound	100%	15%
+111	12	Deduction of input tax, raw fish	Inbound	100%	11,11%
+12	13	Deduction of input tax, low rate	Inbound	100%	12%
+23	14	Deduction of input tax paid on importation, high rate	Inbound	100%	100%
+24	15	Deduction of input tax paid on importation, medium rate	Inbound	100%	100%
+230	20	Basis, no input tax on importation	Inbound	100%	0%
+13	21	Basis input tax on importation, high rate	Inbound	100%	0%
+14	22	Basis including import tax, medium rate	Inbound	100%	0%
+3	3	Outbound tax, high rate	Outbound	100%	25%
+31	31	Outbound tax, medium rate	Outbound	100%	15%
+311	32	Outgoing fee, raw fish	Outbound	100%	11,11%
+32	33	Outgoing fee, low rate	Outbound	100%	12%
+5	5	No output tax (within the VAT Act)	Outbound	100%	0%
+51	51	Tax-free inland turnover with reverse tax liability	Outbound	100%	0%
+52	52	Duty-free export of goods and services	Outbound	100%	0%
+6	6	No output tax (outside the VAT Act)	Outbound	100%	
+7	7	No tax processing (revenues)	Outbound	100%	0%
+81	81	Deduction of input tax on importation, high rate	Outbound	100%	25%
+82	82	Input tax without deduction on importation, high rate	Inbound	100%	25%
+83	83	Deduction of input tax on importation, medium rate	Inbound	100%	15%
+84	84	Input tax without deduction on importation, medium rate	Inbound	100%	15%
+85	85	Basic, duty-free importation	Inbound	100%	0%
+34	86	Deduction of input tax when purchasing services from abroad, high rate	Inbound	100%	25%
+35	87	Purchase of services from abroad without deduction, high rate	Inbound	100%	25%
+88	88	Deduction of input tax when purchasing services from abroad, low rate	Inbound	100%	12%
+89	89	Purchase of services from abroad without deduction, low rate	Inbound	100%	12%
+91	91	Deduction of input tax when purchasing climate quotas/gold	Inbound	100%	25%
+92	92	Purchase of climate quotas/gold without tax compensation	Inbound	100%	25%
+559	JUST-1	VAT adjustment for capital goods – code 1		100%	25%
+562	JUST-81	VAT adjustment for capital goods – code 81		100%	25%
+550	TAP-1	Loss of claim – code 1		100%	25%
+551	TAP-11	Loss of claim – code 11		100%	15%
+552	TAP-12	Loss of claim – code 12		100%	11,11%
+553	TAP-13	Loss of claim – code 13		100%	12%
+560	TILB-1	Refund of VAT for capital goods – code 1		100%	25%
+561	TILB-81	Refund of VAT for capital goods – code 81		100%	25%
+554	UTTAK-3	Withdrawal – code 3		100%	25%
+556	UTTAK-31	Withdrawal – code 31		100%	15%
+557	UTTAK-32	Withdrawal – code 32		100%	11,11%
+558	UTTAK-33	Withdrawal – code 33		100%	12%
+555	UTTAK-5	Withdrawal – code 5		100%	0%
+Doc navigation
+← Checksum
+Debt collection (voucher status) →
+
+================================================================================
+# Debt collection (voucher status) – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/debt-collection-voucher-status
+================================================================================
+
+Debt collection (voucher status)
+
+If your integration is listed as a debt collector with Tripletex you will gain access to the voucherStatus endpoint. This in turn allows your integration to fetch invoices via the invoice endpoint and then set status on the invoice voucher if/when debt collection is started via voucherStatus.
+
+This makes it possible for you to communicate updates along the debt collection process to the customer directly in Tripletex. Note that the customer can not start the debt collection in Tripletex in these cases, and you need to fetch all invoices using the existing parameters in the invoice endpoint. Access to voucherStatus does not mean your debt collection agency will be visible in the list of debt collection agencies within Tripletex.
+
+When debt collection is initiated on an invoice you should mark the invoice as such, this is explained further below. As soon as a status is sent to an invoice voucher it will look like this in GUI:
+
+A new line is added below the invoice itself showing that debt collection has started, your debt collection agency and the statuses you have posted to the invoice voucher.
+
+This is achieved by posting a status on the voucher connected to the invoice. The status must be of type DEBT_COLLECTION and normally you would start with the status PROCESSING.
+
+To be able to post voucher status on a client you need to have an api consumerId and you need to be registered in our api debt collector list.
+
+You also need an employee token from the customer created for your api consumer.
+
+VoucherStatuses are immutable to keep track of history internally. The latest voucherStatus is the one that is relevant to you and the one you get in the API. Therefore we use POST not UPDATE.
+
+Error handling:
+If a invoice is missing data or for some other reason you are not able to process the invoice, you should post a voucherStatus back with status ERROR and use the comment field to give a helpful message to the customer. When this is done the debt collection case will be deleted from our system, the customer will be notified and the comment will be shown to the customer.
+
+Communicating with the customer:
+
+The status field of the latest voucherStatus will be shown to the customer and comments from all voucherStatuses. You can use externalObjectUrl and referenceNumber to link to the case in your system.
+
+Complete a debt collection with the status DONE.
+
+Doc navigation
+← Using vatTypes/VAT-codes
+Useful resources →
+
+================================================================================
+# Useful resources – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/tools
+================================================================================
+
+Useful resources
+
+This section gathers usefull resources that you should familiarize yourself with before starting to build your application.
+
+Articles
+GitHub
+OpenAPI Docs
+Doc navigation
+← Debt collection (voucher status)
+How-to guides →
+
+================================================================================
+# GitHub – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/tools/github
+================================================================================
+
+GitHub
+
+You can find our GitHub here: https://github.com/Tripletex/tripletex-api2
+
+On our GitHub you will find our changelog, as well as other useful information.
+
+Doc navigation
+OpenAPI Docs →
+
+================================================================================
+# OpenAPI Docs – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/tools/openapi-docs
+================================================================================
+
+OpenAPI Docs
+
+OpenAPI Documentation
+
+The OpenAPI documentation lets you view all available endpoints and their methods, and it allows you to test your requests directly from your browser. Please be aware that the production environment and testing environment are separate. Your credentials for the production environment at tripletex.no are only valid for production use, while your credentials for the testing environment at api-test.tripletex.tech are exclusively for testing purposes. Each environment has its own base URL and set of credentials.
+
+Production environment: https://tripletex.no/v2-docs/
+
+Test environment: https://api-test.tripletex.tech/v2-docs/
+
+Doc navigation
+← GitHub
+
+================================================================================
+# How-to guides – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/topic-3
+================================================================================
+
+How-to guides
+
+In this section we will provide usefull how-to guides helping you get the most out of our API.
+
+Articles
+OpenAPI Documentation
+Doc navigation
+← Useful resources
+
+================================================================================
+# OpenAPI Documentation – Tripletex – For Developers
+# https://developer.tripletex.no/docs/documentation/topic-3/openapi
+================================================================================
+
+OpenAPI Documentation
+
+Our interactive OpenAPI documentation provides an overview of our available endpoints, shows how their response models are structured, and allows you to test requests directly from your web browser.
+
+Please note there are two instances of our OpenAPI documentation: one for tripletex.no and one for api-test.tripletex.tech. Ensure you’re using the OpenAPI documentation corresponding to the environment where your credentials were created. Links to each environment are available under Resources at the top of this page.
+
+If you encounter an issue, we recommend testing the same request in the OpenAPI documentation to rule out any problems in your code.
+
+Note: Due to the design of our Data Transfer Objects (DTOs), sub-objects may have mandatory fields. These fields are only required when creating new objects. To reference an existing object, use the id attribute.
+
+Authenticating in the OpenAPI Documentation
+
+To authenticate in the OpenAPI documentation, you’ll need a consumer token and an employee token. These tokens are provided upon registration for access to the test environment at api-test.tripletex.tech, or you may use your consumer token received from us upon production approval, along with an employee token from a Tripletex production account. More information on tokens and authentication can be found here.
+
+To create a session token, perform a request to PUT /session/token/:create
+
+To create a session token, perform a request to PUT /session/token/:create. This endpoint requires no authentication. Click “Try it out” and provide your consumer token, employee token, and an expiration date. The expiration date must be later than today. Your session token will expire at midnight on the specified date.
+
+Upon pressing “Execute,” your session token will appear in the response body as “token,” below expirationDate.
+
+With your session token generated, authenticate by clicking the padlock icon on an endpoint requiring authentication, or via the Authorize button at the top of the page. Enter “0” (zero) as the username and your session token as the password.
+
+Note: If using an accountant token, there is a different authentication process for accessing client accounts. After authenticating with 0 + session token, use GET company/>withClientAccess to obtain a list of all accessible clients, then use the companyId of the desired company as the username along with the session token. This process is also explained at the top of the OpenAPI documentation page.
+
+Performing a request
+
+To perform a request in the documentation, locate the desired endpoint and method after authenticating, then click “Try it out” to unlock the attributes. Fill in the required attributes (mandatory ones marked with an asterisk) and press “Execute” to run it. The response will display below.
+
+Possible error codes
+
+Certain requests may return error codes. Below is a list explaining what they mean, also available at the top of the OpenAPI documentation page:
+
+200 OK
+201 Created – From POSTs that create new resources.
+204 No Content – No response, e.g., "/:anAction" or DELETE.
+
+400 Bad Request
+
+4000 Bad Request Exception
+11000 Illegal Filter Exception
+12000 Path Param Exception
+24000 Cryptography Exception
+
+401 Unauthorized – Authentication required and failed or not provided.
+
+3000 Authentication Exception
+
+403 Forbidden – Authorization denial.
+
+9000 Security Exception
+
+404 Not Found – Resource doesn’t exist.
+
+6000 Not Found Exception
+
+409 Conflict – For edit conflicts due to multiple simultaneous updates.
+
+7000 Object Exists Exception
+8000 Revision Exception
+10000 Locked Exception
+14000 Duplicate Entry
+
+422 Bad Request – Required fields or malformed payload issues.
+
+15000 Value Validation Exception
+16000 Mapping Exception
+17000 Sorting Exception
+18000 Validation Exception
+21000 Param Exception
+22000 Invalid JSON Exception
+23000 Result Set Too Large Exception
+
+429 Too Many Requests – Request rate limit exceeded.
+
+500 Internal Error – Unexpected condition encountered.
+
+1000 Exception
+
+If you’re uncertain about resolving an error, please consult our FAQ to see if it’s already addressed.
+
+================================================================================
+# Authentication and tokens – Tripletex – For Developers
+# https://developer.tripletex.no/docs/getting-started/authentication-and-tokens
+================================================================================
+
+Authentication and tokens
+
+Authentication is done via Basic access authentication.
+
+Username is used to specify what company to access.
+0 (zero) or blank means the company of the employee, employee here meaning the owner of the employee token.
+Any other value for user name means accountant clients. Use /company/>withLoginAccess to get a list of those. More info about these tokens can be found here.
+Password is the sessionToken.
+
+In Tripletex you authenticate using two tokens to create a session token. These two tokens are employee tokens and consumer tokens. For the test environment at api-test.tripletex.tech, you will be given both tokens as well as an email for user activation, once you sign up. For production you will need to apply for access via this form. The consumer token for production is given to each developer once you are approved via email together with your application name within Tripletex. You will use the same token for each end user of the integration.
+
+Please note:
+Credentials/tokens for test (api-test.tripletex.tech) will not work in production (tripletex.no), and vice versa.
+
+The employee token is created by the end user within the GUI and can be either a regular employee token or an accountants employee token. The latter requires some extra steps for authentication, please see further down in this article for information about this.
+
+For your customer to create a regular employee token they log in, activate the integrations-service if they have not already, and then head to the API-access tab for the user they want to own the token. 
+
+From here they click “New token”. If you have submitted an access template to us then your integration will be available from the application dropdown, the end user only has to select your integration, give it a name to associate with the token and click “Create token”.
+
+If your integration is not available in the dropdown, then you need to provide the end user with your application name, the user then clicks “Adapted setup”, and enters it in the application name field (case sensitive). 
+
+For adapted setup the user also decides to give the token all entitlements, the same entitlements as the owner or no entitlements, these can always be tweaked later on. If the end-user sets “All entitlements” on a token owned by a user that does not have all entitlements on their account, these will be activated but greyed out in the token’s entitlement list.
+
+Example showing the user, and in effect also the API key, only having access to customer reports for own department.
+
+Any entitlement given to the token but not the owner will be disabled. 
+
+For both setups the user gives the token a unique name that they will recognise in the last field. End users can find a how-to article here: https://hjelp.tripletex.no/hc/no/articles/4409557117713
+
+When the token is created it will appear once in a dialogue popup:
+
+If the user misplaces this they can generate a new token for the same integration, this invalidates the previous token. 
+
+The user can also click on the token name to adjust entitlements. Note that an employee token can not have an entitlement that the owner does not have.
+
+Once you have both your consumer and an employee token you are ready to authenticate towards the API. We will be using Postman in this example.
+
+First we will make a request to PUT token/session/:create, here we will pass my consumer and employee token as well as an expiration date. For this example we have set the expiration date to tomorrow’s date via a variable, but you are free to set your own. The token will expire when the server time (CET) crosses midnight and the date changes to the one provided here.
+
+In the response you receive our session token. This token is what you use in the authentication header. 
+
+Tip: You can assign the value of this response to a variable with the following test:
+
+var jsonData = JSON.parse(responseBody);
+postman.setEnvironmentVariable("token", jsonData.value.token);
+
+For the authentication settings we enter username 0 and set the password to be the session token. Then set authentication to Basic auth in Postman. Now when you create any new requests in this collection, set them to inherit this auth, and this means we are ready to make requests toward this Tripletex account.
+
+Accountant Clients & Tokens
+
+As mentioned earlier we have two different kinds of employee tokens. The second kind is an accountant token. To explain this we first have to briefly describe the accountant access feature in Tripletex.
+
+In Tripletex any given accountant that has access to Tripletex for their accounting office also has the possibility to create client access via their Tripletex account to their clients. This is done so that their clients won’t need to create individual user accounts for the accountant offices staff in each company. 
+
+Once client access is established the user admin of the accounting office adds their users to the client and assigns entitlements to them through their client access settings. After the client access is established, the accounting office has to be granted API access to the client. The entitlement “API access” is found under “Accountant” in the client’s Company settings.
+Accountant API tokens works the same way, once an accountant token is created it must be added to each client the token should have access to and be assigned entitlements. The accountant token does not have access to any data within the accounting office’s account.
+
+For the authentication this changes a few things. We still create a session token like before, but we can not use 0 as the username for any requests other than GET company/>withLoginAccess and GET token/session/>whoAmI. To be able to run any requests to the client account we have to run GET /company/>withLoginAccess. This will return a list of all clients that the token has been given access to. From here we then use the client’s ID from this list as a username in future requests, so if I want to access this company I will need to use the ID found here as the username, followed by my session token as the password. After this we can perform API calls like usual.
+
+Doc navigation
+← Getting started
+Integration best practices →
+
+================================================================================
+# FAQ – Tripletex – For Developers
+# https://developer.tripletex.no/docs/getting-started/faq
+================================================================================
+
+FAQ
+
+In this section you will find a list of frequently asked question and an answer. Categorized by endpoint.
+
+Articles
+Getting Started
+General
+Invoice/order
+Customer
+Product/Inventory
+Postman
+SupplierInvoice / Attestation
+Ledger/voucher
+Departments
+Integration Marketplace
+Doc navigation
+← Integration best practices
+Support →

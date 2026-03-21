@@ -1,0 +1,21 @@
+# FAQ – Tripletex – For Developers
+# URL: https://developer.tripletex.no/docs/getting-started/faq
+
+FAQ
+
+In this section you will find a list of frequently asked question and an answer. Categorized by endpoint.
+
+Articles
+Getting Started
+General
+Invoice/order
+Customer
+Product/Inventory
+Postman
+SupplierInvoice / Attestation
+Ledger/voucher
+Departments
+Integration Marketplace
+Doc navigation
+← Integration best practices
+Support →

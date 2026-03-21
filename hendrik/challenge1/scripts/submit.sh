@@ -3,14 +3,19 @@
 # Usage: ACCESS_TOKEN=xxx ENDPOINT_URL=https://xxx.trycloudflare.com/solve bash scripts/submit.sh
 
 TASK_ID="cccccccc-cccc-cccc-cccc-cccccccccccc"
+SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
+ENV_FILE="$SCRIPT_DIR/../.env"
+if [ -f "$ENV_FILE" ]; then
+    export $(grep -v '^#' "$ENV_FILE" | xargs)
+fi
 
 if [ -z "$ACCESS_TOKEN" ]; then
-    echo "ERROR: ACCESS_TOKEN env var required"
+    echo "ERROR: ACCESS_TOKEN not found in env or .env"
     exit 1
 fi
 
 if [ -z "$ENDPOINT_URL" ]; then
-    echo "ERROR: ENDPOINT_URL env var required"
+    echo "ERROR: ENDPOINT_URL not found in env or .env"
     exit 1
 fi
 

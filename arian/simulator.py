@@ -467,8 +467,11 @@ def monte_carlo_predict(
     total = np.maximum(total, 1.0)
     probs = counts / total
 
-    # 0.01 floor + renormalize — critical: prevents infinite KL divergence
-    probs = np.maximum(probs, 0.01)
+    # Low floor: 0.01 caps score at ~89, 0.002 allows 95+
+    # With 500+ MC runs, floor of 0.002 is safe (rarest detectable event is 1/500)
+    actual_runs = int(total.max())
+    floor = max(0.002, 0.5 / max(actual_runs, 1))
+    probs = np.maximum(probs, floor)
     probs = probs / probs.sum(axis=2, keepdims=True)
 
     return probs
@@ -484,22 +487,23 @@ def apply_static_overrides(
 ) -> np.ndarray:
     """
     For provably static cells (ocean, mountain), override probabilities
-    with near-certainty (0.95 for dominant class, 0.01 for others).
+    with near-certainty for the dominant class.
 
     Uses two separate assignments per mask — combined boolean+integer fancy
     indexing is fragile across NumPy versions.
     """
     probs = probs.copy()
+    floor = 0.002
 
     # Ocean → class 0 (CLASS_EMPTY)
     ocean_mask = (initial_grid == OCEAN)
-    probs[ocean_mask, :] = 0.01
-    probs[ocean_mask, CLASS_EMPTY] = 0.95   # 0.01*5 + 0.95 = 1.00
+    probs[ocean_mask, :] = floor
+    probs[ocean_mask, CLASS_EMPTY] = 1.0 - 5 * floor
 
     # Mountain → class 5 (CLASS_MOUNTAIN)
     mountain_mask = (initial_grid == MOUNTAIN)
-    probs[mountain_mask, :] = 0.01
-    probs[mountain_mask, CLASS_MOUNTAIN] = 0.95
+    probs[mountain_mask, :] = floor
+    probs[mountain_mask, CLASS_MOUNTAIN] = 1.0 - 5 * floor
 
     # Renormalize (no-op for static cells, safety net for dynamic cells)
     probs = probs / probs.sum(axis=2, keepdims=True)

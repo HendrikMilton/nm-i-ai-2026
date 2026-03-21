@@ -1,0 +1,49 @@
+{
+  "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
+  "round_number": 9,
+  "timestamp": "2026-03-20T23:46:14.970733+00:00",
+  "round_score": 88.3102,
+  "config": {
+    "mode": "legacy",
+    "budget": 50,
+    "warmth": "warm",
+    "expansion_rate": 0.1563
+  },
+  "seeds": {
+    "0": {
+      "obs_score": 87.6117,
+      "prior_score": 87.4966,
+      "weighted_kl": 0.044085,
+      "scored_cells": 1319,
+      "elapsed_s": 1.5
+    },
+    "1": {
+      "obs_score": 87.8622,
+      "prior_score": 87.6731,
+      "weighted_kl": 0.043133,
+      "scored_cells": 1355,
+      "elapsed_s": 2.7
+    },
+    "2": {
+      "obs_score": 87.0947,
+      "prior_score": 87.6185,
+      "weighted_kl": 0.046058,
+      "scored_cells": 1396,
+      "elapsed_s": 3.6
+    },
+    "3": {
+      "obs_score": 89.8101,
+      "prior_score": 89.3326,
+      "weighted_kl": 0.035824,
+      "scored_cells": 1356,
+      "elapsed_s": 2.0
+    },
+    "4": {
+      "obs_score": 89.1725,
+      "prior_score": 89.0296,
+      "weighted_kl": 0.038199,
+      "scored_cells": 1349,
+      "elapsed_s": 2.0
+    }
+  }
+}

@@ -1,0 +1,151 @@
+/* --- Backtest round header --- */
+.backtest-round-header {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  margin-bottom: 1.5rem;
+}
+
+.backtest-round-score {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+.backtest-round-score-value {
+  font-size: 2.5rem;
+  font-weight: 700;
+  color: var(--papaya);
+  line-height: 1;
+}
+
+.backtest-round-score-label {
+  font-size: 0.7rem;
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 0.25rem;
+}
+
+.backtest-round-meta {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--grey);
+}
+
+/* --- Scores overview cards --- */
+.backtest-scores-overview {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.backtest-scores-card {
+  background: var(--dark-card);
+  border: 1px solid var(--dark-border);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  flex: 1;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.backtest-scores-card:hover {
+  border-color: var(--papaya);
+}
+
+.backtest-scores-card.selected {
+  border-color: var(--papaya);
+  border-width: 2px;
+}
+
+.backtest-scores-card-seed {
+  font-size: 0.7rem;
+  color: var(--grey);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.25rem;
+}
+
+.backtest-scores-card-score {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: var(--papaya);
+}
+
+.backtest-scores-card-prior {
+  font-size: 0.7rem;
+  color: var(--grey);
+  margin-top: 0.15rem;
+}
+
+/* --- Seed detail --- */
+.backtest-seed {
+  margin-top: 1rem;
+}
+
+.backtest-seed-header h4 {
+  font-size: 1rem;
+  font-weight: 600;
+  color: var(--white);
+  margin-bottom: 0.75rem;
+}
+
+.backtest-seed-scores {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.75rem;
+}
+
+.backtest-seed-meta {
+  display: flex;
+  gap: 1.5rem;
+  font-size: 0.75rem;
+  color: var(--grey);
+  margin-bottom: 1rem;
+}
+
+/* --- Score bar --- */
+.score-bar-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.score-bar-label {
+  width: 70px;
+  font-size: 0.75rem;
+  color: var(--light-grey);
+}
+
+.score-bar-track {
+  flex: 1;
+  height: 8px;
+  background: var(--dark-border);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.score-bar-fill {
+  height: 100%;
+  border-radius: 4px;
+  transition: width 0.3s;
+}
+
+.score-bar-value {
+  width: 40px;
+  text-align: right;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+/* --- View toggle --- */
+.backtest-view-toggle {
+  display: flex;
+  gap: 0.35rem;
+  margin-bottom: 1rem;
+}
