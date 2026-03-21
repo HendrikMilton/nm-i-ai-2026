@@ -1,0 +1,12 @@
+Dato;Forklaring;Inn;Ut;Saldo
+2026-01-17;Innbetaling fra Robert SARL / Faktura 1001;12875.00;;112875.00
+2026-01-19;Innbetaling fra Bernard SARL / Faktura 1002;11687.50;;124562.50
+2026-01-22;Innbetaling fra Bernard SARL / Faktura 1003;9000.00;;133562.50
+2026-01-25;Innbetaling fra Leroy SARL / Faktura 1004;16562.50;;150125.00
+2026-01-28;Innbetaling fra Richard SARL / Faktura 1005;18000.00;;168125.00
+2026-01-31;Betaling Fournisseur Bernard SARL;;-13100.00;155025.00
+2026-02-01;Betaling Fournisseur Durand SARL;;-7850.00;147175.00
+2026-02-04;Betaling Fournisseur Leroy SARL;;-8200.00;138975.00
+2026-02-06;Bankgebyr;741.58;;139716.58
+2026-02-08;Renteinntekter;;-693.90;139022.68
+2026-02-10;Renteinntekter;1798.77;;140821.45

@@ -1,0 +1,116 @@
+[2026-03-21T18:25:06.344Z] [AGENT] model=claude-sonnet-4-6 prompt="Necesitamos el gasto de Togbillett de este recibo registrado en el departamento Produksjon. Usa la cuenta de gastos correcta y asegura el tratamiento correcto del IVA."
+[2026-03-21T18:25:06.344Z] [AGENT] saved attachment: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge1/logs/attachments/2026-03-21T18-25-06-344Z/files/kvittering_es_05.pdf
+[2026-03-21T18:25:06.344Z] [AGENT] files: files/kvittering_es_05.pdf
+[2026-03-21T18:25:16.283Z] [API] GET /ledger/account?number=7140&fields=id%2Cnumber%2Cname → 200
+[2026-03-21T18:25:16.283Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":467407676,"number":7140,"name":"Reisekostnad, ikke oppgavepliktig"}]}
+[2026-03-21T18:25:16.314Z] [API] GET /department?name=Produksjon&fields=id%2Cname → 200
+[2026-03-21T18:25:16.314Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":946159,"name":"Produksjon"}]}
+[2026-03-21T18:25:16.318Z] [API] GET /supplier?organizationNumber=908986997&fields=id%2Cname → 200
+[2026-03-21T18:25:16.318Z] [API] ← {"fullResultSize":0,"from":0,"count":0,"versionDigest":"'If-None-Match' header not specified","values":[]}
+[2026-03-21T18:25:16.461Z] [API] GET /ledger/account?number=2400&fields=id%2Cnumber%2Cname → 200
+[2026-03-21T18:25:16.461Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":467407432,"number":2400,"name":"Leverandørgjeld"}]}
+[2026-03-21T18:25:21.384Z] [API] POST /supplier → 201 body={"name":"NSB","organizationNumber":"908986997","email":"post@example.org","invoiceEmail":"post@example.org","postalAddress":{"addressLine1":"Parkveien 40","postalCode":"9008","city":"Tromsø"}}
+[2026-03-21T18:25:21.384Z] [API] ← {"value":{"id":108392811,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/supplier/108392811","name":"NSB","organizationNumber":"908986997","supplierNumber":20001,"customerNumber":0,"isSupplier":true,"isCustomer":false,"isInactive":false,"email":"post@example.org","invoiceEmail":"post@example.org","overdueNoticeEmail":"","phoneNumber":"","phoneNumberMobile":"","description":"","isPrivateIndividual":false,"showProducts":false,"accountManager":null,"postalAddress":{"id":405634754,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/address/405634754","addressLine1":"Parkveien 40","addressLine2":"","postalCode":"9008","city":"Tromsø","country":{"id":161,"url":"kkpqfuj-amager.tripletex.dev/v2/country/161"},"displayName":"NSB, Parkveien 40, 9008 Tromsø, Norge","addressAsString":"Parkveien 40, 9008 Tromsø, Norge","displayNameInklMatrikkel":"NSB, Parkveien 40, 9008 Tromsø, Norge","knr":0,"gnr":0,"bnr":0,"fnr":0,"snr":0,"unitNumber":""},"physicalAddress":{"id":405634753,"url":"kkpqfuj-amager.tripletex.dev/v2/address/405634753"},"deliveryAddress":null,"category1":null,"category2":null,"category3":null,"bankAccountPresentation":[],"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"ledgerAccount":{"id":467407432,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407432"},"language":"NO","isWholesaler":false,"displayName":"NSB (20001)","locale":"no_NO","website":""}}
+[2026-03-21T18:25:28.326Z] [API] POST /ledger/voucher → 201 body={"date":"2026-01-16","description":"Togbillett - NSB","supplierVoucherType":"TYPE_SUPPLIER_INVOICE_SIMPLE","postings":[{"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407676},"supplier":{"id":108392811},"department":{"id":946159},"amountGross":7950,"amountGrossCurrency":7950,"vatType":{"id":1},"invoiceNumber":"2026-01-16","row":1},{"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407432},"supplier":{"id":108392811},"department":{"id":946159},"amountGross":-7950,"amountGrossCurrency":-7950,"vatType":{"id":0},"row":2}]}
+[2026-03-21T18:25:28.326Z] [API] ← {"value":{"id":609084481,"version":5,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481","date":"2026-01-16","number":1,"tempNumber":0,"year":2026,"description":"Togbillett - NSB","voucherType":null,"reverseVoucher":null,"postings":[{"id":3845628707,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845628707","voucher":{"id":609084481,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481"},"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407676,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407676"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":{"id":108392811,"url":"kkpqfuj-amager.tripletex.dev/v2/supplier/108392811"},"employee":null,"project":null,"product":null,"department":{"id":946159,"url":"kkpqfuj-amager.tripletex.dev/v2/department/946159"},"vatType":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/1"},"amount":6360.00,"amountCurrency":6360.00,"amountGross":7950,"amountGrossCurrency":7950,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"2026-01-16","termOfPayment":null,"row":1,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":false,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null},{"id":3845628708,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845628708","voucher":{"id":609084481,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481"},"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407432,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407432"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":{"id":108392811,"url":"kkpqfuj-amager.tripletex.dev/v2/supplier/108392811"},"employee":null,"project":null,"product":null,"department":{"id":946159,"url":"kkpqfuj-amager.tripletex.dev/v2/department/946159"},"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":-7950.00,"amountCurrency":-7950.00,"amountGross":-7950.00,"amountGrossCurrency":-7950.00,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":2,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":true,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null},{"id":3845628711,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845628711","voucher":{"id":609084481,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481"},"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407454,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407454"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":null,"employee":null,"project":null,"product":null,"department":null,"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":1590.00,"amountCurrency":1590.00,"amountGross":1590.00,"amountGrossCurrency":1590.00,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":0,"type":null,"externalRef":"","systemGenerated":true,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":true,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null}],"document":null,"attachment":null,"externalVoucherNumber":"","ediDocument":null,"supplierVoucherType":null,"wasAutoMatched":false,"vendorInvoiceNumber":null,"numberAsString":"1-2026"}}
+[2026-03-21T18:25:38.996Z] [STEP 1] calls: tripletex_get({"path":"/supplier","params":{"organizationNumber":"908986997","fields":"id,name"}}), tripletex_get({"path":"/department","params":{"name":"Produksjon","fields":"id,name"}}), tripletex_get({"path":"/ledger/account","params":{"number":"7140","fields":"id,number,name"}}), tripletex_get({"path":"/ledger/account","params":{"number":"2400","fields":"id,number,name"}})
+[2026-03-21T18:25:38.996Z] [STEP 1] results: tripletex_get→{"fullResultSize":0,"from":0,"count":0,"versionDigest":"'If-None-Match' header not specified","values":[]}, tripletex_get→{"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":946159,"name":"Produksjon"}]}, tripletex_get→{"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":467407676,"number":7140,"name":"Reisekostnad, ikke oppgavepliktig"}]}, tripletex_get→{"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":467407432,"number":2400,"name":"Leverandørgjeld"}]}
+[2026-03-21T18:25:38.996Z] [STEP 1] text: Following workflow: **Receipt/expense registration (Task 22)**
+
+Let me analyze the receipt first:
+- **Supplier**: NSB, Org.nr: 908986997, Parkveien 40, 9008 Tromsø
+- **Item**: Togbillett (train ticket) = 7950.00 kr (incl. VAT)
+- **Date**: 16.01.2026
+- **Account**: Togbillett = travel expense → account **7140** (Reisekostnad)
+
+Let me start by fetching all needed data in parallel.
+[2026-03-21T18:25:38.996Z] [STEP 2] calls: tripletex_post({"path":"/supplier","body":{"name":"NSB","organizationNumber":"908986997","email":"post@example.org","invoiceEmail":"post@example.org","postalAddress":{"addressLine1":"Parkveien 40","postalCode":"9008","city":"Tromsø"}}})
+[2026-03-21T18:25:38.996Z] [STEP 2] results: tripletex_post→{"value":{"id":108392811,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/supplier/108392811","name":"NSB","organizationNumber":"908986997","supplierNumber":20001,"customerNumber":0,"isSupplier":true,"isCustomer":false,"isInactive":false,"email":"post@example.org","invoiceEmail":"post@example.org","overdueNoticeEmail":"","phoneNumber":"","phoneNumberMobile":"","description":"","isPrivateIndividual":false,"showProducts":false,"accountManager":null,"postalAddress":{"id":405634754,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/address/405634754","addressLine1":"Parkveien 40","addressLine2":"","postalCode":"9008","city":"Tromsø","country":{"id":161,"url":"kkpqfuj-amager.tripletex.dev/v2/country/161"},"displayName":"NSB, Parkveien 40, 9008 Tromsø, Norge","addressAsString":"Parkveien 40, 9008 Tromsø, Norge","displayNameInklMatrikkel":"NSB, Parkveien 40, 9008 Tromsø, Norge","knr":0,"gnr":0,"bnr":0,"fnr":0,"snr":0,"unitNumber":""},"physicalAddress":{"id":405634753,"url":"kkpqfuj-amager.tripletex.dev/v2/address/405634753"},"deliveryAddress":null,"category1":null,"category2":null,"category3":null,"bankAccountPresentation":[],"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"ledgerAccount":{"id":467407432,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407432"},"language":"NO","isWholesaler":false,"displayName":"NSB (20001)","locale":"no_NO","website":""}}
+[2026-03-21T18:25:38.996Z] [STEP 2] text: NSB is not found as a supplier — I need to create it. I have all other data:
+- **Department Produksjon**: id 946159
+- **Account 7140** (Reisekostnad): id 467407676
+- **Account 2400** (Leverandørgjeld): id 467407432
+[2026-03-21T18:25:38.996Z] [STEP 3] calls: tripletex_post({"path":"/ledger/voucher","body":{"date":"2026-01-16","description":"Togbillett - NSB","supplierVoucherType":"TYPE_SUPPLIER_INVOICE_SIMPLE","postings":[{"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407676},"supplier":{"id":108392811},"department":{"id":946159},"amountGross":7950,"amountGrossCurrency":7950,"vatType":{"id":1},"invoiceNumber":"2026-01-16","row":1},{"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407432},"supplier":{"id":108392811},"department":{"id":946159},"amountGross":-7950,"amountGrossCurrency":-7950,"vatType":{"id":0},"row":2}]}})
+[2026-03-21T18:25:38.996Z] [STEP 3] results: tripletex_post→{"value":{"id":609084481,"version":5,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481","date":"2026-01-16","number":1,"tempNumber":0,"year":2026,"description":"Togbillett - NSB","voucherType":null,"reverseVoucher":null,"postings":[{"id":3845628707,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845628707","voucher":{"id":609084481,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481"},"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407676,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407676"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":{"id":108392811,"url":"kkpqfuj-amager.tripletex.dev/v2/supplier/108392811"},"employee":null,"project":null,"product":null,"department":{"id":946159,"url":"kkpqfuj-amager.tripletex.dev/v2/department/946159"},"vatType":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/1"},"amount":6360,"amountCurrency":6360,"amountGross":7950,"amountGrossCurrency":7950,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"2026-01-16","termOfPayment":null,"row":1,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":false,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null},{"id":3845628708,"version":1,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845628708","voucher":{"id":609084481,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481"},"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407432,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407432"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":{"id":108392811,"url":"kkpqfuj-amager.tripletex.dev/v2/supplier/108392811"},"employee":null,"project":null,"product":null,"department":{"id":946159,"url":"kkpqfuj-amager.tripletex.dev/v2/department/946159"},"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":-7950,"amountCurrency":-7950,"amountGross":-7950,"amountGrossCurrency":-7950,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":2,"type":null,"externalRef":"","systemGenerated":false,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":true,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null},{"id":3845628711,"version":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/posting/3845628711","voucher":{"id":609084481,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/voucher/609084481"},"date":"2026-01-16","description":"Togbillett - NSB","account":{"id":467407454,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/account/467407454"},"amortizationAccount":null,"amortizationStartDate":null,"amortizationEndDate":null,"customer":null,"supplier":null,"employee":null,"project":null,"product":null,"department":null,"vatType":{"id":0,"url":"kkpqfuj-amager.tripletex.dev/v2/ledger/vatType/0"},"amount":1590,"amountCurrency":1590,"amountGross":1590,"amountGrossCurrency":1590,"currency":{"id":1,"url":"kkpqfuj-amager.tripletex.dev/v2/currency/1"},"closeGroup":null,"invoiceNumber":"","termOfPayment":null,"row":0,"type":null,"externalRef":"","systemGenerated":true,"taxTransactionType":"(Ikke valgt)","taxTransactionTypeId":0,"matched":false,"quantityAmount1":0,"quantityType1":null,"quantityAmount2":0,"quantityType2":null,"isVatReadonly":true,"isAmountVatClosed":false,"postingRuleId":0,"freeAccountingDimension1":null,"freeAccountingDimension2":null,"freeAccountingDimension3":null,"asset":null}],"document":null,"attachment":null,"externalVoucherNumber":"","ediDocument":null,"supplierVoucherType":null,"wasAutoMatched":false,"vendorInvoiceNumber":null,"numberAsString":"1-2026"}}
+[2026-03-21T18:25:38.996Z] [STEP 3] text: NSB supplier created (id: 108392811). Now I'll post the voucher for the Togbillett expense.
+[2026-03-21T18:25:38.996Z] [STEP 4] text: The expense has been registered successfully. Here's a summary of what was done:
+
+---
+
+## ✅ Gasto de Togbillett registrado
+
+### Datos del recibo
+| Campo | Valor |
+|-------|-------|
+| **Proveedor** | NSB (creado nuevo, org.nr: 908986997) |
+| **Fecha** | 16.01.2026 |
+| **Artículo** | Togbillett (billete de tren) |
+| **Importe total incl. IVA** | 7.950,00 kr |
+
+### Asiento contable (Bilag #1-2026)
+| Fila | Cuenta | Descripción | Importe bruto | IVA |
+|------|--------|-------------|---------------|-----|
+| 1 | **7140** – Reisekostnad | Togbillett - NSB | +7.950,00 kr | 25% (vatType 1) |
+| 2 | **2400** – Leverandørgjeld | Togbillett - NSB | -7.950,00 kr | 0% |
+| (auto) | **2710** – Inngående MVA | IVA generado automáticamente | +1.590,00 kr | — |
+
+### Detalles adicionales
+- **Departamento**: Produksjon ✅
+- **Cuenta de gasto**: 7140 Reisekostnad (correcta para billetes de tren) ✅
+- **IVA**: 25% aplicado correctamente — el sistema generó automáticamente el asiento en cuenta 2710 por 1.590 kr ✅
+
+> **Nota**: Solo se registró el Togbillett (7.950 kr) según lo solicitado. Los otros artículos del recibo (Middag representasjon y Whiteboard) no fueron incluidos.
+[2026-03-21T18:25:38.996Z] [AGENT] DONE elapsed=32.7s steps=4 apiCalls=6 errors=0
+[2026-03-21T18:25:38.996Z] [AGENT] apiLog: [{"method":"GET","path":"/ledger/account","status":200},{"method":"GET","path":"/department","status":200},{"method":"GET","path":"/supplier","status":200},{"method":"GET","path":"/ledger/account","status":200},{"method":"POST","path":"/supplier","status":201},{"method":"POST","path":"/ledger/voucher","status":201}]
+[2026-03-21T18:25:38.996Z] [AGENT] response: The expense has been registered successfully. Here's a summary of what was done:
+
+---
+
+## ✅ Gasto de Togbillett registrado
+
+### Datos del recibo
+| Campo | Valor |
+|-------|-------|
+| **Proveedor** | NSB (creado nuevo, org.nr: 908986997) |
+| **Fecha** | 16.01.2026 |
+| **Artículo** | Togbillett (billete de tren) |
+| **Importe total incl. IVA** | 7.950,00 kr |
+
+### Asiento contable (Bilag #1-2026)
+| Fila | Cuenta | Descripción | Importe bruto | IVA |
+|------|--------|-------------|---------------|-----|
+| 1 | **7140** – Reisekostnad | Togbillett - NSB | +7.950,00 kr | 25% (vatType 1) |
+| 2 | **2400** – Leverandørgjeld | Togbillett - NSB | -7.950,00 kr | 0% |
+| (auto) | **2710** – Inngående MVA | IVA generado automáticamente | +1.590,00 kr | — |
+
+### Detalles adicionales
+- **Departamento**: Produksjon ✅
+- **Cuenta de gasto**: 7140 Reisekostnad (correcta para billetes de tren) ✅
+- **IVA**: 25% aplicado correctamente — el sistema generó automáticamente el asiento en cuenta 2710 por 1.590 kr ✅
+
+> **Nota**: Solo se registró el Togbillett (7.950 kr) según lo solicitado. Los otros artículos del recibo (Middag representasjon y Whiteboard) no fueron incluidos.
+[2026-03-21T18:25:38.996Z] ---
+
+[LEADERBOARD] Task 22 scored
+[LEADERBOARD] Total: 66.75 → 66.75 (0.00)
+
+[SCORING] {
+  "id": "a66d3f20-4ecf-4b7b-a7c6-ce572769aa90",
+  "status": "completed",
+  "queued_at": "2026-03-21T18:24:57.851685+00:00",
+  "completed_at": "2026-03-21T18:25:39.933159+00:00",
+  "score_raw": 0,
+  "score_max": 10,
+  "normalized_score": 0,
+  "duration_ms": 41968,
+  "feedback": {
+    "comment": "5/5 checks failed.",
+    "checks": [
+      "Check 1: failed",
+      "Check 2: failed",
+      "Check 3: failed",
+      "Check 4: failed",
+      "Check 5: failed"
+    ]
+  }
+}
