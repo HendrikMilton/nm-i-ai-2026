@@ -56,7 +56,8 @@ export const createTools = (client: TripletexClient) => ({
         }),
         execute: async ({ expression }) => {
             try {
-                const result = new Function(`"use strict"; return (${expression})`)();
+                const raw = new Function(`"use strict"; return (${expression})`)();
+                const result = typeof raw === 'number' ? Math.round(raw * 100) / 100 : raw;
                 return { result };
             } catch (e: any) {
                 return { error: e.message };
