@@ -129,8 +129,8 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
-1. In parallel: GET customer, supplier, all employees, project (fields=id,name,version,projectManager(id),isInternal,isFixedPrice,fixedprice), activity, ledger accounts (4300 expense + 2400 payable), GET /project/hourlyRates?projectId=X
-   Do NOT check or update bank account 1920 — invoices work without it.
+1. In parallel: GET customer, supplier, all employees, project (fields=id,name,version,projectManager(id),isInternal,isFixedPrice,fixedprice), activity, ledger accounts (4300 expense + 2400 payable), GET /project/hourlyRates?projectId=X, GET /ledger/account?number=1920&fields=id,bankAccountNumber,version
+   If bank account 1920 has empty bankAccountNumber, PUT to set bankAccountNumber="${dummyNorwegianBankNumber}" BEFORE creating the invoice.
 2. PUT /project/{id} to set isFixedPrice:true, fixedprice:<budget_amount> from the task.
    For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
    Do all PUTs in parallel.
