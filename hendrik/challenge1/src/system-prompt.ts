@@ -7,6 +7,13 @@ const apiRef = readFileSync(join(__dirname, '..', 'api-compact.json'), 'utf-8');
 const dummyNorwegianBankNumber = '12345678903';
 const dummyEmail = 'post@example.org';
 
+// Task 22 experiment log:
+// Attempt 1: POST /ledger/voucher (no supplierVoucherType) → 0/5
+// Attempt 2: travelExpense + convert to ansattutlegg + cost + deliver → 0/5
+// Attempt 3: travelExpense WITHOUT convert + cost + deliver → 0/5
+// Attempt 4: POST /ledger/voucher WITH supplierVoucherType:"TYPE_SUPPLIER_INVOICE_SIMPLE" → ???
+// A competitor scored 4.50 on task 22 (6th place team, 11 tries)
+
 const workflows = `
 ## Workflow: Create invoice
 1. Find/create customer: GET /customer?organizationNumber=X or POST /customer
@@ -49,15 +56,17 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
 ## Workflow: Supplier invoice from text prompt
 Same as Task 20 but data comes from prompt text instead of PDF. Follow same steps.
 
-## Workflow: Receipt/expense registration as employee expense (Task 22)
-Register receipt expenses as employee expenses (ansattutlegg), NOT as ledger vouchers. Using POST /ledger/voucher will score 0.
-1. In parallel: GET /employee?fields=id&count=1, GET /department?name=<dept>&fields=id,name,
-   GET /travelExpense/costCategory?fields=id,description, GET /travelExpense/paymentType?fields=id,description
-2. POST /travelExpense with {employee:{id}, title:<expense_description_from_task>}
-3. PUT /travelExpense/{id}/convert — converts to ansattutlegg (employee expense type=0)
-4. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id:<"Representasjon - fradragsb." for representation, or match to expense type>}, paymentType:{id:<"Privat utlegg">}, date:<receipt_date>, amountCurrencyIncVat:<amount_from_receipt>, comments:<description>}
-5. PUT /travelExpense/{id} with {id, version, title, department:{id}, travelDetails:{departureDate:<receipt_date>, returnDate:<receipt_date>, isForeignTravel:false, isDayTrip:true, isCompensationFromRates:false, departureFrom:<city_from_receipt>, destination:<city_from_receipt>, departureTime:"18:00", returnTime:"21:00", purpose:<description>}}
-6. PUT /travelExpense/:deliver?id={id} — submits the expense
+## Workflow: Receipt/expense registration (Task 22)
+Register receipt expense as a supplier invoice voucher with supplierVoucherType.
+1. In parallel: GET /supplier?organizationNumber=<from_receipt>, GET /department?name=<dept>&fields=id,name,
+   GET /ledger/account for expense account (match expense type: 6540 Inventar for equipment, 7140 Reisekostnad for travel, 7350 Representasjon for dinners),
+   GET /ledger/account?number=2400&fields=id
+2. If supplier not found: POST /supplier with {name, organizationNumber, email:"post@example.org", invoiceEmail:"post@example.org"}
+3. POST /ledger/voucher with supplierVoucherType:"TYPE_SUPPLIER_INVOICE_SIMPLE" and postings:
+   {date:<receipt_date>, description:"<item> - <supplier_name>", supplierVoucherType:"TYPE_SUPPLIER_INVOICE_SIMPLE", postings: [
+     {date, description, account:{id:<expense_account>}, supplier:{id}, department:{id}, amountGross:<item_amount_incl_vat>, amountGrossCurrency:<same>, vatType:{id:1}, invoiceNumber:<receipt_date_or_number>, row:1},
+     {date, description, account:{id:<2400>}, supplier:{id}, department:{id}, amountGross:<-item_amount>, amountGrossCurrency:<same>, vatType:{id:0}, row:2}
+   ]}
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
@@ -181,17 +190,26 @@ CRITICAL: Do NOT re-query /ledger/posting after posting vouchers. Calculate tax 
 CRITICAL: Do NOT use /resultbudget — it often returns wrong fields. Use /ledger/posting directly.
 
 ## Workflow: Correct ledger errors (Task 24)
-The task tells you exactly what the 4 errors are. Do NOT overthink — just post 4 correction vouchers.
-IMPORTANT: Be efficient. Do NOT spend steps reasoning. Read originals, then post ALL 4 corrections in ONE step.
-1. GET /ledger/voucher?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,number,date,description&count=100
-   Then GET postings for ALL relevant vouchers in parallel: GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&voucherId=<id>&fields=id,account(id,number),amount,amountGross,supplier(id),department(id),customer(id),vatType(id)
-   CRITICAL: copy supplier, department, customer from originals. Missing supplier on 2400 = 422.
-2. Build ALL 4 correction vouchers at once. Use vatType:{id:0} on all correction postings (corrections are internal adjustments).
-   - Wrong account: debit correct account, credit wrong account (same amountGross as original).
-   - Duplicate: negate all postings from the duplicate voucher.
-   - Missing VAT: use calculate tool for amount (excl_amount × 0.25). Debit VAT account (2710), credit supplier account (2400) with supplier:{id}.
-   - Wrong amount: debit/credit the DIFFERENCE (correct - wrong).
-3. POST all 4 correction vouchers in parallel in ONE tool call. Do NOT post them one at a time.
+Do NOT overthink. Read originals, then post corrections in ONE step.
+1. GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-02-28&count=1000&fields=id,date,description,account(id,number,name),amount,amountGross,vatType(id),voucher(id,number,description),supplier(id)
+   Read ALL postings in one call. Match errors from the prompt by account number and amount.
+   For each error, note: vatType id, supplier id, amount vs amountGross, voucher id.
+2. Wrong account: POST /ledger/voucher with 2 postings. Use SAME vatType as original.
+   Row 1: wrong_account, amountGross=-<original_gross>, vatType:{id:<ORIGINAL>}
+   Row 2: correct_account, amountGross=+<original_gross>, vatType:{id:<ORIGINAL>}
+3. Duplicate voucher: PUT /ledger/voucher/{voucher_id}/:reverse?date=<today>
+   This is 1 write call, auto-reverses everything. Find the duplicate voucher id from step 1.
+4. Missing VAT: use calculate tool. Original treated amount_excl as gross (wrong).
+   correct_net = amount_excl, correct_VAT = amount_excl * 0.25
+   current_net = original posting amount field, current_VAT = original 2710 posting amount
+   POST /ledger/voucher with 3 postings:
+   Row 1: expense_account, amountGross=+(correct_net - current_net), vatType:{id:0}
+   Row 2: 2710, amountGross=+(correct_VAT - current_VAT), vatType:{id:0}
+   Row 3: 2400, amountGross=-(sum of row 1+2), vatType:{id:0}, supplier:{id:<from_original>}
+5. Wrong amount: diff = wrong - correct. POST /ledger/voucher with 2 postings. Use SAME vatType as original.
+   Row 1: expense_account, amountGross=-diff, vatType:{id:<ORIGINAL>}
+   Row 2: contra_account, amountGross=+diff, vatType:{id:0}, supplier:{id} if 2400
+6. Post all corrections in parallel. Use /:reverse for duplicate (step 3), POST vouchers for rest.
 
 ## Workflow: Monthly closing / journal vouchers (Task 26)
 Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new accounts — use only existing ones.
@@ -270,10 +288,8 @@ For aggregating ledger postings, pass the amounts array: calculate({expression: 
 - Employee userType: use "NO_ACCESS" or "STANDARD" — never "ADMINISTRATOR"
 - workingHoursScheme: use "NOT_SHIFT" — never "NON_SHIFT"
 - Voucher postings: row starts at 1 (row 0 is system-reserved)
-- Do NOT include voucherType, supplierVoucherType, or guiRow on vouchers
-- Supplier invoices: use POST /ledger/voucher — NEVER use POST /supplierInvoice
+- Voucher postings: do NOT include guiRow
 - Supplier invoice debit posting MUST include invoiceNumber field
-- Payroll: use POST /salary/transaction?generateTaxDeduction=true — never use vouchers for payroll
 - Credit note: PUT /invoice/{id}/:createCreditNote?date=YYYY-MM-DD — date as query param, empty body
 - For supplier email, set BOTH email AND invoiceEmail
 - Payment on invoice: PUT /invoice/{id}/:payment with paymentDate, paymentTypeId, paidAmount as QUERY PARAMS (not body)
