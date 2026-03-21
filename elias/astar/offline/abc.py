@@ -1,22 +1,28 @@
 """
-Astar Island — ABC (Approximate Bayesian Computation) Parameter Fitting
+Astar Island v2 — ABC Parameter Fitting
 
-Two-stage ABC that pools observations across all 5 seeds to fit the 8 key
-hidden parameters of the simulator. Produces weighted parameter sets for
-Monte Carlo prediction.
+Key improvements over v1:
+  - Comprehensive cold overrides for ALL 8 parameters (not just 2)
+  - Expansion rate lower bound covers R3-style cold rounds (0.005 vs 0.05)
+  - Uses deterministic RNG seeding (not Python hash())
 """
 
 import math
 import random
 from concurrent.futures import ProcessPoolExecutor
 import os
+import sys
 
-from offline.simulator import Simulator, DEFAULT_PARAMS, TERRAIN_TO_CLASS
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", ".."))
+
+from astar.offline.simulator import Simulator, DEFAULT_PARAMS, TERRAIN_TO_CLASS
+from run import CLASS_FLOORS
 
 # --- ABC parameter ranges ---
 
 ABC_PARAM_RANGES = {
-    "expansion_rate":      (0.05, 0.65),
+    "expansion_rate":      (0.03, 0.65),
     "conflict_prob":       (0.05, 0.55),
     "winter_severity":     (0.08, 0.75),
     "trade_range":         (3, 14),
@@ -26,9 +32,16 @@ ABC_PARAM_RANGES = {
     "longship_range":      (4, 17),
 }
 
+# Comprehensive cold overrides — ALL parameters adjusted for cold rounds
 COLD_OVERRIDES = {
-    "expansion_rate":  (0.01, 0.15),
-    "winter_severity": (0.40, 0.75),
+    "expansion_rate":      (0.005, 0.12),    # v1 had (0.01, 0.15) — R3 was 0.003
+    "conflict_prob":       (0.10, 0.55),     # cold = more conflict (settlements fight over scarce resources)
+    "winter_severity":     (0.40, 0.80),     # cold = harsher winters
+    "trade_range":         (3, 10),          # cold = less trade
+    "ruin_reclaim_rate":   (0.03, 0.30),     # cold = fewer reclaims
+    "forest_reclaim_rate": (0.02, 0.35),     # cold = more forest overtake of ruins
+    "longship_prob":       (0.02, 0.25),     # cold = fewer longships
+    "longship_range":      (4, 12),          # cold = shorter range
 }
 
 INTEGER_PARAMS = {"trade_range", "longship_range"}
@@ -76,7 +89,6 @@ def latin_hypercube_sample(n, ranges, rng):
     param_names = list(ranges.keys())
     k = len(param_names)
 
-    # Create permuted indices for each dimension
     indices = []
     for _ in range(k):
         perm = list(range(n))
@@ -88,7 +100,6 @@ def latin_hypercube_sample(n, ranges, rng):
         sample = {}
         for j, name in enumerate(param_names):
             lo, hi = ranges[name]
-            # Sample uniformly within bin
             bin_idx = indices[j][i]
             u = rng.random()
             val = lo + (bin_idx + u) / n * (hi - lo)
@@ -100,7 +111,7 @@ def latin_hypercube_sample(n, ranges, rng):
     return samples
 
 
-# --- Scoring workers (module-level for pickling) ---
+# --- Scoring workers ---
 
 def _run_sim_get_classes(grid, settlements_data, params, seed, h, w):
     """Run one sim, return flat class grid."""
@@ -108,6 +119,17 @@ def _run_sim_get_classes(grid, settlements_data, params, seed, h, w):
     sim.run()
     cg = sim.get_class_grid()
     return [cg[r][c] for r in range(h) for c in range(w)]
+
+
+def _deterministic_seed(abc_vec, sim_i, stage="s1"):
+    """Deterministic RNG seed (v2 fix: v1 used Python hash() which is randomized)."""
+    # Create a stable hash from parameter values
+    vals = tuple(round(v * 10000) for v in abc_vec.values() if isinstance(v, float))
+    seed = 0
+    for v in vals:
+        seed = (seed * 31 + int(v)) & 0x7FFFFFFF
+    seed = (seed * 31 + sim_i + (1 if stage == "s2" else 0)) & 0x7FFFFFFF
+    return seed
 
 
 def _score_stage1_worker(args):
@@ -120,7 +142,7 @@ def _score_stage1_worker(args):
 
     for grid, settlements, obs_counts, h, w in seed_data_list:
         for sim_i in range(n_sims_per_seed):
-            seed = hash((str(abc_vec), sim_i)) & 0x7FFFFFFF
+            seed = _deterministic_seed(abc_vec, sim_i, "s1")
             flat = _run_sim_get_classes(grid, settlements, sim_params, seed, h, w)
 
             idx = 0
@@ -129,14 +151,12 @@ def _score_stage1_worker(args):
                     n_obs = sum(obs_counts[r][c])
                     if n_obs > 0:
                         obs_argmax = max(range(6), key=lambda k: obs_counts[r][c][k])
-                        sim_class = flat[idx]
-                        if sim_class == obs_argmax:
+                        if flat[idx] == obs_argmax:
                             total_match += 1
                         total_obs += 1
                     idx += 1
 
-    match_rate = total_match / max(total_obs, 1)
-    return abc_vec, match_rate
+    return abc_vec, total_match / max(total_obs, 1)
 
 
 def _score_stage2_worker(args):
@@ -147,16 +167,14 @@ def _score_stage2_worker(args):
     total_ll = 0.0
 
     for grid, settlements, obs_counts, h, w in seed_data_list:
-        # Run MC to get probability distribution
         counts = [[0] * 6 for _ in range(h * w)]
 
         for sim_i in range(n_sims):
-            seed = hash((str(abc_vec), "s2", sim_i)) & 0x7FFFFFFF
+            seed = _deterministic_seed(abc_vec, sim_i, "s2")
             flat = _run_sim_get_classes(grid, settlements, sim_params, seed, h, w)
             for idx in range(h * w):
                 counts[idx][flat[idx]] += 1
 
-        # Compute log-likelihood of observations
         idx = 0
         for r in range(h):
             for c in range(w):
@@ -164,8 +182,7 @@ def _score_stage2_worker(args):
                 if n_obs > 0:
                     for k in range(6):
                         if obs_counts[r][c][k] > 0:
-                            # MC probability for class k
-                            mc_prob = max(counts[idx][k] / n_sims, 0.001)
+                            mc_prob = max(counts[idx][k] / n_sims, CLASS_FLOORS[k])
                             total_ll += obs_counts[r][c][k] * math.log(mc_prob)
                 idx += 1
 
@@ -209,7 +226,7 @@ def run_abc_fit(seed_grids, seed_settlements, seed_obs_counts,
     rng = random.Random(rng_seed)
     n_workers = max(1, os.cpu_count() - 1)
 
-    # Build ranges (narrow for cold rounds)
+    # Use comprehensive cold overrides (v2 fix: all 8 params, not just 2)
     ranges = dict(ABC_PARAM_RANGES)
     if is_cold:
         ranges.update(COLD_OVERRIDES)
@@ -263,8 +280,10 @@ def run_abc_fit(seed_grids, seed_settlements, seed_obs_counts,
     return top_fitted
 
 
+# --- Weighted MC from fitted params ---
+
 def _mc_worker(args):
-    """Worker for weighted MC. Returns flat class grid."""
+    """Worker for weighted MC."""
     grid, settlements_data, params, seed = args
     sim = Simulator(grid, settlements_data, params=params, seed=seed)
     sim.run()
@@ -274,45 +293,32 @@ def _mc_worker(args):
     return [cg[r][c] for r in range(h) for c in range(w)]
 
 
-# --- Weighted MC ---
-
 def weighted_mc_from_fitted(fitted_params, grid, settlements_data, total_runs=500,
                              base_seed=None, map_h=40, map_w=40):
-    """Run weighted MC using fitted parameter sets.
-
-    Args:
-        fitted_params: list of (sim_params_dict, log_likelihood) from run_abc_fit
-        total_runs: total simulations to distribute across param sets
-
-    Returns: H x W x 6 probability tensor as nested lists
-    """
+    """Run weighted MC using fitted parameter sets. Uses unified CLASS_FLOORS."""
     if not fitted_params:
         return None
 
     n_workers = max(1, os.cpu_count() - 1)
 
-    # Compute softmax weights from log-likelihoods
+    # Softmax weights from log-likelihoods
     lls = [ll for _, ll in fitted_params]
     max_ll = max(lls)
     exp_lls = [math.exp(ll - max_ll) for ll in lls]
     total_exp = sum(exp_lls)
     weights = [e / total_exp for e in exp_lls]
 
-    # Distribute runs proportionally (at least 1 per param set)
+    # Distribute runs proportionally
     runs_per = [max(1, int(w * total_runs)) for w in weights]
-    # Adjust to match total
     diff = total_runs - sum(runs_per)
     if diff > 0:
-        # Add remaining to highest-weight param sets
         for i in range(diff):
             runs_per[i % len(runs_per)] += 1
     elif diff < 0:
-        # Remove from lowest-weight param sets
         for i in range(-diff):
             idx = len(runs_per) - 1 - (i % len(runs_per))
             runs_per[idx] = max(1, runs_per[idx] - 1)
 
-    # Build all sim tasks
     h, w = map_h, map_w
     tasks = []
     for pi, (params, _) in enumerate(fitted_params):
@@ -320,7 +326,6 @@ def weighted_mc_from_fitted(fitted_params, grid, settlements_data, total_runs=50
             seed = ((base_seed or 0) + pi * 10000 + si) if base_seed is not None else None
             tasks.append((grid, settlements_data, params, seed))
 
-    # Run all sims in parallel
     counts = [[[0] * 6 for _ in range(w)] for _ in range(h)]
     actual_total = len(tasks)
 
@@ -332,13 +337,12 @@ def weighted_mc_from_fitted(fitted_params, grid, settlements_data, total_runs=50
                     counts[r][c][flat[idx]] += 1
                     idx += 1
 
-    # Convert to probabilities
-    class_floors = [0.005, 0.005, 0.001, 0.002, 0.005, 0.001]
+    # Unified floors
     prediction = [[[0.0] * 6 for _ in range(w)] for _ in range(h)]
     for r in range(h):
         for c in range(w):
             for k in range(6):
-                prediction[r][c][k] = max(counts[r][c][k] / actual_total, class_floors[k])
+                prediction[r][c][k] = max(counts[r][c][k] / actual_total, CLASS_FLOORS[k])
             total = sum(prediction[r][c])
             for k in range(6):
                 prediction[r][c][k] /= total

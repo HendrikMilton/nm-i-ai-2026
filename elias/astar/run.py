@@ -1,71 +1,80 @@
 """
-Astar Island — simulator + prior prediction pipeline (v5).
-Uses offline Monte Carlo simulator blended with contextual priors.
-See STRATEGY.md for the full approach.
+Astar Island v2 — Clean reimplementation with ABC integrated from the start.
+
+Key improvements over v1:
+  - Unified probability floors everywhere (single CLASS_FLOORS constant)
+  - ABC parameter fitting is the primary prediction path, not an afterthought
+  - Warm/cold-aware weight switching for simulator trust
+  - Fixed forest boost double-compute bug from v1
 """
 
 import json
+import math
 import os
-import time
-from datetime import datetime, timezone
-
 import sys
+
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), ".."))
-from shared.utils import (
-    get_active_round,
-    get_round,
-    get_budget,
-    simulate,
-    submit,
-    floor_and_normalize,
-)
-from offline.simulator import run_monte_carlo, DEFAULT_PARAMS
 
-# --- Constants ---
-DEFAULT_MAP_W = 40
-DEFAULT_MAP_H = 40
-N_CLASSES = 6
-N_SEEDS = 5
+# ---------------------------------------------------------------------------
+# Constants
+# ---------------------------------------------------------------------------
+
+MAP_W = 40
+MAP_H = 40
 VIEWPORT = 15
-RATE_LIMIT_DELAY = 0.25  # stay under 5 req/s
+N_SEEDS = 5
+N_CLASSES = 6
 
-# Blending parameters
-# Observations are blended with distance-aware priors when enough samples exist.
-# obs_weight is per-observation; total obs influence = obs_weight * sqrt(n_obs).
-# Simulator is enabled with safety net: auto-disabled when it disagrees with observations.
-SIM_WEIGHT = 0.3
+# Unified probability floors — used everywhere (prediction, MC, scoring).
+# [empty, settlement, port, ruin, forest, mountain]
+# Lower floors reduce probability mass stolen from likely outcomes.
+# Validated: +0.3–0.4 points across all tested rounds vs previous [0.005, 0.005, 0.001, 0.002, 0.005, 0.001].
+CLASS_FLOORS = [0.001, 0.001, 0.0002, 0.0005, 0.001, 0.0002]
+
+# Terrain code → prediction class
+TERRAIN_TO_CLASS = {
+    0: 0, 10: 0, 11: 0,   # empty/ocean/plains → class 0
+    1: 1, 2: 2, 3: 3, 4: 4, 5: 5,
+}
+
+# Warm/cold classification threshold (R3 ≈ 0.003, all others ≥ 0.10)
+WARM_COLD_THRESHOLD = 0.05
+
+# Blending weights
 PRIOR_WEIGHT = 4.0
 OBS_WEIGHT = 0.5
-N_SIMS = 200
+SIM_WEIGHT_WARM = 0.3
+SIM_WEIGHT_COLD = 0.0
+SIM_SAFETY_THRESHOLD = 0.55  # disable sim below this agreement rate
 
-# Terrain code → prediction class mapping
-TERRAIN_TO_CLASS = {
-    0: 0,   # Empty → Empty
-    10: 0,  # Ocean → Empty
-    11: 0,  # Plains → Empty
-    1: 1,   # Settlement
-    2: 2,   # Port
-    3: 3,   # Ruin
-    4: 4,   # Forest
-    5: 5,   # Mountain
+# ABC-based blending
+ABC_PRIOR_WEIGHT = 0.85
+ABC_MC_WEIGHT = 0.15
+MC_EQUIV_SAMPLES = 18
+MC_TOTAL_RUNS = 500
+
+# Observation blending
+MIN_OBS_TO_BLEND = 2
+OBS_EXPONENT = 0.5  # n_obs ** exponent for observation weight scaling
+
+# Default distance decay multipliers (average across R1-R7 ground truth)
+DIST_DECAY_DEFAULT = {
+    0: 0.0,  1: 1.20, 2: 1.00, 3: 0.70,
+    4: 0.50, 5: 0.30, 6: 0.20, 7: 0.10,
 }
 
-# Fallback priors (used when contextual lookup misses)
-TERRAIN_PRIORS = {
-    10: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],             # Ocean → 100% empty
-    11: [0.8384, 0.1099, 0.009, 0.0102, 0.0325, 0.0], # Plains
-    5:  [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],               # Mountain
-    4:  [0.0694, 0.1116, 0.0084, 0.0102, 0.8005, 0.0], # Forest
-    1:  [0.4794, 0.27, 0.0042, 0.0227, 0.2237, 0.0],  # Settlement
-    2:  [0.4911, 0.0757, 0.1821, 0.0214, 0.2296, 0.0], # Port
-    0:  [0.8384, 0.1099, 0.009, 0.0102, 0.0325, 0.0],  # Empty
-    3:  [0.4794, 0.27, 0.0042, 0.0227, 0.2237, 0.0],  # Ruin
+# Separate decay curves for warm vs cold rounds
+DIST_DECAY_WARM = {
+    0: 0.0,  1: 1.30, 2: 1.10, 3: 0.80,
+    4: 0.55, 5: 0.35, 6: 0.25, 7: 0.15,
+}
+DIST_DECAY_COLD = {
+    0: 0.0,  1: 0.80, 2: 0.40, 3: 0.15,
+    4: 0.05, 5: 0.02, 6: 0.01, 7: 0.005,
 }
 
-# Context-aware priors: (terrain, n_forest_neighbors, is_coastal) → [6] probs
-# Three prior tables: average (all rounds), warm (R1-R7 excl R3), cold (R3 only).
-# The appropriate table is selected based on observed expansion rate.
-_PRIORS_DIR = os.path.dirname(__file__)
+# Contextual priors (terrain, n_forest_neighbors, is_coastal → [6] probs)
+_PRIORS_DIR = os.path.join(os.path.dirname(__file__), "..", "astar")
 
 def _load_priors(filename):
     path = os.path.join(_PRIORS_DIR, filename)
@@ -78,31 +87,135 @@ _CONTEXTUAL_PRIORS = _load_priors("contextual_priors.json")
 _CONTEXTUAL_PRIORS_WARM = _load_priors("contextual_priors_warm.json")
 _CONTEXTUAL_PRIORS_COLD = _load_priors("contextual_priors_cold.json")
 
-# Expansion rate threshold for warm/cold classification.
-# Below this → cold priors. Above → warm priors.
-# R3 had expansion rate ~0.003. All other rounds >= 0.10.
-WARM_COLD_THRESHOLD = 0.05
+# Fallback priors when contextual lookup misses
+TERRAIN_PRIORS = {
+    10: [1.0, 0.0, 0.0, 0.0, 0.0, 0.0],
+    11: [0.8384, 0.1099, 0.009, 0.0102, 0.0325, 0.0],
+    5:  [0.0, 0.0, 0.0, 0.0, 0.0, 1.0],
+    4:  [0.0694, 0.1116, 0.0084, 0.0102, 0.8005, 0.0],
+    1:  [0.4794, 0.27, 0.0042, 0.0227, 0.2237, 0.0],
+    2:  [0.4911, 0.0757, 0.1821, 0.0214, 0.2296, 0.0],
+    0:  [0.8384, 0.1099, 0.009, 0.0102, 0.0325, 0.0],
+    3:  [0.4794, 0.27, 0.0042, 0.0227, 0.2237, 0.0],
+}
 
+# Hidden parameter defaults for the simulator
+HIDDEN_PARAMS = {
+    "GROWTH": {
+        "EXPANSION_RATE": 0.08,
+        "EXPANSION_RANGE": 3,
+        "PORT_DEVELOPMENT_CHANCE": 0.15,
+        "LONGSHIP_BUILD_CHANCE": 0.10,
+    },
+    "CONFLICT": {
+        "RAID_CHANCE": 0.15,
+        "CONQUEST_CHANCE": 0.10,
+        "LONGSHIP_RAID_RANGE": 10,
+    },
+    "TRADE": {
+        "TRADE_RANGE": 6,
+    },
+    "WINTER": {
+        "WINTER_HARSHNESS": 0.40,
+        "COLLAPSE_CHANCE": 0.30,
+    },
+    "ENVIRONMENT": {
+        "RUIN_TO_SETTLEMENT_RECLAIM_RATE": 0.10,
+        "RUIN_TO_PORT_RECLAIM_RATE": 0.10,
+        "FOREST_OVERTAKE_RATE": 0.05,
+    },
+}
+
+
+# ---------------------------------------------------------------------------
+# Floor & normalize (unified)
+# ---------------------------------------------------------------------------
+
+def floor_and_normalize(prediction):
+    """Apply CLASS_FLOORS and renormalize. Mutates in-place and returns."""
+    for row in prediction:
+        for cell in row:
+            for i in range(len(cell)):
+                cell[i] = max(cell[i], CLASS_FLOORS[i])
+            total = sum(cell)
+            for i in range(len(cell)):
+                cell[i] /= total
+    return prediction
+
+
+# ---------------------------------------------------------------------------
+# Map helpers
+# ---------------------------------------------------------------------------
+
+def tile_positions(map_size, vp_size):
+    """Evenly space viewport origins to cover the interior with uniform overlap."""
+    n_tiles = -(-map_size // vp_size)  # ceil division
+    if n_tiles <= 1:
+        return [0]
+    step = (map_size - vp_size) / (n_tiles - 1)
+    return sorted(set(int(i * step + 0.5) for i in range(n_tiles)))
+
+def build_tiling(map_w=MAP_W, map_h=MAP_H):
+    """Build full-coverage tiling that skips the 1-cell ocean border."""
+    interior_w = map_w - 2
+    interior_h = map_h - 2
+    xs = [x + 1 for x in tile_positions(interior_w, VIEWPORT)]
+    ys = [y + 1 for y in tile_positions(interior_h, VIEWPORT)]
+    return [(x, y) for y in ys for x in xs]
+
+def extract_map_dimensions(round_data):
+    w = round_data.get("map_width") or round_data.get("width") or MAP_W
+    h = round_data.get("map_height") or round_data.get("height") or MAP_H
+    return int(w), int(h)
+
+def extract_grid_and_settlements(round_data, seed_index):
+    """Extract initial grid and settlement data for a specific seed."""
+    initial_states = round_data.get("initial_states") or []
+    if seed_index >= len(initial_states):
+        raise ValueError(f"Seed index {seed_index} not found")
+    state = initial_states[seed_index]
+    grid = state.get("grid") or state.get("terrain") or []
+    settlements = state.get("settlements") or []
+    if not settlements:
+        for r in range(len(grid)):
+            for c in range(len(grid[0])):
+                if grid[r][c] in (1, 2):
+                    settlements.append({
+                        "x": c, "y": r,
+                        "has_port": grid[r][c] == 2,
+                        "alive": True,
+                        "owner_id": len(settlements),
+                    })
+    return grid, settlements
+
+def merge_counts(a, b, map_w, map_h):
+    for r in range(map_h):
+        for c in range(map_w):
+            for k in range(N_CLASSES):
+                a[r][c][k] += b[r][c][k]
+    return a
+
+
+# ---------------------------------------------------------------------------
+# Warm/cold classification
+# ---------------------------------------------------------------------------
 
 def classify_round_warmth(expansion_rate):
-    """Classify a round as 'warm' or 'cold' based on observed expansion rate.
-
-    Returns the appropriate contextual prior table.
-    """
+    """Returns (prior_table, warmth_label, dist_decay_defaults)."""
     if expansion_rate < WARM_COLD_THRESHOLD:
-        return _CONTEXTUAL_PRIORS_COLD, "cold"
+        return _CONTEXTUAL_PRIORS_COLD, "cold", DIST_DECAY_COLD
     else:
-        return _CONTEXTUAL_PRIORS_WARM, "warm"
+        return _CONTEXTUAL_PRIORS_WARM, "warm", DIST_DECAY_WARM
 
 
-def get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=None):
-    """Get the best prior for a cell based on its terrain and neighborhood.
+# ---------------------------------------------------------------------------
+# Contextual priors
+# ---------------------------------------------------------------------------
 
-    If prior_table is provided, uses it instead of the default (all-rounds) table.
-    """
-    terrain = initial_grid[r][c]
+def get_contextual_prior(grid, r, c, map_h, map_w, prior_table=None):
+    """Get prior for a cell based on terrain + neighborhood context."""
+    terrain = grid[r][c]
 
-    # Static terrain — no context needed
     if terrain == 10:
         return [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     if terrain == 5:
@@ -110,7 +223,6 @@ def get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=None):
 
     table = prior_table or _CONTEXTUAL_PRIORS
 
-    # Count neighbors
     n_forest = 0
     is_coastal = False
     for dr in (-1, 0, 1):
@@ -119,287 +231,84 @@ def get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=None):
                 continue
             nr, nc = r + dr, c + dc
             if 0 <= nr < map_h and 0 <= nc < map_w:
-                if initial_grid[nr][nc] == 4:
+                if grid[nr][nc] == 4:
                     n_forest += 1
-                if initial_grid[nr][nc] == 10:
+                if grid[nr][nc] == 10:
                     is_coastal = True
 
-    n_forest = min(n_forest, 4)  # capped in training data
+    n_forest = min(n_forest, 4)
 
-    # Try exact match, then relax features
-    key = f"{terrain}_{n_forest}_{1 if is_coastal else 0}"
-    if key in table:
-        return list(table[key])
+    # Try exact, then relax features
+    for key in [f"{terrain}_{n_forest}_{1 if is_coastal else 0}",
+                f"{terrain}_{n_forest}_0",
+                f"{terrain}_0_{1 if is_coastal else 0}"]:
+        if key in table:
+            return list(table[key])
 
-    # Relax: ignore coastal
-    key = f"{terrain}_{n_forest}_0"
-    if key in table:
-        return list(table[key])
-
-    # Relax: ignore forest count
-    key = f"{terrain}_0_{1 if is_coastal else 0}"
-    if key in table:
-        return list(table[key])
-
-    # Fallback to default table, then global prior
-    if prior_table is not None and key not in prior_table:
-        # Try the all-rounds table as fallback
-        for fallback_key in [f"{terrain}_{n_forest}_{1 if is_coastal else 0}",
-                             f"{terrain}_{n_forest}_0",
-                             f"{terrain}_0_{1 if is_coastal else 0}"]:
-            if fallback_key in _CONTEXTUAL_PRIORS:
-                return list(_CONTEXTUAL_PRIORS[fallback_key])
+    # Fallback to all-rounds table
+    if prior_table is not None:
+        for key in [f"{terrain}_{n_forest}_{1 if is_coastal else 0}",
+                    f"{terrain}_{n_forest}_0",
+                    f"{terrain}_0_{1 if is_coastal else 0}"]:
+            if key in _CONTEXTUAL_PRIORS:
+                return list(_CONTEXTUAL_PRIORS[key])
 
     return list(TERRAIN_PRIORS.get(terrain, [1/N_CLASSES] * N_CLASSES))
 
 
-# --- Distance-aware priors ---
-
-def compute_settlement_distances(initial_grid, map_h, map_w):
-    """Compute Chebyshev distance from each cell to nearest initial settlement.
-
-    Returns: H x W grid of distances (999 if no settlements).
-    """
-    dist = [[999] * map_w for _ in range(map_h)]
-    # BFS from all settlement cells simultaneously
-    queue = []
-    for r in range(map_h):
-        for c in range(map_w):
-            if initial_grid[r][c] in (1, 2):  # settlement or port
-                dist[r][c] = 0
-                queue.append((r, c))
-
-    head = 0
-    while head < len(queue):
-        r, c = queue[head]
-        head += 1
-        for dr in (-1, 0, 1):
-            for dc in (-1, 0, 1):
-                if dr == 0 and dc == 0:
-                    continue
-                nr, nc = r + dr, c + dc
-                if 0 <= nr < map_h and 0 <= nc < map_w:
-                    if dist[nr][nc] > dist[r][c] + 1:
-                        dist[nr][nc] = dist[r][c] + 1
-                        queue.append((nr, nc))
-    return dist
-
-
-def estimate_expansion_rate(obs_counts, initial_grid, dist_map, map_h, map_w):
-    """Estimate the round's expansion rate from observation counts.
-
-    Looks at cells near settlements (dist 1-3) and counts how often
-    they were observed as settlements vs other classes.
-
-    Returns: expansion_rate (0.0 to 1.0), n_samples
-    """
-    settle_obs = 0
-    total_obs = 0
-
-    for r in range(map_h):
-        for c in range(map_w):
-            n_obs = sum(obs_counts[r][c])
-            if n_obs == 0:
-                continue
-            terrain = initial_grid[r][c]
-            # Only count non-settlement cells near settlements
-            if terrain in (10, 5, 1, 2):  # skip ocean, mountain, existing settlements
-                continue
-            d = dist_map[r][c]
-            if d < 1 or d > 3:  # only cells in expansion range
-                continue
-            total_obs += n_obs
-            settle_obs += obs_counts[r][c][1]  # class 1 = settlement
-
-    if total_obs == 0:
-        return 0.10, 0  # default fallback
-
-    return settle_obs / total_obs, total_obs
-
-
-# Default distance decay multipliers — used as fallback when no observations
-# are available. These are the average across R1-R7 ground truth.
-_DIST_DECAY_DEFAULT = {
-    0: 0.0,
-    1: 1.20,
-    2: 1.00,
-    3: 0.70,
-    4: 0.50,
-    5: 0.30,
-    6: 0.20,
-    7: 0.10,
-}
-
-
-def estimate_dist_decay(initial_grid, obs_counts, dist_map, map_h, map_w):
-    """Estimate per-distance settlement rate directly from observations.
-
-    Returns: dict of {distance: settlement_rate} and the base_rate (avg of d1-3).
-    The rates are absolute (not multipliers) — settlement probability at each distance.
-    """
-    dist_settle = {}  # dist -> (settle_count, total_count)
-    for r in range(map_h):
-        for c in range(map_w):
-            n_obs = sum(obs_counts[r][c])
-            if n_obs == 0:
-                continue
-            terrain = initial_grid[r][c]
-            if terrain in (10, 5, 1, 2):  # skip ocean, mountain, existing settlements
-                continue
-            d = dist_map[r][c]
-            if d < 1 or d > 7:
-                continue
-            if d not in dist_settle:
-                dist_settle[d] = [0, 0]
-            dist_settle[d][0] += obs_counts[r][c][1]  # settlement class
-            dist_settle[d][1] += n_obs
-
-    # Compute per-distance rates
-    rates = {}
-    for d in range(1, 8):
-        if d in dist_settle and dist_settle[d][1] >= 5:
-            rates[d] = dist_settle[d][0] / dist_settle[d][1]
-        else:
-            rates[d] = None  # not enough data
-
-    # Base rate = average of d1-3
-    d13_settle = sum(dist_settle.get(d, [0, 0])[0] for d in [1, 2, 3])
-    d13_total = sum(dist_settle.get(d, [0, 0])[1] for d in [1, 2, 3])
-    base_rate = d13_settle / d13_total if d13_total > 0 else 0.10
-
-    # Convert to multipliers relative to base_rate
-    multipliers = {}
-    for d in range(1, 8):
-        if rates[d] is not None and base_rate > 0:
-            multipliers[d] = rates[d] / base_rate
-        else:
-            multipliers[d] = _DIST_DECAY_DEFAULT.get(d, 0.0)
-
-    return multipliers, base_rate
-
-
-def estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w):
-    """Estimate port/settle and ruin/settle ratios from observations.
-
-    Returns: (port_ratio, ruin_ratio) — observed ratios to use instead of fixed defaults.
-    """
-    port_obs = 0
-    ruin_obs = 0
-    settle_obs = 0
-    total_coastal = 0
-    total_inland = 0
-
-    for s in seed_grids:
-        grid = seed_grids[s]
-        counts = seed_counts.get(s)
-        if counts is None:
-            continue
-        for r in range(map_h):
-            for c in range(map_w):
-                n_obs = sum(counts[r][c])
-                if n_obs == 0:
-                    continue
-                terrain = grid[r][c]
-                if terrain in (10, 5, 1, 2):
-                    continue
-
-                # Check coastal
-                is_coastal = False
-                for dr in (-1, 0, 1):
-                    for dc in (-1, 0, 1):
-                        nr, nc = r + dr, c + dc
-                        if 0 <= nr < map_h and 0 <= nc < map_w and grid[nr][nc] == 10:
-                            is_coastal = True
-                            break
-                    if is_coastal:
-                        break
-
-                settle_obs += counts[r][c][1]
-                ruin_obs += counts[r][c][3]
-                if is_coastal:
-                    port_obs += counts[r][c][2]
-                    total_coastal += n_obs
-                total_inland += n_obs
-
-    # Compute ratios with fallback defaults
-    port_ratio = port_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
-    ruin_ratio = ruin_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
-
-    return port_ratio, ruin_ratio
-
-
-def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansion_rate,
+def get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map, expansion_rate,
                               dist_multipliers=None, port_ratio=0.75, ruin_ratio=0.10,
                               prior_table=None):
-    """Get prior adjusted for distance to nearest settlement and round's expansion rate.
+    """Prior adjusted for distance to nearest settlement and expansion rate."""
+    terrain = grid[r][c]
 
-    Directly sets settlement+port probability to the distance-based target,
-    then redistributes remaining probability among other classes proportionally
-    to the base contextual prior.
-
-    If dist_multipliers is provided (from estimate_dist_decay), uses the
-    observation-derived per-distance multipliers instead of the fixed curve.
-    If prior_table is provided, uses warm/cold-specific contextual priors.
-    """
-    terrain = initial_grid[r][c]
-
-    # Static terrain — no adjustment
     if terrain == 10:
         return [1.0, 0.0, 0.0, 0.0, 0.0, 0.0]
     if terrain == 5:
         return [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
 
-    # Start from contextual prior (warm/cold-aware if table provided)
-    prior = get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=prior_table)
-
+    prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
     dist = dist_map[r][c]
 
-    # For existing settlements, don't adjust — they have their own dynamics
+    # Existing settlements keep their own dynamics
     if terrain in (1, 2):
         return prior
 
-    # Compute target settlement probability based on distance and expansion rate
-    mults = dist_multipliers or _DIST_DECAY_DEFAULT
+    # Distance-based settlement probability
+    mults = dist_multipliers or DIST_DECAY_DEFAULT
     if dist <= 7:
-        decay = mults.get(dist, _DIST_DECAY_DEFAULT.get(dist, 0.0))
+        decay = mults.get(dist, DIST_DECAY_DEFAULT.get(dist, 0.0))
     else:
         decay = max(0.02, 0.5 / max(dist, 1)) if dist <= 10 else 0.0
+
     target_settle = expansion_rate * decay
 
-    # Port probability for coastal cells
+    # Forest cells near settlements are attractive expansion targets (food bonus)
+    # Apply boost BEFORE computing port/ruin (fixed v1 double-compute bug)
+    if terrain == 4 and dist <= 2:
+        terrain_boost = 1.5 if dist == 1 else 1.2
+        target_settle *= terrain_boost
+
+    # Coastal → ports; activity → ruins
     is_coastal = False
     for dr in (-1, 0, 1):
         for dc in (-1, 0, 1):
             nr, nc = r + dr, c + dc
-            if 0 <= nr < map_h and 0 <= nc < map_w and initial_grid[nr][nc] == 10:
+            if 0 <= nr < map_h and 0 <= nc < map_w and grid[nr][nc] == 10:
                 is_coastal = True
                 break
         if is_coastal:
             break
 
     target_port = target_settle * port_ratio if is_coastal else 0.0
-
-    # Ruin probability scales with expansion (more activity = more collapses)
     target_ruin = target_settle * ruin_ratio
 
-    # Total probability allocated to settlement-related classes
+    # Total dynamic probability (computed once, after all boosts)
     target_dynamic = target_settle + target_port + target_ruin
 
-    # Forest cells adjacent to settlements are attractive expansion targets
-    # (settlements need adjacent forest for food production). Boost settlement
-    # probability for forest cells at close range.
-    if terrain == 4 and dist <= 2:  # forest cell near settlements
-        terrain_boost = 1.5 if dist == 1 else 1.2
-        target_settle *= terrain_boost
-        target_ruin *= terrain_boost
-
-    # Total probability allocated to settlement-related classes
-    target_dynamic = target_settle + target_port + target_ruin
-
-    # Remaining probability goes to the "static" classes (empty, forest, mountain)
-    # distributed proportionally to the base prior
+    # Distribute remaining probability among static classes proportionally
     remaining = max(0.01, 1.0 - target_dynamic)
-    static_classes = [0, 4, 5]  # empty, forest, mountain
+    static_classes = [0, 4, 5]
     base_static = sum(prior[k] for k in static_classes)
 
     adjusted = [0.0] * 6
@@ -411,9 +320,8 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
         for k in static_classes:
             adjusted[k] = remaining * (prior[k] / base_static)
     else:
-        adjusted[0] = remaining  # fallback: all to empty
+        adjusted[0] = remaining
 
-    # Normalize (should already sum to ~1.0)
     total = sum(adjusted)
     if total > 0:
         adjusted = [v / total for v in adjusted]
@@ -421,307 +329,360 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
     return adjusted
 
 
-# Minimum observations before we trust data over priors
-MIN_OBS_TO_BLEND = 1
+# ---------------------------------------------------------------------------
+# Distance / expansion estimation from observations
+# ---------------------------------------------------------------------------
+
+def compute_settlement_distances(grid, map_h, map_w):
+    """BFS Chebyshev distance from each cell to nearest initial settlement/port."""
+    dist = [[999] * map_w for _ in range(map_h)]
+    queue = []
+    for r in range(map_h):
+        for c in range(map_w):
+            if grid[r][c] in (1, 2):  # settlement or port
+                dist[r][c] = 0
+                queue.append((r, c))
+    head = 0
+    while head < len(queue):
+        r, c = queue[head]
+        head += 1
+        for dr in (-1, 0, 1):
+            for dc in (-1, 0, 1):
+                if dr == 0 and dc == 0:
+                    continue
+                nr, nc = r + dr, c + dc
+                if 0 <= nr < map_h and 0 <= nc < map_w and dist[nr][nc] > dist[r][c] + 1:
+                    dist[nr][nc] = dist[r][c] + 1
+                    queue.append((nr, nc))
+    return dist
 
 
-# --- Logging ---
-LOG_DIR = os.path.join(os.path.dirname(__file__), "..", "logs")
-INDEX_FILE = os.path.join(LOG_DIR, "index.json")
+def estimate_seed_expansion_rate(obs_counts, grid, dist_map, map_h, map_w):
+    """Estimate expansion rate for a single seed from its observations."""
+    settle_obs = 0
+    total_obs = 0
+    for r in range(map_h):
+        for c in range(map_w):
+            n_obs = sum(obs_counts[r][c])
+            if n_obs == 0:
+                continue
+            if grid[r][c] in (10, 5, 1, 2):  # skip ocean, mountain, existing settlements
+                continue
+            d = dist_map[r][c]
+            if d < 1 or d > 3:
+                continue
+            total_obs += n_obs
+            settle_obs += obs_counts[r][c][1]
+    if total_obs == 0:
+        return 0.10, 0
+    return settle_obs / total_obs, total_obs
 
 
-def _load_index():
-    if os.path.exists(INDEX_FILE):
-        with open(INDEX_FILE) as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                pass
-    return {"rounds": []}
+def pick_phase2_viewports(seed_grids, seed_counts, remaining, map_w=MAP_W, map_h=MAP_H):
+    """Allocate remaining queries using expansion-rate confidence targeting.
 
+    1. Compute per-seed expansion rate from Phase 1 observations.
+    2. If seeds disagree (high variance) → target boundary cells (dist 1-3)
+       across multiple seeds to nail down expansion rate.
+    3. If seeds agree (low variance) → target the most surprising seed's
+       boundary cells for better per-cell estimates.
 
-def _save_index(index):
-    os.makedirs(LOG_DIR, exist_ok=True)
-    with open(INDEX_FILE, "w") as f:
-        json.dump(index, f, indent=2)
+    Returns: list of (seed_index, vx, vy) tuples.
+    """
+    if remaining <= 0:
+        return []
 
-
-def _round_file(round_id):
-    return os.path.join(LOG_DIR, "rounds", f"{round_id}.json")
-
-
-def _load_round(round_id):
-    path = _round_file(round_id)
-    if os.path.exists(path):
-        with open(path) as f:
-            try:
-                return json.load(f)
-            except json.JSONDecodeError:
-                pass
-    return None
-
-
-def _save_round(round_id, round_data):
-    path = _round_file(round_id)
-    os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, "w") as f:
-        json.dump(round_data, f, indent=2)
-
-
-def _ensure_round(round_id, map_width=DEFAULT_MAP_W, map_height=DEFAULT_MAP_H):
-    index = _load_index()
-    if round_id not in [r["id"] for r in index["rounds"]]:
-        index["rounds"].append({
-            "id": round_id,
-            "started_at": datetime.now(timezone.utc).isoformat(),
-        })
-        _save_index(index)
-    round_data = _load_round(round_id)
-    if round_data is None:
-        round_data = {
-            "started_at": datetime.now(timezone.utc).isoformat(),
-            "map_width": map_width,
-            "map_height": map_height,
-            "queries": [],
-            "submissions": [],
-            "actions": [],
-        }
-        _save_round(round_id, round_data)
-    return round_data
-
-
-def log_action(round_id, action, details=None):
-    round_data = _ensure_round(round_id)
-    round_data["actions"].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "action": action,
-        "details": details or {},
-    })
-    _save_round(round_id, round_data)
-
-
-def log_query(round_id, seed_index, viewport, grid, budget_remaining):
-    round_data = _ensure_round(round_id)
-    round_data["queries"].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "seed_index": seed_index,
-        "viewport": viewport,
-        "grid": grid,
-        "budget_remaining": budget_remaining,
-    })
-    _save_round(round_id, round_data)
-
-
-def log_submission(round_id, seed_index, result):
-    round_data = _ensure_round(round_id)
-    round_data["submissions"].append({
-        "timestamp": datetime.now(timezone.utc).isoformat(),
-        "seed_index": seed_index,
-        "result": result,
-    })
-    _save_round(round_id, round_data)
-
-
-# --- Map helpers ---
-
-def tile_positions(map_size, vp_size):
-    """Evenly space viewport origins to cover the full map with uniform overlap."""
-    n_tiles = -(-map_size // vp_size)  # ceil division
-    if n_tiles <= 1:
-        return [0]
-    step = (map_size - vp_size) / (n_tiles - 1)
-    return sorted(set(int(i * step + 0.5) for i in range(n_tiles)))
-
-
-def build_tiling(map_w, map_h):
-    """Build full-coverage tiling that skips the 1-cell ocean border."""
-    interior_w = map_w - 2  # skip col 0 and col map_w-1
-    interior_h = map_h - 2  # skip row 0 and row map_h-1
-    xs = [x + 1 for x in tile_positions(interior_w, VIEWPORT)]
-    ys = [y + 1 for y in tile_positions(interior_h, VIEWPORT)]
-    return [(x, y) for y in ys for x in xs]
-
-
-def extract_map_dimensions(round_data):
-    w = round_data.get("map_width") or round_data.get("width") or DEFAULT_MAP_W
-    h = round_data.get("map_height") or round_data.get("height") or DEFAULT_MAP_H
-    return int(w), int(h)
-
-
-def parse_initial_grid(round_data, map_w, map_h):
-    """Get the full initial terrain grid (raw terrain codes)."""
-    initial_states = round_data.get("initial_states") or []
-    for state in initial_states:
-        grid = state.get("grid") or state.get("terrain") or []
-        if grid and len(grid) == map_h and len(grid[0]) == map_w:
-            return grid
-    # Fallback: return None grid
-    return [[11] * map_w for _ in range(map_h)]
-
-
-
-def observe_seed(round_id, seed_index, viewports, map_w, map_h):
-    """Run simulate queries for one seed and return observation counts."""
-    counts = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-
-    for vx, vy in viewports:
-        print(f"  simulate seed={seed_index} viewport=({vx},{vy})")
-        try:
-            result = simulate(round_id, seed_index, vx, vy, VIEWPORT, VIEWPORT)
-        except Exception as e:
-            print(f"    ERROR: {e}")
-            log_action(round_id, "simulate_error", {
-                "seed_index": seed_index,
-                "viewport": {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
-                "error": str(e),
-            })
+    # Compute per-seed expansion rates
+    seed_rates = {}
+    for s in range(N_SEEDS):
+        grid = seed_grids.get(s)
+        counts = seed_counts.get(s)
+        if grid is None or counts is None:
             continue
+        dist_map = compute_settlement_distances(grid, map_h, map_w)
+        rate, n_samples = estimate_seed_expansion_rate(counts, grid, dist_map, map_h, map_w)
+        seed_rates[s] = (rate, n_samples, dist_map)
 
-        queries_used = result.get("queries_used")
-        queries_max = result.get("queries_max")
-        budget = queries_max - queries_used if queries_used is not None and queries_max is not None else None
-        grid = result.get("grid") or []
-        settlements = result.get("settlements") or []
+    if not seed_rates:
+        return []
 
-        log_query(round_id, seed_index,
-                  {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
-                  grid, budget)
-        log_action(round_id, "simulate_response", {
-            "seed_index": seed_index,
-            "viewport": {"x": vx, "y": vy, "w": VIEWPORT, "h": VIEWPORT},
-            "settlements": settlements,
-            "response_keys": list(result.keys()),
-        })
+    rates = [r for r, _, _ in seed_rates.values()]
+    mean_rate = sum(rates) / len(rates)
+    variance = sum((r - mean_rate) ** 2 for r in rates) / len(rates)
 
-        for r, row in enumerate(grid):
-            for c, val in enumerate(row):
-                map_r = vy + r
-                map_c = vx + c
-                if 0 <= map_r < map_h and 0 <= map_c < map_w:
-                    cls = TERRAIN_TO_CLASS.get(val, 0)
-                    counts[map_r][map_c][cls] += 1
+    # Find boundary cells (dist 1-3) per seed and score them by surprise
+    def boundary_viewport(seed_idx, grid, counts, dist_map):
+        """Find the best 15x15 viewport maximizing coverage of boundary cells
+        where observation disagreed with prior (high surprise)."""
+        best_vp = None
+        best_score = -1
+        # Score each possible viewport position
+        for vy in range(1, map_h - VIEWPORT):
+            for vx in range(1, map_w - VIEWPORT):
+                score = 0
+                for r in range(vy, min(vy + VIEWPORT, map_h)):
+                    for c in range(vx, min(vx + VIEWPORT, map_w)):
+                        d = dist_map[r][c]
+                        if d < 1 or d > 3:
+                            continue
+                        if grid[r][c] in (10, 5, 1, 2):
+                            continue
+                        n_obs = sum(counts[r][c])
+                        if n_obs == 0:
+                            continue
+                        obs_settle = counts[r][c][1] / n_obs
+                        surprise = abs(obs_settle - mean_rate)
+                        score += surprise + 0.5  # bonus for every boundary cell
+                if score > best_score:
+                    best_score = score
+                    best_vp = (vx, vy)
+        return best_vp, best_score
 
-        print(f"    budget remaining: {budget}")
-        time.sleep(RATE_LIMIT_DELAY)
+    queries = []
+    high_variance = variance > 0.005  # seeds disagree on expansion rate
 
-    return counts
-
-
-def counts_to_prediction_v4(counts, initial_grid, map_w, map_h):
-    """Blend observations with contextual priors using conservative adaptive weighting.
-
-    prior_weight decays slowly as observations increase, keeping the prior
-    dominant when few observations exist (where sampling noise is high):
-      0 obs → pure prior
-      1 obs → pw=20  (prior ~95%, obs ~5%)
-      2 obs → pw=13  (prior ~87%, obs ~13%)
-      5 obs → pw=8   (prior ~62%, obs ~38%)
-      10 obs → pw=5.7 (prior ~36%, obs ~64%)
-    """
-    prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-
-    for r in range(map_h):
-        for c in range(map_w):
-            prior = get_contextual_prior(initial_grid, r, c, map_h, map_w)
-            obs_total = sum(counts[r][c])
-
-            if obs_total == 0:
-                prediction[r][c] = prior
-            else:
-                prior_weight = 40.0 / (1.0 + obs_total / 2.0)
-                blended = [0.0] * N_CLASSES
-                for k in range(N_CLASSES):
-                    blended[k] = (counts[r][c][k] + prior_weight * prior[k]) / (obs_total + prior_weight)
-                prediction[r][c] = blended
-
-    return prediction
-
-# Keep v3 as alias for backward compat with offline code
-counts_to_prediction_v3 = counts_to_prediction_v4
-
-
-def merge_counts(a, b, map_w, map_h):
-    for r in range(map_h):
-        for c in range(map_w):
-            for k in range(N_CLASSES):
-                a[r][c][k] += b[r][c][k]
-    return a
-
-
-def extract_grid_and_settlements(round_data, seed_index):
-    """Extract initial grid and settlement data for a specific seed."""
-    initial_states = round_data.get("initial_states") or []
-    if seed_index >= len(initial_states):
-        raise ValueError(
-            f"Seed index {seed_index} not found (only {len(initial_states)} seeds)")
-
-    state = initial_states[seed_index]
-    grid = state.get("grid") or state.get("terrain") or []
-    settlements = state.get("settlements") or []
-
-    if not settlements:
-        for r in range(len(grid)):
-            for c in range(len(grid[0])):
-                if grid[r][c] in (1, 2):
-                    settlements.append({
-                        "x": c, "y": r,
-                        "has_port": grid[r][c] == 2,
-                        "alive": True,
-                        "owner_id": len(settlements),
-                    })
-
-    return grid, settlements
-
-
-def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map_h,
-                        sim_weight=SIM_WEIGHT, prior_weight=PRIOR_WEIGHT,
-                        obs_counts=None, obs_weight=OBS_WEIGHT,
-                        expansion_rate=None, dist_multipliers=None,
-                        port_ratio=0.75, ruin_ratio=0.10,
-                        prior_table=None):
-    """Generate prediction by blending observations + simulator + distance-aware priors.
-
-    Three signal sources, blended per-cell:
-      - obs_counts: real API observations (weighted by obs_weight per observation)
-      - sim_pred:   Monte Carlo simulator output (weighted by sim_weight)
-      - prior:      distance-aware contextual priors (weighted by prior_weight)
-
-    If expansion_rate is provided, priors are adjusted based on each cell's
-    distance to the nearest settlement and the round's expansion aggressiveness.
-
-    When sim_weight=0, skips the expensive Monte Carlo entirely.
-    """
-    # Skip Monte Carlo if sim has zero weight
-    sim_pred = None
-    if sim_weight > 0:
-        sim_pred = run_monte_carlo(grid, settlements, n_sims=n_sims, params=params, base_seed=base_seed)
-
-        # Simulator safety net: compare sim output to observations.
-        # If the sim's most-likely class disagrees with observations on too many
-        # cells, the sim's hidden params are wrong for this round — disable it.
-        if sim_pred is not None and obs_counts is not None:
-            agree = 0
-            total = 0
+    if high_variance:
+        # Target outlier seeds to resolve disagreement
+        seed_order = sorted(seed_rates.keys(),
+                            key=lambda s: abs(seed_rates[s][0] - mean_rate),
+                            reverse=True)
+    else:
+        # Target most surprising seed for better per-cell estimates
+        seed_surprise = {}
+        for s in range(N_SEEDS):
+            counts = seed_counts.get(s)
+            grid = seed_grids.get(s)
+            if counts is None or grid is None:
+                continue
+            surprise = 0.0
+            n_cells = 0
             for r in range(map_h):
                 for c in range(map_w):
-                    n_obs = sum(obs_counts[r][c])
-                    if n_obs < 1:
+                    n_obs = sum(counts[r][c])
+                    if n_obs == 0:
                         continue
-                    # Observed most-common class
-                    obs_argmax = max(range(N_CLASSES), key=lambda k: obs_counts[r][c][k])
-                    # Sim's most-likely class
-                    sim_argmax = max(range(N_CLASSES), key=lambda k: sim_pred[r][c][k])
-                    total += 1
-                    if obs_argmax == sim_argmax:
-                        agree += 1
-            if total > 0:
-                agreement = agree / total
-                # If sim agrees on fewer than 60% of observed cells, disable it
-                if agreement < 0.60:
-                    sim_pred = None
-                    sim_weight = 0.0
+                    n_cells += 1
+                    obs_frac = [counts[r][c][k] / n_obs for k in range(N_CLASSES)]
+                    surprise += sum(abs(obs_frac[k] - 1.0 / N_CLASSES) for k in range(N_CLASSES))
+            seed_surprise[s] = surprise / max(n_cells, 1)
+        seed_order = sorted(seed_surprise, key=seed_surprise.get, reverse=True)
 
-    # Precompute distance map if we have an expansion rate
+    used_seeds = set()
+    for s in seed_order:
+        if remaining <= 0:
+            break
+        grid = seed_grids[s]
+        counts = seed_counts[s]
+        _, _, dist_map = seed_rates[s]
+        vp, score = boundary_viewport(s, grid, counts, dist_map)
+        if vp:
+            queries.append((s, vp[0], vp[1]))
+            remaining -= 1
+            used_seeds.add(s)
+
+    # If we still have budget, cycle through seeds again
+    for s in seed_order:
+        if remaining <= 0:
+            break
+        if s in used_seeds:
+            continue
+        grid = seed_grids[s]
+        counts = seed_counts[s]
+        _, _, dist_map = seed_rates[s]
+        vp, score = boundary_viewport(s, grid, counts, dist_map)
+        if vp:
+            queries.append((s, vp[0], vp[1]))
+            remaining -= 1
+
+    return queries
+
+
+# ---------------------------------------------------------------------------
+# Expansion & distance estimation (aggregated across seeds)
+# ---------------------------------------------------------------------------
+
+def estimate_dist_decay(grid, obs_counts, dist_map, map_h, map_w):
+    """Per-distance settlement rate from observations for one seed."""
+    dist_settle = {}
+    for r in range(map_h):
+        for c in range(map_w):
+            n_obs = sum(obs_counts[r][c])
+            if n_obs == 0:
+                continue
+            terrain = grid[r][c]
+            if terrain in (10, 5, 1, 2):
+                continue
+            d = dist_map[r][c]
+            if d < 1 or d > 7:
+                continue
+            if d not in dist_settle:
+                dist_settle[d] = [0, 0]
+            dist_settle[d][0] += obs_counts[r][c][1]
+            dist_settle[d][1] += n_obs
+    return dist_settle
+
+
+def estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w):
+    """Estimate port/settle and ruin/settle ratios from observations."""
+    port_obs = ruin_obs = settle_obs = 0
+    for s in seed_grids:
+        grid = seed_grids[s]
+        counts = seed_counts.get(s)
+        if counts is None:
+            continue
+        for r in range(map_h):
+            for c in range(map_w):
+                n_obs = sum(counts[r][c])
+                if n_obs == 0:
+                    continue
+                if grid[r][c] in (10, 5, 1, 2):
+                    continue
+                settle_obs += counts[r][c][1]
+                ruin_obs += counts[r][c][3]
+                # Check coastal for port
+                is_coastal = any(
+                    0 <= r+dr < map_h and 0 <= c+dc < map_w and grid[r+dr][c+dc] == 10
+                    for dr in (-1, 0, 1) for dc in (-1, 0, 1) if not (dr == 0 and dc == 0)
+                )
+                if is_coastal:
+                    port_obs += counts[r][c][2]
+    port_ratio = port_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
+    ruin_ratio = ruin_obs / max(settle_obs, 1) if settle_obs > 10 else 0.10
+    return port_ratio, ruin_ratio
+
+
+def aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w):
+    """Compute expansion rate, distance multipliers, port/ruin ratios from all seeds.
+
+    Returns: (expansion_rate, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth, decay_defaults)
+    """
+    agg_dist_settle = {}
+    expansion_rates = []
+
+    initial_grid = seed_grids.get(0, [[11] * map_w for _ in range(map_h)])
+
+    for s in range(N_SEEDS):
+        grid = seed_grids.get(s, initial_grid)
+        counts = seed_counts.get(s)
+        if counts is None:
+            continue
+        dist_map = compute_settlement_distances(grid, map_h, map_w)
+        rate, n_samples = estimate_seed_expansion_rate(counts, grid, dist_map, map_h, map_w)
+        if n_samples > 0:
+            expansion_rates.append((rate, n_samples))
+
+        seed_dist = estimate_dist_decay(grid, counts, dist_map, map_h, map_w)
+        for d, (s_count, t_count) in seed_dist.items():
+            if d not in agg_dist_settle:
+                agg_dist_settle[d] = [0, 0]
+            agg_dist_settle[d][0] += s_count
+            agg_dist_settle[d][1] += t_count
+
+    if expansion_rates:
+        total_samples = sum(n for _, n in expansion_rates)
+        avg_expansion = sum(r * n for r, n in expansion_rates) / total_samples
+    else:
+        avg_expansion = 0.10
+
+    # Classify warmth and get appropriate defaults
+    prior_table, warmth, decay_defaults = classify_round_warmth(avg_expansion)
+
+    # Compute per-distance multipliers from observations
+    d13_settle = sum(agg_dist_settle.get(d, [0, 0])[0] for d in [1, 2, 3])
+    d13_total = sum(agg_dist_settle.get(d, [0, 0])[1] for d in [1, 2, 3])
+    base_rate = d13_settle / d13_total if d13_total > 0 else avg_expansion
+
+    dist_multipliers = {}
+    for d in range(1, 8):
+        if d in agg_dist_settle and agg_dist_settle[d][1] >= 10 and base_rate > 0.001:
+            dist_multipliers[d] = (agg_dist_settle[d][0] / agg_dist_settle[d][1]) / base_rate
+        else:
+            dist_multipliers[d] = decay_defaults.get(d, 0.0)
+
+    port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w)
+
+    return avg_expansion, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth
+
+
+# ---------------------------------------------------------------------------
+# Observation phase runner
+# ---------------------------------------------------------------------------
+
+def run_observation_phases(seed_grids, seed_viewports, total_budget, map_w, map_h,
+                           observe_fn, print_fn=print):
+    """Run Phase 1 (coverage) + Phase 2 (surprise-targeted) observations.
+
+    Returns: (seed_counts, expansion_rate, dist_multipliers, prior_table,
+              port_ratio, ruin_ratio, warmth)
+    """
+    # Phase 1 — observe every seed once
+    seed_counts = {}
+    budget_spent = 0
+    for seed_idx in range(N_SEEDS):
+        dvps = seed_viewports.get(seed_idx, [])
+        if not dvps or budget_spent >= total_budget:
+            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+            continue
+        queries_to_use = dvps[:max(0, total_budget - budget_spent)]
+        if not queries_to_use:
+            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+            continue
+        print_fn(f"  Seed {seed_idx} Phase 1 ({len(queries_to_use)} queries)")
+        seed_counts[seed_idx] = observe_fn(seed_idx, queries_to_use)
+        budget_spent += len(queries_to_use)
+
+    # Phase 2 — allocate remaining budget to most surprising seeds
+    remaining = total_budget - budget_spent
+    if remaining > 0:
+        phase2_queries = pick_phase2_viewports(seed_grids, seed_counts, remaining, map_w, map_h)
+        for seed_idx, vx, vy in phase2_queries:
+            print_fn(f"  Seed {seed_idx} Phase 2 viewport ({vx},{vy})")
+            extra = observe_fn(seed_idx, [(vx, vy)])
+            merge_counts(seed_counts[seed_idx], extra, map_w, map_h)
+
+    # Aggregate stats
+    avg_expansion, dist_multipliers, port_ratio, ruin_ratio, prior_table, warmth = \
+        aggregate_expansion_stats(seed_grids, seed_counts, map_h, map_w)
+
+    print_fn(f"  Expansion rate: {avg_expansion:.4f} → {warmth} round")
+    print_fn(f"  Dist multipliers: " + " ".join(f"d{d}={dist_multipliers.get(d, 0):.2f}" for d in range(1, 8)))
+    print_fn(f"  Port ratio: {port_ratio:.3f}, Ruin ratio: {ruin_ratio:.3f}")
+
+    return seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio, warmth
+
+
+# ---------------------------------------------------------------------------
+# Prediction generation
+# ---------------------------------------------------------------------------
+
+def generate_prediction(grid, settlements, map_w, map_h,
+                        obs_counts=None, sim_pred=None,
+                        expansion_rate=None, dist_multipliers=None,
+                        port_ratio=0.75, ruin_ratio=0.10,
+                        prior_table=None, warmth="warm"):
+    """Generate prediction by blending distance-aware priors + observations + simulator.
+
+    Warm/cold-aware: uses SIM_WEIGHT_COLD=0 for cold rounds.
+    """
+    sim_weight = SIM_WEIGHT_WARM if warmth == "warm" else SIM_WEIGHT_COLD
+
+    # Simulator safety net
+    if sim_pred is not None and obs_counts is not None and sim_weight > 0:
+        agree = total = 0
+        for r in range(map_h):
+            for c in range(map_w):
+                n_obs = sum(obs_counts[r][c])
+                if n_obs < 1:
+                    continue
+                obs_argmax = max(range(N_CLASSES), key=lambda k: obs_counts[r][c][k])
+                sim_argmax = max(range(N_CLASSES), key=lambda k: sim_pred[r][c][k])
+                total += 1
+                if obs_argmax == sim_argmax:
+                    agree += 1
+        if total > 0 and agree / total < SIM_SAFETY_THRESHOLD:
+            sim_pred = None
+            sim_weight = 0.0
+
     dist_map = None
     if expansion_rate is not None:
         dist_map = compute_settlement_distances(grid, map_h, map_w)
@@ -730,24 +691,22 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
     for r in range(map_h):
         for c in range(map_w):
             if dist_map is not None:
-                prior = get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map, expansion_rate,
-                                                 dist_multipliers=dist_multipliers,
-                                                 port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                                                 prior_table=prior_table)
+                prior = get_distance_aware_prior(
+                    grid, r, c, map_h, map_w, dist_map, expansion_rate,
+                    dist_multipliers=dist_multipliers,
+                    port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+                    prior_table=prior_table)
             else:
                 prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
 
             n_obs = sum(obs_counts[r][c]) if obs_counts else 0
-            # Only blend observations when we have enough samples
-            use_obs = n_obs >= MIN_OBS_TO_BLEND and obs_weight > 0
-            # Sub-linear scaling: sqrt(n_obs) prevents many observations from
-            # completely drowning out the prior
-            ow = obs_weight * (n_obs ** 0.5) if use_obs else 0
+            use_obs = n_obs >= MIN_OBS_TO_BLEND and OBS_WEIGHT > 0
+            ow = OBS_WEIGHT * (n_obs ** OBS_EXPONENT) if use_obs else 0
 
             if ow > 0 or sim_weight > 0:
-                total_w = ow + sim_weight + prior_weight
+                total_w = ow + sim_weight + PRIOR_WEIGHT
                 for k in range(N_CLASSES):
-                    val = prior_weight * prior[k]
+                    val = PRIOR_WEIGHT * prior[k]
                     if ow > 0:
                         val += ow * (obs_counts[r][c][k] / n_obs)
                     if sim_pred is not None:
@@ -756,87 +715,71 @@ def generate_prediction(grid, settlements, n_sims, params, base_seed, map_w, map
             else:
                 prediction[r][c] = prior
 
-    return floor_and_normalize(prediction, obs_counts=obs_counts)
+    return floor_and_normalize(prediction)
 
 
-# --- ABC-based prediction ---
+def pool_observations(seed_counts, map_w, map_h):
+    """Pool observation counts across all seeds into a single grid.
 
-ABC_PRIOR_WEIGHT = 0.85
-ABC_MC_WEIGHT = 0.15
-MC_EQUIV_SAMPLES = 18
-MC_TOTAL_RUNS = 500
+    Since all seeds share the same hidden parameters, pooling gives 5x more
+    data per cell — especially valuable on cold rounds where dynamic cells are rare.
+    """
+    pooled = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
+    for s in seed_counts:
+        counts = seed_counts[s]
+        for r in range(map_h):
+            for c in range(map_w):
+                for k in range(N_CLASSES):
+                    pooled[r][c][k] += counts[r][c][k]
+    return pooled
+
+
+# Equiv samples for Bayesian obs update
+# Cold rounds: pooled obs (5x data) + higher equiv (trust prior more per obs)
+# Warm rounds: per-seed obs + lower equiv (trust obs more)
+EQUIV_COLD_POOLED = 50
+EQUIV_WARM_PER_SEED = 20
 
 
 def generate_prediction_abc(grid, mc_pred, map_w, map_h,
                              obs_counts=None, expansion_rate=None,
                              dist_multipliers=None, port_ratio=0.75,
-                             ruin_ratio=0.10, prior_table=None):
-    """Generate prediction using three-layer blending: prior + MC + observations.
-
-    Layer 1: Distance-aware contextual prior
-    Layer 2: Blend MC prediction into prior
-    Layer 3: Bayesian Dirichlet update with observations
-    """
-    # Precompute distance map
+                             ruin_ratio=0.10, prior_table=None,
+                             warmth="warm"):
+    """Three-layer blending: distance-aware prior + ABC MC + Bayesian obs update."""
     dist_map = None
     if expansion_rate is not None:
         dist_map = compute_settlement_distances(grid, map_h, map_w)
 
-    # Compute MC-observation agreement to set adaptive mc_equiv_samples
-    mc_agree = 0
-    mc_total = 0
-    if mc_pred is not None and obs_counts is not None:
-        for r in range(map_h):
-            for c in range(map_w):
-                n_obs = sum(obs_counts[r][c])
-                if n_obs < 1:
-                    continue
-                obs_argmax = max(range(N_CLASSES), key=lambda k: obs_counts[r][c][k])
-                mc_argmax = max(range(N_CLASSES), key=lambda k: mc_pred[r][c][k])
-                mc_total += 1
-                if obs_argmax == mc_argmax:
-                    mc_agree += 1
+    is_cold = warmth == "cold"
 
-    if mc_total > 0:
-        agreement = mc_agree / mc_total
-        # Safety net: disable MC if agreement < 40%
-        if agreement < 0.40:
-            mc_pred = None
-        # Adaptive equiv samples: high agreement → trust model more
-        if agreement > 0.80:
-            equiv_samples = 30
-        elif agreement < 0.60:
-            equiv_samples = 8
-        else:
-            equiv_samples = 8 + (agreement - 0.60) / 0.20 * 22
-    else:
-        equiv_samples = MC_EQUIV_SAMPLES
-
-    # Determine effective MC weight
-    mc_w = ABC_MC_WEIGHT if mc_pred is not None else 0.0
-    prior_w = 1.0 - mc_w
+    # MC predictions from ABC fitting are currently disabled — they consistently
+    # hurt scores across all tested rounds. The prior+obs Bayesian blend alone
+    # outperforms the three-layer approach. Keeping the parameter for future use.
+    equiv_samples = EQUIV_COLD_POOLED if is_cold else EQUIV_WARM_PER_SEED
+    mc_pred = None  # disabled: MC hurts on both warm and cold rounds
+    mc_w = 0.0
+    prior_w = 1.0
 
     prediction = [[[0.0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
     for r in range(map_h):
         for c in range(map_w):
-            # Layer 1: Distance-aware prior
+            # Layer 1: distance-aware prior
             if dist_map is not None:
-                prior = get_distance_aware_prior(grid, r, c, map_h, map_w, dist_map,
-                                                  expansion_rate,
-                                                  dist_multipliers=dist_multipliers,
-                                                  port_ratio=port_ratio,
-                                                  ruin_ratio=ruin_ratio,
-                                                  prior_table=prior_table)
+                prior = get_distance_aware_prior(
+                    grid, r, c, map_h, map_w, dist_map, expansion_rate,
+                    dist_multipliers=dist_multipliers,
+                    port_ratio=port_ratio, ruin_ratio=ruin_ratio,
+                    prior_table=prior_table)
             else:
                 prior = get_contextual_prior(grid, r, c, map_h, map_w, prior_table=prior_table)
 
-            # Layer 2: Blend MC into prior
+            # Layer 2: blend MC
             blended = [0.0] * N_CLASSES
             for k in range(N_CLASSES):
                 blended[k] = prior_w * prior[k]
                 if mc_pred is not None:
                     blended[k] += mc_w * mc_pred[r][c][k]
-            # Normalize
             total = sum(blended)
             if total > 0:
                 blended = [v / total for v in blended]
@@ -851,387 +794,4 @@ def generate_prediction_abc(grid, mc_pred, map_w, map_h,
             else:
                 prediction[r][c] = blended
 
-    return floor_and_normalize(prediction, obs_counts=obs_counts)
-
-
-def run_observation_phases(seed_grids, seed_viewports, total_budget, map_w, map_h,
-                           observe_fn, print_fn=print):
-    """Run Phase 1 (coverage) and Phase 2 (surprise-based) observation allocation.
-
-    This is the shared query strategy used by both the live pipeline and offline backtest.
-
-    Args:
-        seed_grids: dict of seed_index → initial grid
-        seed_viewports: dict of seed_index → list of (vx, vy) viewports
-        total_budget: total queries available
-        map_w, map_h: map dimensions
-        observe_fn: callable(seed_index, viewports) → counts grid
-            Live pipeline passes a wrapper around observe_seed().
-            Backtest passes a wrapper around observe_seed_local().
-        print_fn: print function (use lambda *a: None to suppress)
-
-    Returns:
-        seed_counts: dict of seed_index → H x W x N_CLASSES counts grid
-        expansion_rate: estimated round expansion rate
-    """
-    initial_grid = seed_grids.get(0, [[11] * map_w for _ in range(map_h)])
-
-    # Phase 1 — observe every seed once
-    seed_counts = {}
-    budget_spent = 0
-    for seed_idx in range(N_SEEDS):
-        dvps = seed_viewports[seed_idx]
-        if not dvps or budget_spent >= total_budget:
-            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-            continue
-        queries_to_use = dvps[:max(0, total_budget - budget_spent)]
-        if not queries_to_use:
-            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-            continue
-        print_fn(f"  Seed {seed_idx} Phase 1 ({len(queries_to_use)} queries)")
-        seed_counts[seed_idx] = observe_fn(seed_idx, queries_to_use)
-        budget_spent += len(queries_to_use)
-
-    # Phase 2 — compute per-seed surprise and allocate remaining budget
-    remaining = total_budget - budget_spent
-    if remaining > 0:
-        seed_surprise = {}
-        for s in range(N_SEEDS):
-            grid = seed_grids.get(s, initial_grid)
-            surprise = 0.0
-            n_cells = 0
-            for r in range(map_h):
-                for c in range(map_w):
-                    obs_total = sum(seed_counts[s][r][c])
-                    if obs_total == 0:
-                        continue
-                    prior = get_contextual_prior(grid, r, c, map_h, map_w)
-                    for k in range(N_CLASSES):
-                        obs_frac = seed_counts[s][r][c][k] / obs_total
-                        surprise += abs(obs_frac - prior[k])
-                    n_cells += 1
-            seed_surprise[s] = surprise / max(n_cells, 1)
-
-        priority = sorted(range(N_SEEDS),
-                          key=lambda s: seed_surprise.get(s, 0), reverse=True)
-
-        print_fn(f"  Phase 2: {remaining} queries, priority: {priority}")
-
-        while remaining > 0:
-            allocated = False
-            for s in priority:
-                dvps = seed_viewports[s]
-                if not dvps:
-                    continue
-                can_add = min(len(dvps), remaining)
-                extra_counts = observe_fn(s, dvps[:can_add])
-                merge_counts(seed_counts[s], extra_counts, map_w, map_h)
-                remaining -= can_add
-                allocated = True
-                if remaining <= 0:
-                    break
-            if not allocated:
-                break
-
-    # Estimate expansion rate and per-distance multipliers from observations
-    # Aggregate observation counts across all seeds for per-distance estimation
-    agg_dist_settle = {}  # dist -> [settle_count, total_count]
-    expansion_rates = []
-    for s in range(N_SEEDS):
-        grid = seed_grids.get(s, initial_grid)
-        dist_map = compute_settlement_distances(grid, map_h, map_w)
-        rate, n_samples = estimate_expansion_rate(
-            seed_counts[s], grid, dist_map, map_h, map_w)
-        if n_samples > 0:
-            expansion_rates.append((rate, n_samples))
-
-        # Accumulate per-distance stats for decay estimation
-        for r in range(map_h):
-            for c in range(map_w):
-                n_obs = sum(seed_counts[s][r][c])
-                if n_obs == 0:
-                    continue
-                terrain = grid[r][c]
-                if terrain in (10, 5, 1, 2):
-                    continue
-                d = dist_map[r][c]
-                if d < 1 or d > 7:
-                    continue
-                if d not in agg_dist_settle:
-                    agg_dist_settle[d] = [0, 0]
-                agg_dist_settle[d][0] += seed_counts[s][r][c][1]
-                agg_dist_settle[d][1] += n_obs
-
-    if expansion_rates:
-        total_samples = sum(n for _, n in expansion_rates)
-        avg_expansion = sum(r * n for r, n in expansion_rates) / total_samples
-    else:
-        avg_expansion = 0.10
-
-    # Compute per-distance multipliers from aggregated observations
-    d13_settle = sum(agg_dist_settle.get(d, [0, 0])[0] for d in [1, 2, 3])
-    d13_total = sum(agg_dist_settle.get(d, [0, 0])[1] for d in [1, 2, 3])
-    base_rate = d13_settle / d13_total if d13_total > 0 else avg_expansion
-
-    dist_multipliers = {}
-    for d in range(1, 8):
-        if d in agg_dist_settle and agg_dist_settle[d][1] >= 10 and base_rate > 0.001:
-            dist_multipliers[d] = (agg_dist_settle[d][0] / agg_dist_settle[d][1]) / base_rate
-        else:
-            dist_multipliers[d] = _DIST_DECAY_DEFAULT.get(d, 0.0)
-
-    # Estimate port/ruin ratios from observations
-    port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_h, map_w)
-
-    # Classify round warmth and select appropriate prior table
-    prior_table, warmth = classify_round_warmth(avg_expansion)
-
-    print_fn(f"  Expansion rate: {avg_expansion:.3f} → {warmth} round")
-    print_fn(f"  Dist multipliers: " + " ".join(f"d{d}={dist_multipliers.get(d, 0):.2f}" for d in range(1, 8)))
-    print_fn(f"  Port ratio: {port_ratio:.3f}, Ruin ratio: {ruin_ratio:.3f}")
-
-    return seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio
-
-
-def reconstruct_counts_from_log(round_id, map_w, map_h):
-    """Reconstruct per-seed observation counts from previously logged queries.
-
-    Returns: dict of seed_index → H x W x N_CLASSES counts grid, or None if no queries found.
-    """
-    round_data = _load_round(round_id)
-    if round_data is None:
-        return None
-
-    queries = round_data.get("queries") or []
-    if not queries:
-        return None
-
-    seed_counts = {}
-    for q in queries:
-        seed_idx = q.get("seed_index")
-        if seed_idx is None:
-            continue
-        if seed_idx not in seed_counts:
-            seed_counts[seed_idx] = [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)]
-
-        vp = q.get("viewport") or {}
-        vx, vy = vp.get("x", 0), vp.get("y", 0)
-        grid = q.get("grid") or []
-
-        for r, row in enumerate(grid):
-            for c, val in enumerate(row):
-                map_r = vy + r
-                map_c = vx + c
-                if 0 <= map_r < map_h and 0 <= map_c < map_w:
-                    cls = TERRAIN_TO_CLASS.get(val, 0)
-                    seed_counts[seed_idx][map_r][map_c][cls] += 1
-
-    if not seed_counts:
-        return None
-
-    total_queries = len(queries)
-    print(f"  Reconstructed counts from {total_queries} logged queries across {len(seed_counts)} seeds")
-    return seed_counts
-
-
-def main():
-    # 1. Find active round
-    print("Fetching active round...")
-    active = get_active_round()
-    if not active:
-        print("No active round found. Exiting.")
-        log_action("no_round", "no_active_round_found")
-        return
-
-    round_id = active["id"]
-    print(f"Active round: {round_id}")
-    log_action(round_id, "fetch_active_round", {"round": active})
-
-    # 2. Get round details
-    round_data = get_round(round_id)
-    map_w, map_h = extract_map_dimensions(round_data)
-    _ensure_round(round_id, map_w, map_h)
-    log_action(round_id, "fetch_round_details", {"raw_response": round_data})
-    print(f"Map: {map_w}x{map_h}")
-
-    # Parse per-seed grids
-    initial_states = round_data.get("initial_states") or []
-    seed_grids = {}
-    for i, state in enumerate(initial_states):
-        grid = state.get("grid") or state.get("terrain") or []
-        if grid:
-            seed_grids[i] = grid
-    initial_grid = seed_grids.get(0, parse_initial_grid(round_data, map_w, map_h))
-
-    dynamic_count = sum(
-        1 for r in range(map_h) for c in range(map_w)
-        if initial_grid[r][c] in (1, 2, 3)
-    )
-    log_action(round_id, "parse_initial_state", {
-        "num_seeds": len(seed_grids),
-        "dynamic_cells_seed0": dynamic_count,
-        "total_cells": map_w * map_h,
-    })
-    print(f"Seeds with grids: {len(seed_grids)}")
-    print(f"Dynamic cells (seed 0): {dynamic_count}")
-
-    # 3. Check budget
-    budget_info = get_budget()
-    log_action(round_id, "check_budget", {"raw_response": budget_info})
-    used = budget_info.get("queries_used", 0)
-    max_q = budget_info.get("queries_max", 50)
-    total_budget = int(max_q) - int(used)
-    print(f"Budget: {total_budget} remaining ({used} used / {max_q} max)")
-
-    # 4. Try to reconstruct counts from previous run's logged queries
-    cached_counts = reconstruct_counts_from_log(round_id, map_w, map_h)
-
-    if cached_counts and total_budget == 0:
-        # No budget left — reuse cached queries entirely
-        print("No budget remaining — reusing cached queries from previous run")
-        log_action(round_id, "reuse_cached_queries", {"num_seeds": len(cached_counts)})
-
-        # Ensure all seeds have counts
-        seed_counts = {}
-        for s in range(N_SEEDS):
-            seed_counts[s] = cached_counts.get(s, [[[0] * N_CLASSES for _ in range(map_w)] for _ in range(map_h)])
-
-    else:
-        # Budget available — run fresh observations (will also be logged for next time)
-        # 4b. Plan viewports — full-coverage 3×3 tiling (same for all seeds)
-        tiling = build_tiling(map_w, map_h)
-        seed_viewports = {s: tiling for s in range(N_SEEDS)}
-
-        phase1_total = len(tiling) * N_SEEDS
-        log_action(round_id, "plan_v6", {
-            "strategy": "full_coverage_tiling",
-            "total_budget": total_budget,
-            "viewports_per_seed": len(tiling),
-            "phase1_queries": phase1_total,
-            "phase2_budget": max(0, total_budget - phase1_total),
-            "n_sims": N_SIMS,
-            "sim_weight": SIM_WEIGHT,
-            "prior_weight": PRIOR_WEIGHT,
-        })
-        print(f"Full-coverage tiling: {len(tiling)} viewports/seed × {N_SEEDS} seeds = {phase1_total} queries")
-        print(f"Phase 2: {max(0, total_budget - phase1_total)} queries (extra on hardest)")
-
-        # 5-7. Run observations + estimate expansion rate (shared logic)
-        def live_observe(seed_idx, viewports):
-            print(f"\n--- Seed {seed_idx} ({len(viewports)} queries) ---")
-            log_action(round_id, "start_seed_observation", {
-                "seed_index": seed_idx, "num_queries": len(viewports),
-            })
-            return observe_seed(round_id, seed_idx, viewports, map_w, map_h)
-
-        seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio = run_observation_phases(
-            seed_grids, seed_viewports, total_budget, map_w, map_h,
-            observe_fn=live_observe,
-        )
-
-        # Merge with cached counts if available
-        if cached_counts:
-            print("Merging new observations with cached queries")
-            for s in range(N_SEEDS):
-                if s in cached_counts:
-                    merge_counts(seed_counts[s], cached_counts[s], map_w, map_h)
-
-    # Estimate expansion parameters from whatever counts we have
-    agg_dist_settle = {}
-    expansion_rates = []
-    for s in range(N_SEEDS):
-        grid = seed_grids.get(s, initial_grid)
-        dist_map = compute_settlement_distances(grid, map_h, map_w)
-        rate, n_samples = estimate_expansion_rate(seed_counts[s], grid, dist_map, map_h, map_w)
-        if n_samples > 0:
-            expansion_rates.append((rate, n_samples))
-        for r in range(map_h):
-            for c in range(map_w):
-                n_obs = sum(seed_counts[s][r][c])
-                if n_obs == 0:
-                    continue
-                terrain = grid[r][c]
-                if terrain in (10, 5, 1, 2):
-                    continue
-                d = dist_map[r][c]
-                if d < 1 or d > 7:
-                    continue
-                if d not in agg_dist_settle:
-                    agg_dist_settle[d] = [0, 0]
-                agg_dist_settle[d][0] += seed_counts[s][r][c][1]
-                agg_dist_settle[d][1] += n_obs
-
-    if expansion_rates:
-        total_samples = sum(n for _, n in expansion_rates)
-        avg_expansion = sum(r * n for r, n in expansion_rates) / total_samples
-    else:
-        avg_expansion = 0.10
-
-    d13_settle = sum(agg_dist_settle.get(d, [0, 0])[0] for d in [1, 2, 3])
-    d13_total = sum(agg_dist_settle.get(d, [0, 0])[1] for d in [1, 2, 3])
-    base_rate = d13_settle / d13_total if d13_total > 0 else avg_expansion
-
-    dist_multipliers = {}
-    for d in range(1, 8):
-        if d in agg_dist_settle and agg_dist_settle[d][1] >= 10 and base_rate > 0.001:
-            dist_multipliers[d] = (agg_dist_settle[d][0] / agg_dist_settle[d][1]) / base_rate
-        else:
-            dist_multipliers[d] = _DIST_DECAY_DEFAULT.get(d, 0.0)
-
-    port_ratio, ruin_ratio = estimate_port_ruin_ratios(seed_grids, seed_counts, map_w, map_h)
-    prior_table, warmth = classify_round_warmth(avg_expansion)
-
-    log_action(round_id, "expansion_rate_estimate", {
-        "pooled_rate": round(avg_expansion, 4),
-        "dist_multipliers": {str(k): round(v, 3) for k, v in dist_multipliers.items()},
-    })
-    print(f"\nExpansion rate estimate: {avg_expansion:.3f} ({warmth})")
-
-    # 8. Run simulator + blend with observations + distance-aware priors, then submit
-    params = DEFAULT_PARAMS.copy()
-    for seed_idx in range(N_SEEDS):
-        print(f"\nBuilding prediction for seed {seed_idx}...")
-
-        grid, settlements = extract_grid_and_settlements(round_data, seed_idx)
-
-        t0 = time.time()
-        prediction = generate_prediction(
-            grid, settlements, N_SIMS, params,
-            base_seed=seed_idx * 10000,
-            map_w=map_w, map_h=map_h,
-            obs_counts=seed_counts[seed_idx],
-            expansion_rate=avg_expansion,
-            dist_multipliers=dist_multipliers,
-            port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-            prior_table=prior_table,
-        )
-        elapsed = time.time() - t0
-        print(f"  Prediction built in {elapsed:.1f}s")
-
-        log_action(round_id, "build_prediction", {
-            "seed_index": seed_idx,
-            "method": "obs_sim_prior_v5",
-            "n_sims": N_SIMS,
-            "elapsed_s": round(elapsed, 1),
-            "prediction": prediction,
-        })
-
-        print(f"  Submitting seed {seed_idx}...")
-        try:
-            result = submit(round_id, seed_idx, prediction)
-            log_submission(round_id, seed_idx, result)
-            print(f"  Submit result: {result}")
-        except Exception as e:
-            print(f"  Submit ERROR: {e}")
-            log_action(round_id, "submit_error", {
-                "seed_index": seed_idx,
-                "error": str(e),
-            })
-        time.sleep(0.6)
-
-    log_action(round_id, "run_complete", {"seeds_submitted": N_SEEDS})
-    print("\nDone! All 5 seeds submitted.")
-
-
-if __name__ == "__main__":
-    main()
+    return floor_and_normalize(prediction)
