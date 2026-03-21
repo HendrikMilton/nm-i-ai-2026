@@ -4191,6 +4191,20 @@
         "warmth": "warm",
         "expansion_rate": 0.2045
       }
+    },
+    {
+      "id": "v2_R16",
+      "round_id": "8f664aed-8839-4c85-bed0-77a2cac7c6f5",
+      "round_number": 16,
+      "timestamp": "2026-03-21T18:18:03.300078+00:00",
+      "round_score": 80.5523,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.0999
+      }
     }
   ]
 }
