@@ -154,8 +154,8 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 ## Workflow: Timesheet + project invoice (Task 16)
 1. Find employee, customer, project, activity (GET all in parallel). Also GET /project/hourlyRates?projectId=X to get rate config.
 2. If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:<today>, hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
-   This ensures timesheet entries get the correct hourlyRate. Do employee PUT and rate PUT in parallel.
+3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:"2026-01-01", hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
+   CRITICAL: startDate MUST be "2026-01-01" (not today) — the rate only applies to timesheet entries ON or AFTER startDate. Using today's date causes entries on earlier dates to get hourlyRate=0.
 4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
 5. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
    Do NOT check or update bank account 1920 — invoices work without it.
