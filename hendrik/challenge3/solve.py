@@ -23,9 +23,7 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 # ============================================================
 GRID_SIZE = 40
 N_CLASSES = 6
-# Per-class floors: lower for rare classes to avoid stealing probability mass
-# [empty, settlement, port, ruin, forest, mountain]
-CLASS_FLOORS = np.array([0.001, 0.001, 0.0002, 0.0005, 0.001, 0.0002])
+PROB_FLOOR = 0.01
 TERRAIN_TO_CLASS = {0: 0, 10: 0, 11: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
@@ -189,13 +187,36 @@ def extract_features(grid, is_warm, expansion_rate, obs_probs=None, n_obs=None):
 # ============================================================
 # Data loading
 # ============================================================
-def load_v2_data():
-    """Load all v2_R rounds with per-seed grids and reconstructed observations."""
+def load_v2_data(exclude_rounds=None):
+    """Load training data from v2_R files (R1-R12) + round_data (R13+)."""
+    exclude = set(exclude_rounds or [])
     samples = []
+    seen_rounds = set()
+
+    # Config mapping from v2_R files
+    config_map = {}
     for f in sorted(V2_DATA_DIR.glob("v2_R*.json")):
+        # Skip variant files (v2_R9_threshold90.json etc)
+        name = f.stem
+        if name.count("_") > 1:
+            continue
         with open(f) as fh:
             d = json.load(fh)
         rnum = d["round_number"]
+        config_map[rnum] = d.get("config", {})
+        config_map[d.get("round_id", "")] = d.get("config", {})
+
+    # Load from v2_R files (R1-R12, have per-seed grids + queries)
+    for f in sorted(V2_DATA_DIR.glob("v2_R*.json")):
+        name = f.stem
+        if name.count("_") > 1:
+            continue
+        with open(f) as fh:
+            d = json.load(fh)
+        rnum = d["round_number"]
+        if rnum in exclude or rnum in seen_rounds:
+            continue
+        seen_rounds.add(rnum)
         config = d.get("config", {})
         is_warm = config.get("warmth", "warm") == "warm"
         exp_rate = config.get("expansion_rate", 0.15)
@@ -206,26 +227,61 @@ def load_v2_data():
             gt = np.array(seed["ground_truth"], dtype=np.float32)
             if ig.shape != (GRID_SIZE, GRID_SIZE) or gt.shape != (GRID_SIZE, GRID_SIZE, N_CLASSES):
                 continue
-
-            # Reconstruct observations from queries
             queries = seed.get("queries", [])
-            if queries:
-                obs_probs, n_obs = reconstruct_observations(queries)
-            else:
-                obs_probs, n_obs = None, None
-
+            obs_probs, n_obs = reconstruct_observations(queries) if queries else (None, None)
             samples.append({
-                "grid": ig,
-                "gt": gt,
-                "is_warm": is_warm,
-                "expansion_rate": exp_rate,
-                "round": rnum,
-                "seed": int(sid),
-                "obs_probs": obs_probs,
-                "n_obs": n_obs,
+                "grid": ig, "gt": gt, "is_warm": is_warm,
+                "expansion_rate": exp_rate, "round": rnum, "seed": int(sid),
+                "obs_probs": obs_probs, "n_obs": n_obs,
             })
 
-    log.info(f"Loaded {len(samples)} samples from v2_R data ({len(samples)//5} rounds x 5 seeds)")
+    # Load from round_data (R13+ that have per-seed grids and GT)
+    for f in sorted(ROUND_DATA_DIR.glob("round_*.json")):
+        with open(f) as fh:
+            d = json.load(fh)
+        rnum = d.get("round_number")
+        if rnum is None or rnum in exclude or rnum in seen_rounds:
+            continue
+        # Need GT to be useful for training
+        seeds = d.get("seeds", [])
+        has_gt = any(s.get("ground_truth") is not None for s in seeds)
+        if not has_gt:
+            continue
+
+        # Get config from mapping or estimate
+        rid = d.get("round_id", "")
+        cfg = config_map.get(rnum, config_map.get(rid, {}))
+        is_warm = cfg.get("warmth", "warm") == "warm" if cfg else True
+        exp_rate = cfg.get("expansion_rate", 0.15) if cfg else 0.15
+
+        seen_rounds.add(rnum)
+        for s in seeds:
+            gt = s.get("ground_truth")
+            if gt is None:
+                continue
+            gt = np.array(gt, dtype=np.float32)
+            # Per-seed grid if available, else round-level grid
+            ig_raw = s.get("initial_grid") or d.get("initial_grid")
+            ig = np.array(ig_raw, dtype=np.int32)
+            if ig.shape != (GRID_SIZE, GRID_SIZE) or gt.shape != (GRID_SIZE, GRID_SIZE, N_CLASSES):
+                continue
+
+            # Observations from query_grids or pre-aggregated
+            obs_probs, n_obs = None, None
+            if s.get("query_grids"):
+                obs_probs, n_obs = reconstruct_observations(s["query_grids"])
+            elif s.get("observed_probs") and s.get("n_observations"):
+                obs_probs = np.array(s["observed_probs"], dtype=np.float32)
+                n_obs = np.array(s["n_observations"], dtype=np.int32)
+
+            samples.append({
+                "grid": ig, "gt": gt, "is_warm": is_warm,
+                "expansion_rate": exp_rate, "round": rnum,
+                "seed": s.get("seed_index", 0),
+                "obs_probs": obs_probs, "n_obs": n_obs,
+            })
+
+    log.info(f"Loaded {len(samples)} samples from {len(seen_rounds)} rounds: {sorted(seen_rounds)}")
     return samples
 
 
@@ -357,7 +413,7 @@ def predict_grid(models, grid, is_warm, expansion_rate, obs_probs=None, n_obs=No
         pred[mountain_mask, 5] = 1.0
 
     # Per-class floor and renormalize
-    pred = np.maximum(pred, CLASS_FLOORS[None, None, :])
+    pred = np.clip(pred, PROB_FLOOR, None)
     pred = pred / pred.sum(axis=-1, keepdims=True)
     return pred
 
@@ -366,7 +422,7 @@ def predict_grid(models, grid, is_warm, expansion_rate, obs_probs=None, n_obs=No
 # Scoring
 # ============================================================
 def score_prediction(pred, gt):
-    pred = np.maximum(pred, CLASS_FLOORS[None, None, :])
+    pred = np.clip(pred, PROB_FLOOR, None)
     pred = pred / pred.sum(axis=-1, keepdims=True)
     gt_s = np.clip(gt, 1e-10, None)
     pred_s = np.clip(pred, 1e-10, None)
