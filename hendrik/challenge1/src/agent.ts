@@ -111,7 +111,7 @@ export const solve = async (body: SolveRequest) => {
             system: SYSTEM_PROMPT,
             messages: [{ role: 'user', content: userContent }],
             tools,
-            maxSteps: 15,
+            maxSteps: 25,
             abortSignal: abortController.signal,
         });
     } finally {

@@ -265,3 +265,9 @@ All 4 errors have been corrected with proper correction vouchers dated 2026-03-2
 
 [LEADERBOARD] Task 24 scored
 [LEADERBOARD] Total: 66.69 → 66.69 (0.00)
+
+Task 24 (fix ledger errors)
+Score: 0.0 (0/10 checks) — only 1 of 4 corrections posted, agent ran out of steps reasoning about VAT
+422 error: used vatType:{id:12} instead of {id:0} on credit posting
+141s elapsed, 22 API calls, 1 error
+Need: increase maxSteps or simplify agent reasoning

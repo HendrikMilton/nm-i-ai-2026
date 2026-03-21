@@ -181,17 +181,17 @@ CRITICAL: Do NOT re-query /ledger/posting after posting vouchers. Calculate tax 
 CRITICAL: Do NOT use /resultbudget — it often returns wrong fields. Use /ledger/posting directly.
 
 ## Workflow: Correct ledger errors (Task 24)
-The task tells you exactly what the errors are. For each error, post ONE correction voucher.
+The task tells you exactly what the 4 errors are. Do NOT overthink — just post 4 correction vouchers.
+IMPORTANT: Be efficient. Do NOT spend steps reasoning. Read originals, then post ALL 4 corrections in ONE step.
 1. GET /ledger/voucher?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,number,date,description&count=100
-   Then for each error, GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&voucherId=<id>&fields=id,account(id,number),amount,amountGross,supplier(id),department(id),customer(id),vatType(id)
-   CRITICAL: you MUST read the original postings to copy supplier, department, customer, vatType to your corrections. Missing supplier on 2400 = 422 error.
-2. For each error, create a simple correction voucher. Keep it minimal:
-   - Wrong account: reverse the wrong posting (negate amount), post the correct one.
-   - Duplicate voucher: reverse it entirely (negate all postings).
-   - Missing VAT: add the missing VAT posting. Use calculate tool for VAT amount.
-   - Wrong amount: post the difference (correct - wrong) as adjustment.
-   Copy supplier:{id}, department:{id}, vatType:{id} from original postings to ALL correction postings.
-3. POST all correction vouchers in parallel.
+   Then GET postings for ALL relevant vouchers in parallel: GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-12-31&voucherId=<id>&fields=id,account(id,number),amount,amountGross,supplier(id),department(id),customer(id),vatType(id)
+   CRITICAL: copy supplier, department, customer from originals. Missing supplier on 2400 = 422.
+2. Build ALL 4 correction vouchers at once. Use vatType:{id:0} on all correction postings (corrections are internal adjustments).
+   - Wrong account: debit correct account, credit wrong account (same amountGross as original).
+   - Duplicate: negate all postings from the duplicate voucher.
+   - Missing VAT: use calculate tool for amount (excl_amount × 0.25). Debit VAT account (2710), credit supplier account (2400) with supplier:{id}.
+   - Wrong amount: debit/credit the DIFFERENCE (correct - wrong).
+3. POST all 4 correction vouchers in parallel in ONE tool call. Do NOT post them one at a time.
 
 ## Workflow: Monthly closing / journal vouchers (Task 26)
 Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new accounts — use only existing ones.

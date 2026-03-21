@@ -72,7 +72,7 @@ async function pollForChange(before: any[], ts: string) {
             if (afterAttempts <= beforeAttempts) continue;
 
             // Save after state
-            writeFileSync(join(LB_DIR, `after-${ts}.json`), JSON.stringify(after, null, 2));
+            writeFileSync(join(LB_DIR, `${ts}-after.json`), JSON.stringify(after, null, 2));
 
             // Diff and append to log
             const diff = diffLeaderboard(before, after);
@@ -103,7 +103,7 @@ app.post('/solve', async (req, res) => {
     // Fetch leaderboard state before solving
     const before = await fetchLeaderboard();
     if (before.length > 0) {
-        writeFileSync(join(LB_DIR, `before-${ts}.json`), JSON.stringify(before, null, 2));
+        writeFileSync(join(LB_DIR, `${ts}-before.json`), JSON.stringify(before, null, 2));
     }
 
     try {
