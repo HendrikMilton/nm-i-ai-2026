@@ -1,11 +1,13 @@
 """
 Challenge 3: Astar Island — Per-cell LightGBM prediction.
-Trains on v2_R data (which has per-seed grids).
+Trains on v2_R data (per-seed grids) with observation features from queries.
 """
 
 import json
 import logging
 import math
+import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -22,9 +24,11 @@ logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(mess
 GRID_SIZE = 40
 N_CLASSES = 6
 PROB_FLOOR = 0.01
+TERRAIN_TO_CLASS = {0: 0, 10: 0, 11: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
 V2_DATA_DIR = Path(__file__).parent / "../../elias/logs/offline"
+ROUND_DATA_DIR = Path(__file__).parent / "round_data"
 
 FEATURE_NAMES = [
     "terrain_code",
@@ -37,14 +41,47 @@ FEATURE_NAMES = [
     "is_warm", "expansion_rate",
     "row_norm", "col_norm",
     "n_land_nbr", "terrain_diversity",
+    # Observation features (8)
+    "obs_p_empty", "obs_p_settle", "obs_p_port", "obs_p_ruin", "obs_p_forest", "obs_p_mountain",
+    "n_obs_norm", "has_obs",
 ]
+
+# Dropout rate: probability of zeroing obs features during training
+OBS_DROPOUT = 0.3
+
+
+# ============================================================
+# Observation reconstruction
+# ============================================================
+def reconstruct_observations(queries):
+    """Reconstruct observed_counts/probs/n_obs from viewport query results."""
+    obs_counts = np.zeros((GRID_SIZE, GRID_SIZE, N_CLASSES), dtype=np.int32)
+    n_obs = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.int32)
+
+    for q in queries:
+        vp = q["viewport"]
+        qgrid = np.array(q["grid"])
+        x, y, w, h = vp["x"], vp["y"], vp["w"], vp["h"]
+        for dr in range(min(h, qgrid.shape[0])):
+            for dc in range(min(w, qgrid.shape[1])):
+                r, c = y + dr, x + dc
+                if 0 <= r < GRID_SIZE and 0 <= c < GRID_SIZE:
+                    code = int(qgrid[dr, dc])
+                    cls = TERRAIN_TO_CLASS.get(code, 0)
+                    obs_counts[r, c, cls] += 1
+                    n_obs[r, c] += 1
+
+    obs_probs = np.zeros((GRID_SIZE, GRID_SIZE, N_CLASSES), dtype=np.float32)
+    mask = n_obs > 0
+    obs_probs[mask] = obs_counts[mask] / n_obs[mask, None]
+    return obs_probs, n_obs
 
 
 # ============================================================
 # Feature extraction
 # ============================================================
-def extract_features(grid, is_warm, expansion_rate):
-    """Extract per-cell features for a 40x40 grid. Returns (1600, n_features)."""
+def extract_features(grid, is_warm, expansion_rate, obs_probs=None, n_obs=None):
+    """Extract per-cell features. Returns (1600, n_features)."""
     grid = np.asarray(grid, dtype=np.int32)
     h, w = grid.shape
 
@@ -80,7 +117,7 @@ def extract_features(grid, is_warm, expansion_rate):
     land = 1.0 - masks["ocean"]
     is_coastal = (n_ocean > 0).astype(np.float32) * land
     has_settle_nbr = (n_settle > 0).astype(np.float32)
-    n_settle_nbr = n_settle * 8  # un-normalize to get actual count
+    n_settle_nbr = n_settle * 8
 
     def dist_norm(mask, max_d=20):
         if mask.sum() == 0:
@@ -106,7 +143,6 @@ def extract_features(grid, is_warm, expansion_rate):
     exp_arr = np.full((h, w), expansion_rate, dtype=np.float32)
 
     n_land_nbr = nbr_count(land)
-    # Terrain diversity: count of unique terrain types in 3x3 neighborhood
     div = np.zeros((h, w), dtype=np.float32)
     for dy in (-1, 0, 1):
         for dx in (-1, 0, 1):
@@ -121,6 +157,16 @@ def extract_features(grid, is_warm, expansion_rate):
             div += (shifted != grid).astype(np.float32)
     terrain_div = div / 8.0
 
+    # Observation features
+    if obs_probs is not None and n_obs is not None:
+        obs_probs = np.asarray(obs_probs, dtype=np.float32)
+        n_obs = np.asarray(n_obs, dtype=np.float32)
+        obs_feat = [obs_probs[:, :, k] for k in range(N_CLASSES)]
+        obs_feat.append(n_obs / 10.0)  # normalized
+        obs_feat.append((n_obs > 0).astype(np.float32))
+    else:
+        obs_feat = [np.zeros((h, w), dtype=np.float32) for _ in range(N_CLASSES + 2)]
+
     feature_maps = [
         grid.astype(np.float32),
         n_ocean, n_settle, n_port, n_forest, n_mountain, n_plains, n_ruin,
@@ -132,16 +178,17 @@ def extract_features(grid, is_warm, expansion_rate):
         warm_arr, exp_arr,
         row_norm, col_norm,
         n_land_nbr, terrain_div,
+        *obs_feat,
     ]
 
     return np.stack([f.ravel() for f in feature_maps], axis=1)
 
 
 # ============================================================
-# Data loading from v2_R files (per-seed grids!)
+# Data loading
 # ============================================================
 def load_v2_data():
-    """Load all v2_R rounds. Each seed has its own initial_grid."""
+    """Load all v2_R rounds with per-seed grids and reconstructed observations."""
     samples = []
     for f in sorted(V2_DATA_DIR.glob("v2_R*.json")):
         with open(f) as fh:
@@ -155,22 +202,33 @@ def load_v2_data():
             seed = d["seeds"][sid]
             ig = np.array(seed["initial_grid"], dtype=np.int32)
             gt = np.array(seed["ground_truth"], dtype=np.float32)
-            if ig.shape == (GRID_SIZE, GRID_SIZE) and gt.shape == (GRID_SIZE, GRID_SIZE, N_CLASSES):
-                samples.append({
-                    "grid": ig,
-                    "gt": gt,
-                    "is_warm": is_warm,
-                    "expansion_rate": exp_rate,
-                    "round": rnum,
-                    "seed": int(sid),
-                })
+            if ig.shape != (GRID_SIZE, GRID_SIZE) or gt.shape != (GRID_SIZE, GRID_SIZE, N_CLASSES):
+                continue
+
+            # Reconstruct observations from queries
+            queries = seed.get("queries", [])
+            if queries:
+                obs_probs, n_obs = reconstruct_observations(queries)
+            else:
+                obs_probs, n_obs = None, None
+
+            samples.append({
+                "grid": ig,
+                "gt": gt,
+                "is_warm": is_warm,
+                "expansion_rate": exp_rate,
+                "round": rnum,
+                "seed": int(sid),
+                "obs_probs": obs_probs,
+                "n_obs": n_obs,
+            })
 
     log.info(f"Loaded {len(samples)} samples from v2_R data ({len(samples)//5} rounds x 5 seeds)")
     return samples
 
 
 def build_training_arrays(samples, augment=True):
-    """Convert samples to (X, Y) arrays with optional D4 augmentation."""
+    """Convert samples to (X, Y) with D4 augmentation and observation dropout."""
     n_cells = GRID_SIZE * GRID_SIZE
     n_features = len(FEATURE_NAMES)
     n_augs = 8 if augment else 1
@@ -179,23 +237,42 @@ def build_training_arrays(samples, augment=True):
     X = np.zeros((total * n_cells, n_features), dtype=np.float32)
     Y = np.zeros((total * n_cells, N_CLASSES), dtype=np.float32)
 
+    rng = random.Random(42)
     idx = 0
     for s in samples:
         grid = s["grid"]
         gt = s["gt"]
+        obs_probs = s.get("obs_probs")
+        n_obs_arr = s.get("n_obs")
+
         for k in range(n_augs):
-            # D4 transform: k%4 rotations, k>=4 adds flip
             g = np.rot90(grid, k % 4)
             t = np.rot90(gt, k % 4)
+            if obs_probs is not None:
+                op = np.rot90(obs_probs, k % 4)
+                no = np.rot90(n_obs_arr, k % 4)
+            else:
+                op, no = None, None
             if k >= 4:
                 g = np.fliplr(g)
                 t = np.fliplr(t)
+                if op is not None:
+                    op = np.fliplr(op)
+                    no = np.fliplr(no)
             g = np.ascontiguousarray(g)
             t = np.ascontiguousarray(t)
 
+            # Observation dropout: randomly zero out obs features
+            use_obs = op is not None and rng.random() > OBS_DROPOUT
+            if use_obs:
+                op = np.ascontiguousarray(op)
+                no = np.ascontiguousarray(no)
+            else:
+                op, no = None, None
+
             start = idx * n_cells
             end = start + n_cells
-            X[start:end] = extract_features(g, s["is_warm"], s["expansion_rate"])
+            X[start:end] = extract_features(g, s["is_warm"], s["expansion_rate"], op, no)
             Y[start:end] = t.reshape(n_cells, N_CLASSES)
             idx += 1
 
@@ -224,8 +301,6 @@ LGB_PARAMS = {
 
 
 def train_models(X, Y):
-    """Train 6 independent LightGBM regressors."""
-    import time
     models = []
     t0 = time.time()
     for k in range(N_CLASSES):
@@ -233,8 +308,7 @@ def train_models(X, Y):
         model = lgb.LGBMRegressor(**LGB_PARAMS)
         model.fit(X, Y[:, k], categorical_feature=[0])
         models.append(model)
-        elapsed = time.time() - tk
-        log.info(f"  Class {k}/{N_CLASSES}: {elapsed:.1f}s (total {time.time()-t0:.0f}s)")
+        log.info(f"  Class {k}/{N_CLASSES}: {time.time()-tk:.1f}s (total {time.time()-t0:.0f}s)")
     return models
 
 
@@ -259,10 +333,10 @@ def load_models():
 # ============================================================
 # Prediction
 # ============================================================
-def predict_grid(models, grid, is_warm, expansion_rate, observations=None):
+def predict_grid(models, grid, is_warm, expansion_rate, obs_probs=None, n_obs=None):
     """Predict 40x40x6 probability distribution."""
     grid = np.asarray(grid, dtype=np.int32)
-    X = extract_features(grid, is_warm, expansion_rate)
+    X = extract_features(grid, is_warm, expansion_rate, obs_probs, n_obs)
 
     preds = np.zeros((GRID_SIZE * GRID_SIZE, N_CLASSES), dtype=np.float64)
     for k, model in enumerate(models):
@@ -279,21 +353,6 @@ def predict_grid(models, grid, is_warm, expansion_rate, observations=None):
     if mountain_mask.any():
         pred[mountain_mask] = 0.0
         pred[mountain_mask, 5] = 1.0
-
-    # Observation blending
-    if observations is not None:
-        n_obs = observations.get("n_observations")
-        obs_probs = observations.get("observed_probs") or observations.get("ground_truth_from_queries")
-        if n_obs is not None and obs_probs is not None:
-            n_obs = np.array(n_obs, dtype=np.float32)
-            obs_probs = np.array(obs_probs, dtype=np.float32)
-            has_obs = n_obs > 0
-            if has_obs.any():
-                obs_weight = np.clip(n_obs * 0.2, 0, 0.8)[:, :, None]
-                pred[has_obs] = (
-                    (1 - obs_weight[has_obs]) * pred[has_obs]
-                    + obs_weight[has_obs] * obs_probs[has_obs]
-                )
 
     # Floor and renormalize
     pred = np.clip(pred, PROB_FLOOR, None)
@@ -322,14 +381,13 @@ def score_prediction(pred, gt):
 # Leave-one-round-out cross-validation
 # ============================================================
 def cross_validate():
-    """LOO-CV using per-seed grids from v2_R data."""
+    """LOO-CV with observation features."""
     samples = load_v2_data()
     rounds = {}
     for s in samples:
         rounds.setdefault(s["round"], []).append(s)
     round_nums = sorted(rounds.keys())
 
-    import time
     all_round_scores = []
     cv_start = time.time()
     for fold_i, test_rn in enumerate(round_nums):
@@ -344,7 +402,8 @@ def cross_validate():
 
         seed_scores = []
         for s in test:
-            pred = predict_grid(models, s["grid"], s["is_warm"], s["expansion_rate"])
+            pred = predict_grid(models, s["grid"], s["is_warm"], s["expansion_rate"],
+                                s.get("obs_probs"), s.get("n_obs"))
             sc = score_prediction(pred, s["gt"])
             seed_scores.append(sc)
 
@@ -362,10 +421,9 @@ def cross_validate():
 
 
 # ============================================================
-# Train-on-all evaluation (sanity check)
+# Train-on-all
 # ============================================================
 def eval_train_on_all():
-    """Train on all data and evaluate (upper bound — no holdout)."""
     samples = load_v2_data()
     X, Y = build_training_arrays(samples)
     log.info(f"Training on all: X={X.shape}")
@@ -380,7 +438,8 @@ def eval_train_on_all():
     for rn in sorted(rounds.keys()):
         seed_scores = []
         for s in rounds[rn]:
-            pred = predict_grid(models, s["grid"], s["is_warm"], s["expansion_rate"])
+            pred = predict_grid(models, s["grid"], s["is_warm"], s["expansion_rate"],
+                                s.get("obs_probs"), s.get("n_obs"))
             sc = score_prediction(pred, s["gt"])
             seed_scores.append(sc)
         round_mean = np.mean(seed_scores)
@@ -428,9 +487,16 @@ def predict(body: dict) -> dict:
     if grid.shape != (GRID_SIZE, GRID_SIZE):
         return {"error": f"expected {GRID_SIZE}x{GRID_SIZE}, got {grid.shape}"}
 
-    # Default config — at competition time we'd estimate from queries
+    # Default config
     is_warm, exp_rate = True, 0.15
-    pred = predict_grid(_models, grid, is_warm, exp_rate)
+
+    # Use observations if provided
+    obs_probs, n_obs_arr = None, None
+    if "observed_probs" in body and "n_observations" in body:
+        obs_probs = np.array(body["observed_probs"], dtype=np.float32)
+        n_obs_arr = np.array(body["n_observations"], dtype=np.float32)
+
+    pred = predict_grid(_models, grid, is_warm, exp_rate, obs_probs, n_obs_arr)
     return {"prediction": pred.tolist()}
 
 
