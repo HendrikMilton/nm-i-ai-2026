@@ -3888,8 +3888,8 @@
       "id": "v2_R13",
       "round_id": "7b4bda99-6165-4221-97cc-27880f5e6d95",
       "round_number": 13,
-      "timestamp": "2026-03-21T19:53:03.885828+00:00",
-      "round_score": 86.5366,
+      "timestamp": "2026-03-21T20:29:36.203184+00:00",
+      "round_score": 85.9203,
       "n_sims": 500,
       "config": {
         "mode": "abc",
