@@ -292,6 +292,34 @@
       }
     },
     {
+      "id": "v2_depth_obs_test",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-21T13:15:55.344637+00:00",
+      "round_score": 80.9899,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1922
+      }
+    },
+    {
+      "id": "v2_depth_obs_v2",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-21T13:18:43.927519+00:00",
+      "round_score": 82.7767,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1922
+      }
+    },
+    {
       "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
       "round_number": 2,
       "timestamp": "2026-03-20T08:20:04.717771+00:00",
@@ -3535,6 +3563,34 @@
       }
     },
     {
+      "id": "v2_R9_threshold90",
+      "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
+      "round_number": 9,
+      "timestamp": "2026-03-21T12:56:20.406661+00:00",
+      "round_score": 88.7162,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1563
+      }
+    },
+    {
+      "id": "v2_depth_R9",
+      "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
+      "round_number": 9,
+      "timestamp": "2026-03-21T13:26:25.940683+00:00",
+      "round_score": 88.8799,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1592
+      }
+    },
+    {
       "id": "v2_R10",
       "round_id": "75e625c3-60cb-4392-af3e-c86a98bde8c2",
       "round_number": 10,
@@ -3554,6 +3610,48 @@
       "round_number": 11,
       "timestamp": "2026-03-21T12:07:36.053929+00:00",
       "round_score": 83.2153,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.3536
+      }
+    },
+    {
+      "id": "v2_R11_threshold90",
+      "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
+      "round_number": 11,
+      "timestamp": "2026-03-21T12:57:38.575334+00:00",
+      "round_score": 81.2866,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.3536
+      }
+    },
+    {
+      "id": "v2_R11_noabc",
+      "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
+      "round_number": 11,
+      "timestamp": "2026-03-21T12:57:59.861000+00:00",
+      "round_score": 80.1997,
+      "n_sims": 500,
+      "config": {
+        "mode": "legacy",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.3536
+      }
+    },
+    {
+      "id": "v2_R11_50cand_t90",
+      "round_id": "324fde07-1670-4202-b199-7aa92ecb40ee",
+      "round_number": 11,
+      "timestamp": "2026-03-21T13:02:48.831576+00:00",
+      "round_score": 81.2866,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3588,6 +3686,76 @@
         "budget": 50,
         "warmth": "warm",
         "expansion_rate": 0.1058
+      }
+    },
+    {
+      "id": "v2_R13_mc_validation",
+      "round_id": "7b4bda99-6165-4221-97cc-27880f5e6d95",
+      "round_number": 13,
+      "timestamp": "2026-03-21T12:53:32.423354+00:00",
+      "round_score": 87.4804,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1058
+      }
+    },
+    {
+      "id": "v2_R13_threshold90",
+      "round_id": "7b4bda99-6165-4221-97cc-27880f5e6d95",
+      "round_number": 13,
+      "timestamp": "2026-03-21T12:54:52.398387+00:00",
+      "round_score": 88.1979,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1058
+      }
+    },
+    {
+      "id": "v2_R13_50cand_t90",
+      "round_id": "7b4bda99-6165-4221-97cc-27880f5e6d95",
+      "round_number": 13,
+      "timestamp": "2026-03-21T13:00:03.382841+00:00",
+      "round_score": 88.1979,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1058
+      }
+    },
+    {
+      "id": "v2_depth_R13",
+      "round_id": "7b4bda99-6165-4221-97cc-27880f5e6d95",
+      "round_number": 13,
+      "timestamp": "2026-03-21T13:24:02.691632+00:00",
+      "round_score": 87.1564,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1036
+      }
+    },
+    {
+      "id": "v2_depth_R14",
+      "round_id": "d0a2c894-2162-4d49-86cf-435b9013f3b8",
+      "round_number": 14,
+      "timestamp": "2026-03-21T13:22:06.806401+00:00",
+      "round_score": 72.2686,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.309
       }
     }
   ]

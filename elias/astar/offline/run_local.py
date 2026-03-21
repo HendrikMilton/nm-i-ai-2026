@@ -28,7 +28,8 @@ from run import (
     MC_TOTAL_RUNS,
     build_tiling, extract_map_dimensions, extract_grid_and_settlements,
     compute_settlement_distances, get_distance_aware_prior,
-    generate_prediction, generate_prediction_abc,
+    generate_prediction, generate_prediction_abc, validate_mc_against_obs,
+    SIM_SAFETY_THRESHOLD,
     run_observation_phases, floor_and_normalize,
     aggregate_expansion_stats, pool_observations,
 )
@@ -195,10 +196,9 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         seed_gt[seed] = analysis["ground_truth"]
 
     # Build tiling
-    tiling = build_tiling(map_w, map_h)
     if not quiet:
+        tiling = build_tiling(map_w, map_h)
         print(f"  Tiling: {len(tiling)} viewports per seed")
-    seed_viewports = {s: tiling for s in range(N_SEEDS)}
 
     rng = random.Random(rng_seed if rng_seed is not None else round_num * 7919)
     seed_queries = {s: [] for s in range(N_SEEDS)}
@@ -212,7 +212,7 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
     # Run observations
     seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio, warmth = \
         run_observation_phases(
-            seed_grids, seed_viewports, budget, map_w, map_h,
+            seed_grids, budget, map_w, map_h,
             observe_fn=local_observe, print_fn=print_fn,
         )
 
@@ -259,6 +259,18 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
                 fitted_params, grid, settlements,
                 total_runs=MC_TOTAL_RUNS, base_seed=seed * 10000,
                 map_h=map_h, map_w=map_w)
+
+            # Log MC validation
+            if mc_pred is not None and not quiet:
+                mc_agree, mc_compared = validate_mc_against_obs(
+                    mc_pred, effective_obs, map_h, map_w)
+                if mc_compared == 0:
+                    mc_status = "USED (no obs)"
+                elif mc_agree >= SIM_SAFETY_THRESHOLD:
+                    mc_status = "USED"
+                else:
+                    mc_status = "SKIPPED"
+                print(f"MC agree={mc_agree:.1%} ({mc_compared} cells) → {mc_status}  ", end="", flush=True)
 
             obs_pred = generate_prediction_abc(
                 grid, mc_pred, map_w, map_h,
