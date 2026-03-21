@@ -46,9 +46,19 @@ FEATURE_NAMES = [
     "port_density_r3",
     "row_norm", "col_norm",
     "n_land_nbr", "terrain_diversity",
-    # 3 round-level hidden params
+    # 3 round-level hidden params (from GT or obs)
     "settle_survive", "spread_tendency", "port_activity",
+    # 7 settlement stats (from query API, defaults for historical rounds)
+    "mean_population", "mean_food", "mean_wealth", "mean_defense",
+    "n_factions", "sett_port_ratio", "alive_ratio",
 ]
+
+# Defaults for settlement stats (median across observed rounds)
+DEFAULT_SETTLEMENT_STATS = {
+    "mean_population": 2.5, "mean_food": 0.4, "mean_wealth": 0.02,
+    "mean_defense": 0.9, "n_factions": 15, "port_ratio": 0.05,
+    "alive_ratio": 0.8,
+}
 
 
 # ============================================================
@@ -139,8 +149,8 @@ def reconstruct_observations(queries):
 # ============================================================
 # Feature extraction
 # ============================================================
-def extract_features(grid, settle_survive, spread_tendency, port_activity):
-    """Extract per-cell features + 3 round-level hidden params. Returns (1600, 28)."""
+def extract_features(grid, settle_survive, spread_tendency, port_activity, settlement_stats=None):
+    """Extract per-cell features + 3 hidden params + 7 settlement stats. Returns (1600, 35)."""
     grid = np.asarray(grid, dtype=np.int32)
     h, w = grid.shape
 
@@ -218,6 +228,16 @@ def extract_features(grid, settle_survive, spread_tendency, port_activity):
     st_arr = np.full((h, w), spread_tendency, dtype=np.float32)
     pa_arr = np.full((h, w), port_activity, dtype=np.float32)
 
+    # 7 settlement stats broadcast to all cells
+    ss_dict = settlement_stats or DEFAULT_SETTLEMENT_STATS
+    mp_arr = np.full((h, w), ss_dict.get("mean_population", DEFAULT_SETTLEMENT_STATS["mean_population"]), dtype=np.float32)
+    mf_arr = np.full((h, w), ss_dict.get("mean_food", DEFAULT_SETTLEMENT_STATS["mean_food"]), dtype=np.float32)
+    mw_arr = np.full((h, w), ss_dict.get("mean_wealth", DEFAULT_SETTLEMENT_STATS["mean_wealth"]), dtype=np.float32)
+    md_arr = np.full((h, w), ss_dict.get("mean_defense", DEFAULT_SETTLEMENT_STATS["mean_defense"]), dtype=np.float32)
+    nf_arr = np.full((h, w), ss_dict.get("n_factions", DEFAULT_SETTLEMENT_STATS["n_factions"]), dtype=np.float32)
+    pr_arr = np.full((h, w), ss_dict.get("port_ratio", DEFAULT_SETTLEMENT_STATS["port_ratio"]), dtype=np.float32)
+    ar_arr = np.full((h, w), ss_dict.get("alive_ratio", DEFAULT_SETTLEMENT_STATS["alive_ratio"]), dtype=np.float32)
+
     feature_maps = [
         grid.astype(np.float32),
         n_ocean, n_settle, n_port, n_forest, n_mountain, n_plains, n_ruin,
@@ -229,6 +249,7 @@ def extract_features(grid, settle_survive, spread_tendency, port_activity):
         row_norm, col_norm,
         n_land_nbr, terrain_div,
         ss_arr, st_arr, pa_arr,
+        mp_arr, mf_arr, mw_arr, md_arr, nf_arr, pr_arr, ar_arr,
     ]
 
     return np.stack([f.ravel() for f in feature_maps], axis=1)
@@ -340,7 +361,7 @@ def build_training_arrays(samples):
     for i, s in enumerate(samples):
         start = i * n_cells
         end = start + n_cells
-        X[start:end] = extract_features(s["grid"], s["ss"], s["st"], s["pa"])
+        X[start:end] = extract_features(s["grid"], s["ss"], s["st"], s["pa"], s.get("settlement_stats"))
         Y[start:end] = s["gt"].reshape(n_cells, N_CLASSES)
 
     return X, Y
@@ -407,10 +428,11 @@ def load_models():
 # Prediction
 # ============================================================
 def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_activity=None,
-                 obs_probs=None, n_obs=None):
+                 obs_probs=None, n_obs=None, settlement_stats=None):
     """Predict 40x40x6 probability distribution.
 
     Hidden params can be provided directly, or estimated from obs, or use defaults.
+    Settlement stats from query API are optional extra features.
     """
     grid = np.asarray(grid, dtype=np.int32)
 
@@ -423,7 +445,7 @@ def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_a
     else:
         ss, st, pa = DEFAULT_SETTLE_SURVIVE, DEFAULT_SPREAD_TENDENCY, DEFAULT_PORT_ACTIVITY
 
-    X = extract_features(grid, ss, st, pa)
+    X = extract_features(grid, ss, st, pa, settlement_stats)
 
     preds = np.zeros((GRID_SIZE * GRID_SIZE, N_CLASSES), dtype=np.float64)
     for k, model in enumerate(models):

@@ -83,6 +83,7 @@ def run_queries(round_id, seed_idx, viewports):
     obs_counts = np.zeros((GRID_SIZE, GRID_SIZE, 6), dtype=np.int32)
     n_obs = np.zeros((GRID_SIZE, GRID_SIZE), dtype=np.int32)
     query_grids = []
+    all_settlements = []  # collect settlement stats from all queries
 
     for vp_x, vp_y in viewports:
         try:
@@ -91,6 +92,9 @@ def run_queries(round_id, seed_idx, viewports):
             if grid is None: continue
             grid = np.array(grid)
             query_grids.append({"viewport": {"x": vp_x, "y": vp_y, "w": VIEWPORT, "h": VIEWPORT}, "grid": grid.tolist()})
+            # Save settlement stats
+            settlements = result.get("settlements", [])
+            all_settlements.extend(settlements)
             for dr in range(min(VIEWPORT, grid.shape[0])):
                 for dc in range(min(VIEWPORT, grid.shape[1])):
                     r, c = vp_y + dr, vp_x + dc
@@ -107,7 +111,44 @@ def run_queries(round_id, seed_idx, viewports):
     if mask.any():
         obs_probs[mask] = obs_counts[mask] / n_obs[mask, None]
 
-    return obs_probs, n_obs, query_grids
+    # Aggregate settlement stats (deduplicate by position)
+    settlement_stats = aggregate_settlement_stats(all_settlements)
+
+    return obs_probs, n_obs, query_grids, settlement_stats
+
+
+def aggregate_settlement_stats(settlements):
+    """Aggregate settlement stats from all queries into round-level features.
+    Deduplicates by (x,y) position, keeps last seen values."""
+    if not settlements:
+        return None
+
+    # Deduplicate: same settlement seen in multiple queries
+    by_pos = {}
+    for s in settlements:
+        key = (s["x"], s["y"])
+        by_pos[key] = s
+
+    unique = list(by_pos.values())
+    alive = [s for s in unique if s.get("alive", True)]
+
+    if not alive:
+        return {
+            "mean_population": 0, "mean_food": 0, "mean_wealth": 0,
+            "mean_defense": 0, "n_factions": 0, "port_ratio": 0,
+            "alive_ratio": 0, "n_settlements": len(unique),
+        }
+
+    return {
+        "mean_population": np.mean([s["population"] for s in alive]),
+        "mean_food": np.mean([s["food"] for s in alive]),
+        "mean_wealth": np.mean([s["wealth"] for s in alive]),
+        "mean_defense": np.mean([s["defense"] for s in alive]),
+        "n_factions": len(set(s["owner_id"] for s in alive)),
+        "port_ratio": np.mean([1 if s.get("has_port") else 0 for s in alive]),
+        "alive_ratio": len(alive) / max(len(unique), 1),
+        "n_settlements": len(unique),
+    }
 
 
 # ============================================================
@@ -136,11 +177,13 @@ def save_round_data(round_number, round_id, seed_grids, seed_obs):
         seed_save["initial_grid"] = seed_grids[seed_idx].tolist()
 
         if seed_idx in seed_obs:
-            obs_probs, n_obs, query_grids = seed_obs[seed_idx]
+            obs_probs, n_obs, query_grids, settlement_stats = seed_obs[seed_idx]
             if obs_probs is not None and query_grids:
                 seed_save["query_grids"] = query_grids
                 seed_save["observed_probs"] = obs_probs.tolist()
                 seed_save["n_observations"] = n_obs.tolist()
+            if settlement_stats is not None:
+                seed_save["settlement_stats"] = settlement_stats
 
         save_data["seeds"][str(seed_idx)] = seed_save
 
@@ -253,13 +296,16 @@ def submit_round(round_id, round_number, seed_grids, seed_obs):
         grid = seed_grids[seed_idx]
 
         # Get obs data if available
-        obs_probs, n_obs_arr = None, None
+        obs_probs, n_obs_arr, settlement_stats = None, None, None
         if seed_idx in seed_obs:
-            obs_probs, n_obs_arr, _ = seed_obs[seed_idx]
+            obs_probs = seed_obs[seed_idx][0]
+            n_obs_arr = seed_obs[seed_idx][1]
+            settlement_stats = seed_obs[seed_idx][3] if len(seed_obs[seed_idx]) > 3 else None
 
         # predict_grid handles param estimation from obs or uses defaults
         pred = solve.predict_grid(solve._models, grid,
-                                  obs_probs=obs_probs, n_obs=n_obs_arr)
+                                  obs_probs=obs_probs, n_obs=n_obs_arr,
+                                  settlement_stats=settlement_stats)
 
         try:
             result = submit(round_id, seed_idx, pred.tolist())
@@ -347,10 +393,12 @@ def run_iteration(state):
     if queries_remaining > 0:
         for seed_idx in range(N_SEEDS):
             log.info(f"Querying seed {seed_idx} ({len(tiling)} viewports)...")
-            obs_probs, n_obs, query_grids = run_queries(round_id, seed_idx, tiling)
-            seed_obs[seed_idx] = (obs_probs, n_obs, query_grids)
+            obs_probs, n_obs, query_grids, settlement_stats = run_queries(round_id, seed_idx, tiling)
+            seed_obs[seed_idx] = (obs_probs, n_obs, query_grids, settlement_stats)
             coverage = (n_obs > 0).sum()
             log.info(f"  Coverage: {coverage}/{GRID_SIZE*GRID_SIZE}")
+            if settlement_stats:
+                log.info(f"  Settlements: pop={settlement_stats['mean_population']:.2f} food={settlement_stats['mean_food']:.2f} factions={settlement_stats['n_factions']}")
     else:
         log.warning("No query budget remaining!")
 
