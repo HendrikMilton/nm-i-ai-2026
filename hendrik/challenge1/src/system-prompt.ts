@@ -93,7 +93,7 @@ Register as an EMPLOYEE EXPENSE (ansattutlegg) via Reise og utlegg — NOT a led
 Total: 4 write calls.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002, GET /ledger/paymentTypeOut?fields=id,description
+1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002
 2. GET /employee/{id}?fields=* — check dateOfBirth, bankAccountNumber, employment
    CRITICAL: Employee MUST have BOTH dateOfBirth AND bankAccountNumber set (non-empty). If EITHER is missing/empty, PUT /employee/{id} with ALL of: id, version, firstName, lastName, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}", email (keep existing).
    The PUT body MUST include bankAccountNumber — payroll WILL FAIL silently without it (0 points).
@@ -102,9 +102,6 @@ Total: 4 write calls.
    Then POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, shiftDurationHours:7.5}]}
 4. POST /salary/transaction?generateTaxDeduction=true with {date, year, month, isHistorical:false, payslips:[{employee:{id}, date, year, month, specifications:[{salaryType:{id}, rate:<amount>, count:1, amount:<amount>, year, month, employee:{id}}]}]}
    NEVER use /ledger/voucher for payroll.
-5. FINALIZE the transaction: find paymentTypeId from step 1 (use "Manuelt betalt nettbank").
-   PUT /tsk/salaryv2/transaction/{transactionId}/:run?paymentTypeId={id}&paymentDate={date}&paySlipsAvailableDate={date}&oneTimePassword=
-   Empty body. This finalizes the payslip and creates the Lønnsbilag voucher. If 403, ignore — the transaction is still created.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
