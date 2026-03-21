@@ -137,7 +137,7 @@ async function main() {
     }
     // Enforce daily limit starting 2026-03-22 03:00 UTC
     const now = new Date();
-    const limitStart = new Date("2026-03-22T01:00:00Z");
+    const limitStart = new Date("2026-03-22T03:00:00Z");
     if (now >= limitStart && dailyUsed >= MAX_DAILY_SUBMISSIONS) {
       console.log(`  [${ts()}] daily limit reached (${dailyUsed}/${MAX_DAILY_SUBMISSIONS}), stopping.`);
       process.exit(0);
