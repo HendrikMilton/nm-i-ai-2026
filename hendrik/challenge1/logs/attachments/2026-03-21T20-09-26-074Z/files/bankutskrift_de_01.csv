@@ -1,0 +1,12 @@
+Dato;Forklaring;Inn;Ut;Saldo
+2026-01-17;Innbetaling fra Fischer GmbH / Faktura 1001;29312.50;;129312.50
+2026-01-19;Innbetaling fra Wagner GmbH / Faktura 1002;3275.00;;132587.50
+2026-01-20;Innbetaling fra Wagner GmbH / Faktura 1003;18625.00;;151212.50
+2026-01-23;Innbetaling fra Meyer GmbH / Faktura 1004;25937.50;;177150.00
+2026-01-26;Innbetaling fra Richter GmbH / Faktura 1005;14375.00;;191525.00
+2026-01-28;Betaling Lieferant Meyer GmbH;;-11750.00;179775.00
+2026-01-30;Betaling Lieferant Becker GmbH;;-10050.00;169725.00
+2026-01-31;Betaling Lieferant Becker GmbH;;-15300.00;154425.00
+2026-02-02;Renteinntekter;1121.91;;155546.91
+2026-02-04;Skattetrekk;;-866.92;154679.99
+2026-02-05;Skattetrekk;255.85;;154935.84
