@@ -244,7 +244,9 @@ def load_v2_data(exclude_rounds=None):
             continue
         # Need GT to be useful for training
         seeds = d.get("seeds", [])
-        has_gt = any(s.get("ground_truth") is not None for s in seeds)
+        if isinstance(seeds, dict):
+            seeds = list(seeds.values())
+        has_gt = any(s.get("ground_truth") is not None for s in seeds if isinstance(s, dict))
         if not has_gt:
             continue
 
@@ -285,7 +287,7 @@ def load_v2_data(exclude_rounds=None):
     return samples
 
 
-def build_training_arrays(samples, augment=True):
+def build_training_arrays(samples, augment=False):
     """Convert samples to (X, Y) with D4 augmentation and observation dropout."""
     n_cells = GRID_SIZE * GRID_SIZE
     n_features = len(FEATURE_NAMES)
