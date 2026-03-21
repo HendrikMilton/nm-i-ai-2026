@@ -218,7 +218,8 @@ def holdout_eval(holdout_round):
         if gt is None: continue
         gt = np.array(gt, dtype=np.float32)
         ig = np.array(s.get("initial_grid", rd.get("initial_grid")), dtype=np.int32)
-        pred = solve.predict_grid(models, ig, True, 0.15)
+        # Use default params for holdout (same as inference)
+        pred = solve.predict_grid(models, ig)
         sc = solve.score_prediction(pred, gt)
         seed_scores.append(sc)
 
@@ -244,13 +245,21 @@ def full_retrain():
 # Submit round
 # ============================================================
 def submit_round(round_id, round_number, seed_grids, seed_obs):
-    """Predict and submit for all seeds."""
+    """Predict and submit for all seeds. Uses obs to estimate hidden params."""
     import solve
     solve._ensure_models()
 
     for seed_idx in range(N_SEEDS):
         grid = seed_grids[seed_idx]
-        pred = solve.predict_grid(solve._models, grid, True, 0.15)
+
+        # Get obs data if available
+        obs_probs, n_obs_arr = None, None
+        if seed_idx in seed_obs:
+            obs_probs, n_obs_arr, _ = seed_obs[seed_idx]
+
+        # predict_grid handles param estimation from obs or uses defaults
+        pred = solve.predict_grid(solve._models, grid,
+                                  obs_probs=obs_probs, n_obs=n_obs_arr)
 
         try:
             result = submit(round_id, seed_idx, pred.tolist())

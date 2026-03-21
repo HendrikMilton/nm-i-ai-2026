@@ -285,14 +285,8 @@ def main():
         if seed_idx in seed_obs:
             obs_probs, n_obs, _ = seed_obs[seed_idx]
 
-        # Estimate config from observations
-        if obs_probs is not None and n_obs is not None:
-            is_warm, exp_rate = estimate_config(grid, obs_probs, n_obs)
-        else:
-            is_warm, exp_rate = True, 0.15
-
-        # Predict
-        pred = solve.predict_grid(solve._models, grid, is_warm, exp_rate, obs_probs, n_obs)
+        # predict_grid estimates hidden params from obs or uses defaults
+        pred = solve.predict_grid(solve._models, grid, obs_probs=obs_probs, n_obs=n_obs)
         print(f"  Seed {seed_idx}: pred shape={pred.shape}, sum check={pred.sum(axis=-1).mean():.4f}")
 
         # Submit
