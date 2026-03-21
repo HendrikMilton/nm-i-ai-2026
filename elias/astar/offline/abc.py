@@ -213,8 +213,8 @@ def perturb_candidates(top_candidates, n_perturbations, ranges, rng, sigma=0.1):
 
 def run_abc_fit(seed_grids, seed_settlements, seed_obs_counts,
                 map_h, map_w, is_cold=False, rng_seed=42,
-                stage1_candidates=500, stage1_sims=2, stage1_keep=50,
-                stage2_perturbations=180, stage2_sims=50, stage2_keep=15,
+                stage1_candidates=50, stage1_sims=2, stage1_keep=15,
+                stage2_perturbations=40, stage2_sims=20, stage2_keep=8,
                 print_fn=print):
     """Run two-stage ABC parameter fitting pooled across all seeds.
 

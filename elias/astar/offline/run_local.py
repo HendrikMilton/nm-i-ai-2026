@@ -28,7 +28,8 @@ from run import (
     MC_TOTAL_RUNS,
     build_tiling, extract_map_dimensions, extract_grid_and_settlements,
     compute_settlement_distances, get_distance_aware_prior,
-    generate_prediction, generate_prediction_abc,
+    generate_prediction, generate_prediction_abc, validate_mc_against_obs,
+    SIM_SAFETY_THRESHOLD,
     run_observation_phases, floor_and_normalize,
     aggregate_expansion_stats, pool_observations,
 )
@@ -152,7 +153,8 @@ def observe_seed_local(ground_truth, seed_index, viewports, map_w, map_h, rng,
 # --- Full pipeline backtest ---
 
 def backtest_full_pipeline(round_id, round_num, budget=50,
-                           use_abc=True, rng_seed=None, quiet=False):
+                           use_abc=True, rng_seed=None, quiet=False,
+                           iteration_id=None):
     """Full pipeline backtest with GT-sampled queries.
 
     With use_abc=True (default), runs the ABC parameter fitting path.
@@ -162,10 +164,15 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         print(f"\n{'='*60}")
         print(f"  v2 Backtest — Round {round_num} ({round_id[:8]}...)")
         print(f"  Budget: {budget}, ABC: {use_abc}")
+        if iteration_id:
+            print(f"  Name: {iteration_id}")
         print(f"{'='*60}")
 
     rd = get_round(round_id)
     map_w, map_h = extract_map_dimensions(rd)
+
+    if not quiet:
+        print(f"  Map: {map_w}x{map_h}")
 
     # Parse per-seed grids
     initial_states = rd.get("initial_states") or []
@@ -175,6 +182,13 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         if grid:
             seed_grids[i] = grid
 
+    if not quiet:
+        for si in sorted(seed_grids.keys()):
+            g = seed_grids[si]
+            n_settle = sum(1 for r in g for c in r if c in (1, 2))
+            n_forest = sum(1 for r in g for c in r if c == 4)
+            print(f"  Seed {si}: {n_settle} settlements/ports, {n_forest} forests")
+
     # Load ground truth
     seed_gt = {}
     for seed in range(N_SEEDS):
@@ -182,8 +196,9 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         seed_gt[seed] = analysis["ground_truth"]
 
     # Build tiling
-    tiling = build_tiling(map_w, map_h)
-    seed_viewports = {s: tiling for s in range(N_SEEDS)}
+    if not quiet:
+        tiling = build_tiling(map_w, map_h)
+        print(f"  Tiling: {len(tiling)} viewports per seed")
 
     rng = random.Random(rng_seed if rng_seed is not None else round_num * 7919)
     seed_queries = {s: [] for s in range(N_SEEDS)}
@@ -197,7 +212,7 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
     # Run observations
     seed_counts, avg_expansion, dist_multipliers, prior_table, port_ratio, ruin_ratio, warmth = \
         run_observation_phases(
-            seed_grids, seed_viewports, budget, map_w, map_h,
+            seed_grids, budget, map_w, map_h,
             observe_fn=local_observe, print_fn=print_fn,
         )
 
@@ -216,7 +231,10 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
             print_fn=print_fn,
         )
 
-    # Pool observations for cold rounds (5x more data per cell)
+    # Each seed has a different procedurally generated map (~700 cells differ).
+    # On cold rounds, pool observations across seeds — noisy but better than
+    # near-zero per-seed data. The Bayesian update with high equiv_samples
+    # naturally downweights the noise.
     is_cold = warmth == "cold"
     if is_cold:
         pooled_counts = pool_observations(seed_counts, map_w, map_h)
@@ -231,7 +249,6 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         grid, settlements = extract_grid_and_settlements(rd, seed)
         ground_truth = seed_gt[seed]
 
-        # Use pooled obs on cold rounds, per-seed on warm
         effective_obs = pooled_counts if is_cold else seed_counts[seed]
 
         t0 = time.time()
@@ -242,6 +259,18 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
                 fitted_params, grid, settlements,
                 total_runs=MC_TOTAL_RUNS, base_seed=seed * 10000,
                 map_h=map_h, map_w=map_w)
+
+            # Log MC validation
+            if mc_pred is not None and not quiet:
+                mc_agree, mc_compared = validate_mc_against_obs(
+                    mc_pred, effective_obs, map_h, map_w)
+                if mc_compared == 0:
+                    mc_status = "USED (no obs)"
+                elif mc_agree >= SIM_SAFETY_THRESHOLD:
+                    mc_status = "USED"
+                else:
+                    mc_status = "SKIPPED"
+                print(f"MC agree={mc_agree:.1%} ({mc_compared} cells) → {mc_status}  ", end="", flush=True)
 
             obs_pred = generate_prediction_abc(
                 grid, mc_pred, map_w, map_h,
@@ -278,13 +307,27 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         obs_result = score_prediction(obs_pred, ground_truth)
         prior_result = score_prediction(prior_pred, ground_truth)
 
+        # Count observations per cell for this seed
+        n_observed = sum(1 for r in range(map_h) for c in range(map_w)
+                         if sum(effective_obs[r][c]) > 0)
+        total_obs = sum(sum(effective_obs[r][c]) for r in range(map_h) for c in range(map_w))
+
+        # Count initial settlements for this seed
+        n_initial_settle = sum(1 for r in grid for c in r if c in (1, 2))
+
         seed_results[seed] = {
             "obs_score": obs_result["score"],
             "prior_score": prior_result["score"],
             "weighted_kl": obs_result["weighted_kl"],
+            "prior_weighted_kl": prior_result["weighted_kl"],
             "scored_cells": obs_result["scored_cells"],
+            "n_initial_settlements": n_initial_settle,
+            "n_observed_cells": n_observed,
+            "total_observations": total_obs,
             "elapsed_s": round(elapsed, 1),
             "n_queries": len(seed_queries.get(seed, [])),
+            "worst_cells": [(r, c, round(ekl, 4), round(kl, 4), round(ent, 4))
+                            for r, c, ekl, kl, ent in obs_result["worst_cells"][:10]],
             "queries": seed_queries.get(seed, []),
             "initial_grid": grid,
             "prediction": obs_pred,
@@ -292,8 +335,14 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         }
 
         if not quiet:
+            delta = obs_result['score'] - prior_result['score']
             print(f"pipeline={obs_result['score']:.1f}  "
-                  f"prior={prior_result['score']:.1f}  ({elapsed:.1f}s)")
+                  f"prior={prior_result['score']:.1f}  "
+                  f"delta={delta:+.1f}  "
+                  f"kl={obs_result['weighted_kl']:.4f}  "
+                  f"cells={obs_result['scored_cells']}  "
+                  f"obs={n_observed}/{map_w*map_h}  "
+                  f"({elapsed:.1f}s)")
 
     # Round score
     scores = [s["obs_score"] for s in seed_results.values()]
@@ -305,13 +354,32 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
         "warmth": warmth,
         "expansion_rate": round(avg_expansion, 4),
     }
-    saved_path = save_backtest(round_id, round_num, seed_results, round_score, config=config)
+    saved_path = save_backtest(round_id, round_num, seed_results, round_score,
+                               iteration_id=iteration_id, config=config)
 
     if not quiet:
         prior_avg = sum(s["prior_score"] for s in seed_results.values()) / N_SEEDS
-        print(f"\n  Round score: {round_score:.1f}  (prior baseline: {prior_avg:.1f})")
+        print(f"\n  {'─'*50}")
+        print(f"  Round score: {round_score:.1f}  (prior baseline: {prior_avg:.1f})")
         print(f"  Pipeline improvement: {round_score - prior_avg:+.1f}")
-        print(f"  Saved to: {saved_path}")
+
+        # Per-seed summary table
+        worst_seed = min(seed_results, key=lambda s: seed_results[s]["obs_score"])
+        best_seed = max(seed_results, key=lambda s: seed_results[s]["obs_score"])
+        print(f"  Best seed: {best_seed} ({seed_results[best_seed]['obs_score']:.1f})")
+        print(f"  Worst seed: {worst_seed} ({seed_results[worst_seed]['obs_score']:.1f})")
+        spread = seed_results[best_seed]["obs_score"] - seed_results[worst_seed]["obs_score"]
+        print(f"  Spread: {spread:.1f}")
+
+        # Show top 5 worst cells from the worst seed
+        worst_cells = seed_results[worst_seed].get("worst_cells", [])
+        if worst_cells:
+            print(f"\n  Worst cells (seed {worst_seed}):")
+            print(f"  {'(r,c)':<10} {'ent*kl':<10} {'kl':<10} {'entropy':<10}")
+            for r, c, ekl, kl, ent in worst_cells[:5]:
+                print(f"  ({r},{c}){'':<5} {ekl:<10.4f} {kl:<10.4f} {ent:<10.4f}")
+
+        print(f"\n  Saved to: {saved_path}")
 
     return seed_results, round_score
 
@@ -328,6 +396,8 @@ def main():
                         help="Disable ABC fitting (use legacy obs+sim+prior)")
     parser.add_argument("--all-rounds", action="store_true",
                         help="Backtest all completed rounds")
+    parser.add_argument("--name", type=str, default=None,
+                        help="Name for this backtest run (used as file ID)")
     args = parser.parse_args()
 
     if args.all_rounds:
@@ -361,7 +431,8 @@ def main():
                 return
         backtest_full_pipeline(
             target["id"], target["round_number"],
-            budget=args.budget, use_abc=not args.no_abc)
+            budget=args.budget, use_abc=not args.no_abc,
+            iteration_id=args.name)
         return
 
     parser.print_help()
