@@ -48,7 +48,7 @@ def nms(boxes, scores, iou_threshold=0.5):
 
 
 def postprocess(output: np.ndarray, scale: float, pad: tuple[int, int],
-                conf_threshold: float = 0.01, iou_threshold: float = 0.5):
+                conf_threshold: float = 0.001, iou_threshold: float = 0.5):
     output = output[0]
     if output.shape[0] < output.shape[1]:
         output = output.T
@@ -141,7 +141,7 @@ def main():
             boxes_list, scores_list, labels_list,
             weights=[1, 1, 1],
             iou_thr=0.5,
-            skip_box_thr=0.001,
+            skip_box_thr=0.0001,
         )
 
         for box, score, label in zip(fused_boxes, fused_scores, fused_labels):
