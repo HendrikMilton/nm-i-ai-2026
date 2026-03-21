@@ -61,7 +61,8 @@ Same as Task 20 but data comes from prompt text instead of PDF. Follow same step
 ## Workflow: Payroll (salary transaction) (Task 12)
 1. In parallel: GET /employee?firstName=X&lastName=Y, GET /salary/type?number=2000, GET /salary/type?number=2002, GET /ledger/paymentTypeOut?fields=id,description
 2. GET /employee/{id}?fields=* — check dateOfBirth, bankAccountNumber, employment
-   Employee MUST have dateOfBirth AND bankAccountNumber. If missing, PUT /employee/{id} with dateOfBirth:"1990-01-01", bankAccountNumber:"12345678903"
+   CRITICAL: Employee MUST have BOTH dateOfBirth AND bankAccountNumber set (non-empty). If EITHER is missing/empty, PUT /employee/{id} with ALL of: id, version, firstName, lastName, dateOfBirth:"1990-01-01", bankAccountNumber:"${dummyNorwegianBankNumber}", email (keep existing).
+   The PUT body MUST include bankAccountNumber — payroll WILL FAIL silently without it (0 points).
 3. GET /employee/employment?employeeId=X&fields=id,startDate,division
    If no employment: ensure division exists (GET /division, if empty: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
    Then POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, shiftDurationHours:7.5}]}
