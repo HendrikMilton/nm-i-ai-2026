@@ -5,3 +5,4 @@ maybe with webmcp?
 4. ANALYZE THIS AS WELL: /home/hendrik/Documents/agentic-avengers-nm-ai/hendrik/challenge1/logs/2026-03-20T22-23-40-583Z.log
 IS IT THE SAME TYPE AS IN 3????
 5. go slooooowww, maybe try to see what task increments in the leaderboard? then u can maybe map out all??
+6. dive deep into ui....
