@@ -38,5 +38,11 @@ while true; do
     ls -t "$LOG_DIR"/*.log 2>/dev/null | tail -n +49 | xargs rm -f 2>/dev/null
 
     echo "Sleeping ${INTERVAL}s until next run..."
-    sleep "$INTERVAL"
+    REMAINING="$INTERVAL"
+    while [ "$REMAINING" -gt 300 ]; do
+        sleep 300
+        REMAINING=$((REMAINING - 300))
+        echo "  [heartbeat] $(date) — ${REMAINING}s remaining" | tee -a "$LOG_FILE"
+    done
+    [ "$REMAINING" -gt 0 ] && sleep "$REMAINING"
 done

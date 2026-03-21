@@ -278,6 +278,20 @@
       }
     },
     {
+      "id": "v2_R1",
+      "round_id": "71451d74-be9f-471f-aacd-a41f3b68a9cd",
+      "round_number": 1,
+      "timestamp": "2026-03-21T00:40:50.441541+00:00",
+      "round_score": 79.725,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1926
+      }
+    },
+    {
       "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
       "round_number": 2,
       "timestamp": "2026-03-20T08:20:04.717771+00:00",
@@ -445,6 +459,20 @@
         "pipeline": "v4",
         "label": "v4 dist-prior map2",
         "true_expansion": 0.298
+      }
+    },
+    {
+      "id": "v2_R2",
+      "round_id": "76909e29-f664-4b2f-b16b-61b7507277e9",
+      "round_number": 2,
+      "timestamp": "2026-03-21T00:39:00.516514+00:00",
+      "round_score": 84.2958,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2002
       }
     },
     {
@@ -1197,6 +1225,20 @@
       }
     },
     {
+      "id": "v2_R3",
+      "round_id": "f1dac9a9-5cf1-49a9-8f17-d6cb5d5ba5cb",
+      "round_number": 3,
+      "timestamp": "2026-03-21T00:37:02.389639+00:00",
+      "round_score": 65.6199,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "cold",
+        "expansion_rate": 0.0034
+      }
+    },
+    {
       "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
       "round_number": 4,
       "timestamp": "2026-03-20T08:18:36.406546+00:00",
@@ -1351,6 +1393,20 @@
         "prior_weight": 4.0,
         "n_sims": 100,
         "iteration": 2
+      }
+    },
+    {
+      "id": "v2_R4",
+      "round_id": "8e839974-b13b-407b-a5e7-fc749d877195",
+      "round_number": 4,
+      "timestamp": "2026-03-21T00:36:01.816510+00:00",
+      "round_score": 88.5005,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1072
       }
     },
     {
@@ -1631,6 +1687,20 @@
         "label": "full_pipeline_b50",
         "budget": 50,
         "mode": "full_pipeline"
+      }
+    },
+    {
+      "id": "v2_R5",
+      "round_id": "fd3c92ff-3178-4dc9-8d9b-acf389b3982b",
+      "round_number": 5,
+      "timestamp": "2026-03-21T00:34:05.814722+00:00",
+      "round_score": 75.7612,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1423
       }
     },
     {
@@ -1940,6 +2010,20 @@
         "sim_weight": null,
         "prior_weight": null,
         "n_sims": 1
+      }
+    },
+    {
+      "id": "v2_R6",
+      "round_id": "ae78003a-4efe-425a-881a-d16a39bca0ad",
+      "round_number": 6,
+      "timestamp": "2026-03-21T00:32:12.465920+00:00",
+      "round_score": 74.3209,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2688
       }
     },
     {
@@ -3349,6 +3433,20 @@
       }
     },
     {
+      "id": "v2_R7",
+      "round_id": "36e581f1-73f8-453f-ab98-cbe3052b701b",
+      "round_number": 7,
+      "timestamp": "2026-03-21T00:30:14.010966+00:00",
+      "round_score": 59.8995,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1675
+      }
+    },
+    {
       "id": "c5cdf100-a876-4fb7-b5d8-757162c97989",
       "round_id": "c5cdf100-a876-4fb7-b5d8-757162c97989",
       "round_number": 8,
@@ -3412,8 +3510,8 @@
       "id": "v2_R9",
       "round_id": "2a341ace-0f57-4309-9b89-e59fe0f09179",
       "round_number": 9,
-      "timestamp": "2026-03-21T00:26:33.861958+00:00",
-      "round_score": 87.5833,
+      "timestamp": "2026-03-21T01:07:00.046109+00:00",
+      "round_score": 88.3283,
       "n_sims": 500,
       "config": {
         "mode": "abc",
@@ -3426,8 +3524,8 @@
       "id": "v2_R10",
       "round_id": "75e625c3-60cb-4392-af3e-c86a98bde8c2",
       "round_number": 10,
-      "timestamp": "2026-03-21T00:24:47.825763+00:00",
-      "round_score": 73.098,
+      "timestamp": "2026-03-21T01:05:15.868039+00:00",
+      "round_score": 83.5472,
       "n_sims": 500,
       "config": {
         "mode": "abc",

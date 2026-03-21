@@ -30,7 +30,7 @@ from run import (
     compute_settlement_distances, get_distance_aware_prior,
     generate_prediction, generate_prediction_abc,
     run_observation_phases, floor_and_normalize,
-    aggregate_expansion_stats,
+    aggregate_expansion_stats, pool_observations,
 )
 from offline.score import score_prediction
 from offline.abc import run_abc_fit, weighted_mc_from_fitted
@@ -216,6 +216,12 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
             print_fn=print_fn,
         )
 
+    # Pool observations for cold rounds (5x more data per cell)
+    is_cold = warmth == "cold"
+    if is_cold:
+        pooled_counts = pool_observations(seed_counts, map_w, map_h)
+        print_fn(f"  Cold round: using pooled observations across all seeds")
+
     # Generate predictions and score
     seed_results = {}
     for seed in range(N_SEEDS):
@@ -224,6 +230,9 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
 
         grid, settlements = extract_grid_and_settlements(rd, seed)
         ground_truth = seed_gt[seed]
+
+        # Use pooled obs on cold rounds, per-seed on warm
+        effective_obs = pooled_counts if is_cold else seed_counts[seed]
 
         t0 = time.time()
 
@@ -236,10 +245,10 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
 
             obs_pred = generate_prediction_abc(
                 grid, mc_pred, map_w, map_h,
-                obs_counts=seed_counts[seed],
+                obs_counts=effective_obs,
                 expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
                 port_ratio=port_ratio, ruin_ratio=ruin_ratio,
-                prior_table=prior_table)
+                prior_table=prior_table, warmth=warmth)
         else:
             # Non-ABC path: obs + sim + prior (with warm/cold sim weight)
             from offline.simulator import run_monte_carlo, DEFAULT_PARAMS
@@ -247,7 +256,7 @@ def backtest_full_pipeline(round_id, round_num, budget=50,
                                         params=DEFAULT_PARAMS, base_seed=seed * 10000)
             obs_pred = generate_prediction(
                 grid, settlements, map_w, map_h,
-                obs_counts=seed_counts[seed], sim_pred=sim_pred,
+                obs_counts=effective_obs, sim_pred=sim_pred,
                 expansion_rate=avg_expansion, dist_multipliers=dist_multipliers,
                 port_ratio=port_ratio, ruin_ratio=ruin_ratio,
                 prior_table=prior_table, warmth=warmth)
