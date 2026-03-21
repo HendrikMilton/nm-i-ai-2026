@@ -3911,6 +3911,132 @@
         "warmth": "warm",
         "expansion_rate": 0.2042
       }
+    },
+    {
+      "id": "v2_R15_run01",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:00:17.973277+00:00",
+      "round_score": 89.5339,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2042
+      }
+    },
+    {
+      "id": "v2_R15_run02",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:02:17.222375+00:00",
+      "round_score": 88.5023,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2107
+      }
+    },
+    {
+      "id": "v2_R15_run03",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:05:32.712370+00:00",
+      "round_score": 89.6972,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2064
+      }
+    },
+    {
+      "id": "v2_R15_run04",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:07:55.696516+00:00",
+      "round_score": 89.6481,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.204
+      }
+    },
+    {
+      "id": "v2_R15_run05",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:10:53.894169+00:00",
+      "round_score": 88.9832,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2101
+      }
+    },
+    {
+      "id": "v2_R15_run06",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:14:12.381100+00:00",
+      "round_score": 89.7735,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2008
+      }
+    },
+    {
+      "id": "v2_R15_run07",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:16:37.641911+00:00",
+      "round_score": 89.7424,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.1947
+      }
+    },
+    {
+      "id": "v2_R15_run08",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:19:54.617027+00:00",
+      "round_score": 89.458,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.211
+      }
+    },
+    {
+      "id": "v2_R15_run09",
+      "round_id": "cc5442dd-bc5d-418b-911b-7eb960cb0390",
+      "round_number": 15,
+      "timestamp": "2026-03-21T16:22:44.984985+00:00",
+      "round_score": 88.034,
+      "n_sims": 500,
+      "config": {
+        "mode": "abc",
+        "budget": 50,
+        "warmth": "warm",
+        "expansion_rate": 0.2007
+      }
     }
   ]
 }
