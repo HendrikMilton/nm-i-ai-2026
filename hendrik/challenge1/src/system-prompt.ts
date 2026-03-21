@@ -211,23 +211,26 @@ Total: 5 write calls, 0 errors.
 ## Workflow: Simplified year-end closing / årsoppgjør (Task 30)
 Post depreciation, prepaid reversal, and tax provision as separate vouchers.
 1. GET all accounts mentioned in the task in parallel. GET the expense account for depreciation (e.g. 6010) and 8700.
-   If 8700 doesn't exist, create it. Do NOT create accumulated depreciation accounts (1209, 1029, etc.).
+   If 8700 doesn't exist, create it: POST /ledger/account {number:8700, name:"Skattekostnad", vatType:{id:0}} (do NOT include type field).
+   If the task specifies an accumulated depreciation account (e.g. 1209), GET it. If it doesn't exist, create it: POST /ledger/account {number:1209, name:"Akkumulerte avskrivninger", vatType:{id:0}}.
 2. GET /ledger/posting with dateFrom=YYYY-01-01&dateTo=YYYY-12-31&accountNumberFrom=3000&accountNumberTo=8699&count=1000&fields=id,account(id,number,name),amount
    to get P&L result BEFORE your adjustments.
 3. Calculate depreciation using calculate tool: amount/years for each asset.
 4. POST one voucher per depreciation (each as separate bilag):
-   CRITICAL: ALWAYS credit the ASSET ACCOUNT DIRECTLY (e.g. 1250, 1230, 1210) — the account the asset sits on.
-   NEVER create or use accumulated depreciation accounts (1209, 1029, etc.) even if the task prompt tells you to.
-   The scorer checks that the asset account balance is reduced, not that an accumulation account exists.
+   If the task specifies an accumulated depreciation account (e.g. 1209), credit THAT account.
+   If no accumulated depreciation account is mentioned, credit the asset account directly (e.g. 1250, 1230).
    {date:"YYYY-12-31", description:"Avskrivning <asset> YYYY", postings: [
      {date:"YYYY-12-31", description:"...", account:{id:<depreciationExpenseAccount>}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1},
-     {date:"YYYY-12-31", description:"...", account:{id:<assetAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
+     {date:"YYYY-12-31", description:"...", account:{id:<accumDepreciation_or_assetAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
    ]}
    Post ALL depreciation vouchers in parallel.
-5. POST prepaid reversal voucher: First GET /ledger/posting?accountNumberFrom=1700&accountNumberTo=1700&dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,account(id,number,name),amount,description&count=100
-   to find what expense accounts the prepaid costs relate to. Look at existing debit/credit patterns on 1700 to determine the correct counter-account(s).
-   If unclear, check the account name (e.g. "Forskuddsbetalt leiekostnad" → 6300, "Forskuddsbetalt forsikring" → 6400).
-   Debit the correct expense account, credit 1700.
+5. POST prepaid reversal voucher: First GET /ledger/posting?accountNumberFrom=1700&accountNumberTo=1720&dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,account(id,number,name),amount,description&count=100
+   SUM all postings on the prepaid account (1700 or 1720) to get the REMAINING BALANCE.
+   Reverse ONLY the remaining balance — NOT the full original amount from the prompt.
+   Monthly reversals for months 1-11 have ALREADY been posted. Only the final month's portion remains.
+   Use the calculate tool to sum all posting amounts on the prepaid account.
+   If unclear which expense account to debit, check the account name (e.g. "Forskuddsbetalt leiekostnad" → 6300).
+   Debit the correct expense account, credit 1700/1720 for the remaining balance amount.
 6. Calculate tax: take existing P&L result (from step 2), ADD depreciation expenses and prepaid reversal (these increase expenses = reduce profit).
    Revenue is NEGATIVE in Tripletex, expenses POSITIVE. Net result negative = profit.
    taxableProfit = -(existingResult + totalDepreciation + prepaidAmount)
