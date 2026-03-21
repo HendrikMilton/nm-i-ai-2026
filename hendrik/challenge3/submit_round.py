@@ -86,7 +86,12 @@ def run_queries(round_id, seed_index, viewports):
                 continue
 
             grid = np.array(grid)
-            query_grids.append({"viewport": {"x": vp_x, "y": vp_y, "w": VIEWPORT, "h": VIEWPORT}, "grid": grid.tolist()})
+            settlements = result.get("settlements", [])
+            query_grids.append({
+                "viewport": {"x": vp_x, "y": vp_y, "w": VIEWPORT, "h": VIEWPORT},
+                "grid": grid.tolist(),
+                "settlements": settlements,
+            })
 
             for dr in range(min(VIEWPORT, grid.shape[0])):
                 for dc in range(min(VIEWPORT, grid.shape[1])):

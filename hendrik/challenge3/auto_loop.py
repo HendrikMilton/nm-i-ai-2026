@@ -93,9 +93,12 @@ def run_queries(round_id, seed_idx, viewports):
             grid = result.get("grid") or result.get("terrain_grid")
             if grid is None: continue
             grid = np.array(grid)
-            query_grids.append({"viewport": {"x": vp_x, "y": vp_y, "w": VIEWPORT, "h": VIEWPORT}, "grid": grid.tolist()})
-            # Save settlement stats
             settlements = result.get("settlements", [])
+            query_grids.append({
+                "viewport": {"x": vp_x, "y": vp_y, "w": VIEWPORT, "h": VIEWPORT},
+                "grid": grid.tolist(),
+                "settlements": settlements,
+            })
             all_settlements.extend(settlements)
             for dr in range(min(VIEWPORT, grid.shape[0])):
                 for dc in range(min(VIEWPORT, grid.shape[1])):
