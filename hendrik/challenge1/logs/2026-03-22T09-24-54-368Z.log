@@ -1,0 +1,48 @@
+[2026-03-22T09:24:54.368Z] [AGENT] model=claude-opus-4-6 prompt="Crie uma fatura para o cliente Montanha Lda (org. nº 869972401) com três linhas de produto: Sessão de formação (7733) a 22950 NOK com 25 % IVA, Licença de software (6106) a 10250 NOK com 15 % IVA (alimentos), e Manutenção (1351) a 3150 NOK com 0 % IVA (isento)."
+[2026-03-22T09:25:01.338Z] [API] GET /product?number=1351&fields=id%2Cname%2Cnumber → 403
+[2026-03-22T09:25:01.338Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:01.341Z] [API] GET /product?number=6106&fields=id%2Cname%2Cnumber → 403
+[2026-03-22T09:25:01.341Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:01.342Z] [API] GET /product?number=7733&fields=id%2Cname%2Cnumber → 403
+[2026-03-22T09:25:01.342Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:01.345Z] [API] GET /customer?organizationNumber=869972401&fields=id%2Cname%2CorganizationNumber → 403
+[2026-03-22T09:25:01.345Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:01.511Z] [API] GET /ledger/vatType?fields=id%2Cnumber%2Cname%2Cpercentage&count=100 → 403
+[2026-03-22T09:25:01.511Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:01.512Z] [API] GET /ledger/account?number=1920&fields=id%2CbankAccountNumber%2Cversion → 403
+[2026-03-22T09:25:01.512Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:06.847Z] [API] GET /product?number=7733&fields=id%2Cname%2Cnumber → 403
+[2026-03-22T09:25:06.847Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:06.848Z] [API] GET /product?number=6106&fields=id%2Cname%2Cnumber → 403
+[2026-03-22T09:25:06.848Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:06.848Z] [API] GET /product?number=1351&fields=id%2Cname%2Cnumber → 403
+[2026-03-22T09:25:06.848Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:06.851Z] [API] GET /ledger/vatType?fields=id%2Cnumber%2Cname%2Cpercentage&count=100 → 403
+[2026-03-22T09:25:06.851Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:06.866Z] [API] GET /customer?organizationNumber=869972401&fields=id%2Cname%2CorganizationNumber → 403
+[2026-03-22T09:25:06.866Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:06.881Z] [API] GET /ledger/account?number=1920&fields=id%2CbankAccountNumber%2Cversion → 403
+[2026-03-22T09:25:06.881Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:10.313Z] [API] GET /customer?organizationNumber=869972401&fields=id%2Cname → 403
+[2026-03-22T09:25:10.313Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+
+[SCORING] {
+  "id": "6ed3923b-8adf-4e78-a0f5-86abf3ceb9d3",
+  "status": "completed",
+  "queued_at": "2026-03-22T09:24:40.034658+00:00",
+  "completed_at": "2026-03-22T09:25:07.153842+00:00",
+  "score_raw": 8,
+  "score_max": 8,
+  "normalized_score": 4,
+  "duration_ms": 27102,
+  "feedback": {
+    "comment": "5/5 checks passed.",
+    "checks": [
+      "Check 1: passed",
+      "Check 2: passed",
+      "Check 3: passed",
+      "Check 4: passed",
+      "Check 5: passed"
+    ]
+  }
+}
