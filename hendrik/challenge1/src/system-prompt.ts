@@ -251,6 +251,10 @@ Post depreciation, prepaid reversal, and tax provision as separate vouchers.
    Debit the correct expense account, credit 1700/1720 for the remaining balance amount.
 6. Calculate tax: take existing P&L result (from step 2), ADD depreciation expenses and prepaid reversal (these increase expenses = reduce profit).
    Revenue is NEGATIVE in Tripletex, expenses POSITIVE. Net result negative = profit.
+   CRITICAL: When summing P&L postings, do NOT list all individual values — there can be 60-100 entries and you WILL drop some.
+   Instead, identify repeating patterns and use multiplication. Example: if you see 12 months of 5 expense types + 11 accruals + 4 revenue entries:
+   calculate("11*3012.5 + 4*(-976280) + 12*(27301.67 + 27301.67 + 21841.34 + 27301.67 + 21841.34)")
+   Group by unique (account, amount) pairs, count occurrences, multiply. Verify the total count matches fullResultSize from the API response.
    taxableProfit = -(existingResult + totalDepreciation + prepaidAmount)
    If taxableProfit > 0: tax = round(taxableProfit * 0.22, 2). If <= 0: no tax voucher needed.
    POST tax voucher: debit 8700 (skattekostnad), credit 2920 (or account specified in task).
