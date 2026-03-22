@@ -1,0 +1,7 @@
+[2026-03-22T11:17:59.132Z] [AGENT] model=claude-opus-4-6 prompt="Der Kunde Grünfeld GmbH (Org.-Nr. 888415769) hat eine offene Rechnung über 32800 NOK ohne MwSt. für "Datenberatung". Registrieren Sie die vollständige Zahlung dieser Rechnung."
+[2026-03-22T11:18:04.585Z] [API] GET /invoice/paymentType?fields=id%2Cdescription → 200
+[2026-03-22T11:18:04.585Z] [API] ← {"fullResultSize":2,"from":0,"count":2,"versionDigest":"'If-None-Match' header not specified","values":[{"id":39856523,"description":"Kontant"},{"id":39856524,"description":"Betalt til bank"}]}
+[2026-03-22T11:18:04.621Z] [API] GET /customer?organizationNumber=888415769&fields=id%2Cname → 200
+[2026-03-22T11:18:04.621Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":108592541,"name":"Grünfeld GmbH"}]}
+[2026-03-22T11:18:08.659Z] [API] GET /invoice?customerId=108592541&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id%2Camount%2CamountOutstanding%2CinvoiceNumber → 200
+[2026-03-22T11:18:08.659Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":2147699262,"invoiceNumber":1,"amount":41000.0,"amountOutstanding":41000.00}]}
