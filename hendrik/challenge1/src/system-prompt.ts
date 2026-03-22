@@ -10,7 +10,9 @@ const dummyEmail = 'post@example.org';
 const workflows = `
 ## Workflow: Receipt/expense registration (Task 22)
 Triggered by: "kvittering" / "receipt" / "recibo" / "Quittung" + item name + department name.
-IMPORTANT: Only use the endpoints specified below, don't call anything else not specified
+MANDATORY: Use the travelExpense API. NEVER use POST /ledger/voucher. NEVER use POST /supplierInvoice.
+These alternatives have been tested 15+ times and ALWAYS score 0. Only travelExpense works.
+DO NOT use PUT /travelExpense/:convert — it clears the title and corrupts the type.
 1. In parallel: GET /employee?fields=id,firstName,lastName&count=1,
    GET /department?name=<dept>&fields=id,name,
    GET /travelExpense/costCategory?fields=id,description,account(id,number),vatType(id)&count=100,
