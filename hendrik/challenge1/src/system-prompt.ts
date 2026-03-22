@@ -19,8 +19,10 @@ const workflows = `
 
 ## Workflow: Create order + invoice + payment (Task 10)
 Complete flow: order → invoice → payment in one task.
-1. In parallel: GET customer, GET each product, GET /invoice/paymentType, GET /ledger/account?number=1920 (bank account check)
-   - If bank account has bankAccountNumber, no update needed
+EFFICIENCY TARGET: exactly 5 API calls (3 GET + 2 write). Do NOT add extra calls.
+1. In parallel: GET /customer?organizationNumber=X, GET /product?count=100&fields=id,name,number (ALL products in ONE call), GET /invoice/paymentType
+   Find product IDs by matching product numbers from the bulk response. Do NOT make individual GET /product?number=X calls.
+   Do NOT call GET /ledger/account?number=1920 — it is not needed for this task.
 2. POST /invoice?sendToCustomer=true with INLINE order+orderlines:
    {invoiceDate, invoiceDueDate, orders:[{customer:{id}, orderDate:<invoiceDate>, deliveryDate:<invoiceDate>,
      orderLines:[{product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}]}]}
