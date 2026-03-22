@@ -78,31 +78,24 @@ Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
    Total: 2 write calls.
 
 ## Workflow: Receipt/expense registration (Task 22)
-Register receipt expenses as supplier invoices — NOT manual vouchers or travelExpense.
-1. In parallel: GET /department?name=<dept>&fields=id,name,
-   GET /travelExpense/costCategory?fields=id,description,account(id,number),vatType(id),
-   GET /ledger/account?number=2400&fields=id
-   Use costCategory ONLY for expense account mapping — do NOT use travelExpense API.
-2. Create supplier from receipt: POST /supplier with {name:<store_name>, organizationNumber:<org_nr_from_receipt>,
-   email:"${dummyEmail}", invoiceEmail:"${dummyEmail}"}
-3. POST /supplierInvoice with {
-     invoiceDate:<receipt_date>, invoiceDueDate:<receipt_date + 14 days>,
-     supplier:{id}, invoiceNumber:"<receipt_date>",
-     amountCurrency: -<receipt_total_incl_vat>,
-     voucher: {date:<receipt_date>, description:"<item> - <store_name>", postings: [
-       {date:<receipt_date>, description:"<item>", account:{id:<expense_account_from_category>},
-        supplier:{id}, department:{id}, amountGross:<receipt_total_incl_vat>,
-        amountGrossCurrency:<receipt_total_incl_vat>, vatType:{id:1}, invoiceNumber:"<receipt_date>", row:1},
-       {date:<receipt_date>, description:"<item>", account:{id:<2400>},
-        supplier:{id}, amountGross:-<receipt_total_incl_vat>,
-        amountGrossCurrency:-<receipt_total_incl_vat>, vatType:{id:0}, row:2}
-     ]}
-   }
-   CRITICAL: amountCurrency must be NEGATIVE.
-   CRITICAL: Always use vatType:{id:1} (25% MVA) — receipts state "herav MVA 25%".
-   Do NOT use the costCategory vatType — use costCategory ONLY for expense account number.
-   THEN IMMEDIATELY: PUT /ledger/voucher/{voucher.id}/:sendToLedger with empty body {}
-   Total: 2 write calls (3 with supplier creation).
+Register receipt expenses as travelExpense — NOT supplier invoices or manual vouchers.
+DO NOT use PUT /travelExpense/:convert — it clears the title and corrupts the type.
+1. In parallel: GET /employee?fields=id,firstName,lastName (find the employee),
+   GET /department?name=<dept>&fields=id,name,
+   GET /travelExpense/costCategory?fields=id,description,account(id,number),
+   GET /travelExpense/paymentType?fields=id,description
+2. POST /travelExpense with {employee:{id}, title:"<item> - <store_name>", department:{id}}
+   Title should describe the specific item being registered, e.g. "USB-hub - Elkjøp".
+3. POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id:<matching_category>},
+   paymentType:{id:<first_available, typically "Privat utlegg">}, date:<receipt_date>,
+   amountCurrencyIncVat:<item_amount_incl_vat>, comments:"<item_description>"}
+   Cost category mapping: Togbillett→"Tog", USB/Tastatur/Data→"Data/EDB" or "Kontorrekvisita",
+   Oppbevaringsboks→"Kontorrekvisita", Overnatting→"Hotell", Kaffemøte→"Representasjon" or "Møte, kurs".
+   Pick the best match from the costCategory list returned in step 1.
+4. PUT /travelExpense/:deliver?id={id} (empty body)
+5. PUT /travelExpense/:approve?id={id} (empty body)
+   Final state must be APPROVED (OPEN→DELIVERED→APPROVED).
+   Total: 3 write calls (travelExpense + cost + deliver + approve are 4 calls).
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
