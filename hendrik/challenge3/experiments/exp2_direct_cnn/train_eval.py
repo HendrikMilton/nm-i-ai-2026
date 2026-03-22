@@ -86,6 +86,11 @@ def extract_input_channels(grid, ss, st, pa):
     channels.append(np.full((h, w), st, dtype=np.float32))
     channels.append(np.full((h, w), pa, dtype=np.float32))
 
+    # 6. Coordinate channels (2 channels) - normalized x, y position
+    yy, xx = np.meshgrid(np.linspace(0, 1, h), np.linspace(0, 1, w), indexing='ij')
+    channels.append(yy.astype(np.float32))
+    channels.append(xx.astype(np.float32))
+
     return np.stack(channels, axis=0)  # (C, 40, 40)
 
 
@@ -112,36 +117,38 @@ def d4_augment(x, gt):
 # U-Net architecture
 # ============================================================
 class ConvBlock(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, dropout=0.0):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False),
             nn.GroupNorm(min(8, out_ch), out_ch),
             nn.SiLU(inplace=True),
+            nn.Dropout2d(dropout),
             nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
             nn.GroupNorm(min(8, out_ch), out_ch),
             nn.SiLU(inplace=True),
         )
+        self.skip = nn.Conv2d(in_ch, out_ch, 1) if in_ch != out_ch else nn.Identity()
 
     def forward(self, x):
-        return self.conv(x)
+        return self.conv(x) + self.skip(x)
 
 
 class SmallUNet(nn.Module):
-    def __init__(self, in_channels, out_channels=6):
+    def __init__(self, in_channels, out_channels=6, dropout=0.1):
         super().__init__()
         # Encoder
-        self.enc1 = ConvBlock(in_channels, 32)
-        self.enc2 = ConvBlock(32, 64)
-        self.enc3 = ConvBlock(64, 128)
+        self.enc1 = ConvBlock(in_channels, 32, dropout)
+        self.enc2 = ConvBlock(32, 64, dropout)
+        self.enc3 = ConvBlock(64, 128, dropout)
 
         self.pool = nn.MaxPool2d(2)
 
         # Decoder
         self.up2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
-        self.dec2 = ConvBlock(128, 64)
+        self.dec2 = ConvBlock(128, 64, dropout)
         self.up1 = nn.ConvTranspose2d(64, 32, 2, stride=2)
-        self.dec1 = ConvBlock(64, 32)
+        self.dec1 = ConvBlock(64, 32, dropout)
 
         self.final = nn.Conv2d(32, out_channels, 1)
 
@@ -197,13 +204,13 @@ def train_and_predict(train_samples, test_samples):
     """
     import time as _time
     fold_start = _time.time()
-    in_channels = 28  # 8 + 7 + 4 + 6 + 3
+    in_channels = 30  # 8 + 7 + 4 + 6 + 3 + 2 (coord)
 
-    # Split train into train/val by round (hold out 1 round for validation)
+    # Split train into train/val by round (hold out 2 rounds for validation)
     rounds_in_train = sorted(set(s["round"] for s in train_samples))
-    val_round = rounds_in_train[-1]  # hold out last round
-    actual_train = [s for s in train_samples if s["round"] != val_round]
-    val_samples = [s for s in train_samples if s["round"] == val_round]
+    val_rounds = set(rounds_in_train[-2:])  # hold out last 2 rounds
+    actual_train = [s for s in train_samples if s["round"] not in val_rounds]
+    val_samples = [s for s in train_samples if s["round"] in val_rounds]
 
     # Prepare training data with D4 augmentation
     train_x_list = []
@@ -236,7 +243,7 @@ def train_and_predict(train_samples, test_samples):
     batch_size = min(32, len(train_x))
     n_epochs = 200
     best_val_loss = float('inf')
-    patience = 20
+    patience = 30
     no_improve = 0
     best_state = None
 
@@ -252,6 +259,7 @@ def train_and_predict(train_samples, test_samples):
             logits = model(bx)
             loss = entropy_weighted_kl_loss(logits, by)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
         scheduler.step()
 
