@@ -351,8 +351,11 @@ def main():
                 n_obs_arr = np.array(saved_seed["n_observations"], dtype=np.float32)
                 print(f"  Seed {seed_idx}: using saved observations ({(n_obs_arr > 0).sum()} cells)")
 
+        # Get query_grids for obs density features
+        qg_for_pred = query_grids  # from live queries or saved data above
         pred = solve.predict_grid(solve._models, grid, settlement_stats=settlement_stats,
-                                   obs_probs=obs_probs_arr, n_obs=n_obs_arr)
+                                   obs_probs=obs_probs_arr, n_obs=n_obs_arr,
+                                   query_grids=qg_for_pred)
         print(f"  Seed {seed_idx}: pred shape={pred.shape}, sum check={pred.sum(axis=-1).mean():.4f}")
 
         # Submit

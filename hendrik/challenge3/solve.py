@@ -120,6 +120,24 @@ def estimate_expansion_rate(grid, settlement_stats):
     return max(0.001, min(0.5, exp_rate))
 
 
+def compute_obs_settle_density(query_grids, grid_shape=(GRID_SIZE, GRID_SIZE)):
+    """From query settlements, compute per-cell settlement density at 3 radii + binary map."""
+    from scipy.ndimage import uniform_filter as uf
+    h, w = grid_shape
+    sett_map = np.zeros((h, w), dtype=np.float32)
+    seen = set()
+    for q in query_grids:
+        for s in q.get("settlements", []):
+            x, y = s["x"], s["y"]
+            if 0 <= y < h and 0 <= x < w and (x, y) not in seen:
+                seen.add((x, y))
+                sett_map[y, x] = 1.0
+    return uf(sett_map, size=3), uf(sett_map, size=5), uf(sett_map, size=7), sett_map
+
+
+N_OBS_DENSITY_FEATURES = 4  # d1, d2, d3, smap
+
+
 def compute_prior_features(grid, expansion_rate):
     """Compute 6 distance prior probability features per cell. Returns (H, W, 6)."""
     grid = np.asarray(grid, dtype=np.int32)
@@ -534,7 +552,7 @@ def load_models():
             log.error(f"V3 checkpoint missing: {p}")
             return None
         models.append(joblib.load(p))
-    expected = len(FEATURE_NAMES) + 6  # 35 base + 6 prior features = 41
+    expected = len(FEATURE_NAMES) + 6 + N_OBS_DENSITY_FEATURES  # 35 + 6 + 4 = 45
     actual = models[0].n_features_
     if actual != expected:
         log.error(f"V3 checkpoint has {actual} features, expected {expected}!")
@@ -547,21 +565,16 @@ def load_models():
 # Prediction (V3: base features + distance prior features)
 # ============================================================
 def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_activity=None,
-                 obs_probs=None, n_obs=None, settlement_stats=None):
-    """Predict 40x40x6 probability distribution using V3 model.
-
-    Uses default hidden params + expansion rate estimated from settlement_stats.
-    """
+                 obs_probs=None, n_obs=None, settlement_stats=None, query_grids=None):
+    """Predict 40x40x6 using V4 model (41 base+prior + 4 obs density = 45 features)."""
     grid = np.asarray(grid, dtype=np.int32)
 
-    # Hidden params: use defaults (V3 doesn't benefit from obs-derived params)
     ss = settle_survive if settle_survive is not None else DEFAULT_SETTLE_SURVIVE
     st = spread_tendency if spread_tendency is not None else DEFAULT_SPREAD_TENDENCY
     pa = port_activity if port_activity is not None else DEFAULT_PORT_ACTIVITY
 
-    # Expansion rate from settlement_stats (the key V3 improvement)
     exp_rate = estimate_expansion_rate(grid, settlement_stats)
-    log.info(f"  V3 predict: exp_rate={exp_rate:.3f} (n_sett={settlement_stats.get('n_settlements', '?') if settlement_stats else '?'})")
+    log.info(f"  V4 predict: exp_rate={exp_rate:.3f} (n_sett={settlement_stats.get('n_settlements', '?') if settlement_stats else '?'})")
 
     # Base features (35)
     X_base = extract_features(grid, ss, st, pa, settlement_stats)
@@ -570,10 +583,19 @@ def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_a
     prior = compute_prior_features(grid, exp_rate)
     prior_flat = prior.reshape(GRID_SIZE * GRID_SIZE, 6)
 
-    # Concatenate: 41 features
-    X = np.zeros((GRID_SIZE * GRID_SIZE, len(FEATURE_NAMES) + 6), dtype=np.float32)
+    # Obs settlement density features (4)
+    n_total = len(FEATURE_NAMES) + 6 + N_OBS_DENSITY_FEATURES
+    X = np.zeros((GRID_SIZE * GRID_SIZE, n_total), dtype=np.float32)
     X[:, :len(FEATURE_NAMES)] = X_base
-    X[:, len(FEATURE_NAMES):] = prior_flat
+    X[:, len(FEATURE_NAMES):len(FEATURE_NAMES)+6] = prior_flat
+
+    if query_grids:
+        d1, d2, d3, smap = compute_obs_settle_density(query_grids)
+        X[:, -4] = d1.ravel()
+        X[:, -3] = d2.ravel()
+        X[:, -2] = d3.ravel()
+        X[:, -1] = smap.ravel()
+        log.info(f"  Obs density: {int(smap.sum())} settlements from queries")
 
     preds = np.zeros((GRID_SIZE * GRID_SIZE, N_CLASSES), dtype=np.float64)
     for k, model in enumerate(models):
@@ -663,7 +685,9 @@ def predict(body: dict) -> dict:
         return {"error": f"expected {GRID_SIZE}x{GRID_SIZE}, got {grid.shape}"}
 
     settlement_stats = body.get("settlement_stats")
-    pred = predict_grid(_models, grid, settlement_stats=settlement_stats)
+    query_grids = body.get("query_grids")
+    pred = predict_grid(_models, grid, settlement_stats=settlement_stats,
+                         query_grids=query_grids)
     return {"prediction": pred.tolist()}
 
 
