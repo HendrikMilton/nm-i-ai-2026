@@ -49,8 +49,22 @@ gcloud compute ssh nm-ai-2026 --zone=europe-west1-b --project=ai-nm26osl-1713
 
 Use A100 for autoresearch/training, L4 for serving if you want to split workloads.
 
-## Model Storage
-- **HuggingFace Hub**: `model.push_to_hub("your-name/model")` — easiest for sharing between machines
+## Model Storage & Submissions
+
+### Challenge 2 — NorgesGruppen Data (Object Detection)
+All trained models, ONNX exports, and submission zips are on Hugging Face:
+**https://huggingface.co/SaulGoodmens/nm-ai-norgesgruppen**
+
+Best score: **0.9186** (3-model YOLO11x ensemble at 1600+1280+960)
+
+| Submission | Leaderboard Score |
+|-----------|------------------|
+| Single YOLO11x-1280 | 0.9017 |
+| 2-model ensemble (1280+640) | 0.9134 |
+| 3-model ensemble (1600+1280+960) | **0.9186** |
+
+### General
+- **HuggingFace Hub** — models and submission zips
 - **GCS bucket**: `gsutil cp model.pt gs://bucket/` — free with GCP credits
 - **Git**: small models/configs directly in repo
 
