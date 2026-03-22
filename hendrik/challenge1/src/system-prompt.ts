@@ -281,14 +281,15 @@ Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new 
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
 ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /resultbudget (400), or /ledger/account with numberFrom/numberTo ranges.
-1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000)
-   Use fields=id,account(id,number,name),amount
+CRITICAL: Create each project and activity EXACTLY ONCE. Duplicate projects cause ALL checks to fail.
+1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000),
+   fields=id,account(id,number,name),amount. Also GET /employee?fields=id&count=1 (for project manager).
 2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
-3. GET /employee?fields=id&count=1 (for project manager)
-4. POST /project × 3 in parallel: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
-5. POST /activity × 3 in parallel: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
-   Use ONLY these 3 fields. Do NOT include isProjectActivity, isGeneral, or other fields.
-6. CRITICAL — DO NOT SKIP: Link each activity to its project ONE AT A TIME sequentially:
+3. Create all projects and activities in ONE step — POST /project × 3 and POST /activity × 3 in parallel:
+   Project: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
+   Activity: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
+   Do NOT create projects or activities in any other step. Do NOT call POST /project or POST /activity more than once per name.
+4. CRITICAL — DO NOT SKIP: Link each activity to its project ONE AT A TIME sequentially:
    POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
    Without this step, 3 checks FAIL and the task scores near 0.
 
