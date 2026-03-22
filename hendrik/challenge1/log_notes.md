@@ -125,6 +125,16 @@ Still losing points on: T22 (0), T30 (0→6.5!), T27 (2/10), slow T21 runs (0).
 Checks 5-6 fail — likely tax calc or structural. The 1209 + remaining balance fix IS working.
 Different variant scored differently — some variants may have calculation edge cases.
 
+### Round 7 (09:46-09:48)
+
+| 09:46 | T21 | 0/8 | 0p/7f | 100.1s | 0 | slow again + missing annualSalary + no standardTime |
+| 09:48 | T01 | 8/8 | 3p/0f | 55.1s | 0 | perfect |
+
+**Task 21 recurring issue**: Agent takes 60s before POST /employee (occupation code search).
+Also missing annualSalary in employmentDetails and no POST /employee/standardTime call.
+When T21 scores 8/8, it probably has those fields. When 0/8, it's either too slow or missing them.
+This is an Opus speed issue — Sonnet was faster on this task.
+
 ### Task 27 — currency/disagio
 This is a currency exchange loss task. Agent finds invoice, calculates disagio, but 3 checks fail.
 Likely needs a specific voucher for the exchange difference on account 8160 (Disagio).
