@@ -80,6 +80,12 @@ Predict probability distributions of terrain types on a 40x40 grid after a 50-ye
 - Compute per-cell entropy from ground truth, weight KL by it, average
 - Report score per seed and mean across seeds
 
+## Model checkpoints (Hugging Face)
+Trained LightGBM models are uploaded to: https://huggingface.co/SaulGoodmens/nm-ai-astar
+- `checkpoints/` — latest production models
+- `checkpoints_v2/` — v2 models with expanded features
+- `checkpoints_v3/` — v3 models with additional tuning
+
 ## Files
 - `solve.py` — all logic here
 - `main.py` — FastAPI wrapper (DO NOT MODIFY)

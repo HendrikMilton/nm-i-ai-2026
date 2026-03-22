@@ -31,3 +31,31 @@ Loaded 105 samples, 21 rounds
     Aug features built in 0s
     Aug GBM trained in 28s
   R 7: GBM=66.4  Prior=58.2  GBM+feat=68.7  (58s, 14 left, ETA 817s)
+    Base GBM trained in 43s
+    Aug features built in 0s
+    Aug GBM trained in 33s
+  R 8: GBM=89.0  Prior=74.9  GBM+feat=89.0  (78s, 13 left, ETA 1016s)
+    Base GBM trained in 37s
+    Aug features built in 0s
+    Aug GBM trained in 32s
+  R 9: GBM=89.5  Prior=74.7  GBM+feat=88.7  (71s, 12 left, ETA 853s)
+    Base GBM trained in 30s
+    Aug features built in 0s
+    Aug GBM trained in 35s
+  R10: GBM=86.3  Prior=76.2  GBM+feat=87.0  (68s, 11 left, ETA 749s)
+    Base GBM trained in 35s
+    Aug features built in 0s
+    Aug GBM trained in 29s
+  R11: GBM=86.3  Prior=75.2  GBM+feat=86.3  (66s, 10 left, ETA 662s)
+    Base GBM trained in 27s
+    Aug features built in 0s
+    Aug GBM trained in 28s
+  R12: GBM=71.4  Prior=40.2  GBM+feat=70.1  (58s, 9 left, ETA 519s)
+    Base GBM trained in 27s
+    Aug features built in 0s
+    Aug GBM trained in 29s
+  R13: GBM=88.5  Prior=79.1  GBM+feat=88.7  (58s, 8 left, ETA 466s)
+    Base GBM trained in 29s
+    Aug features built in 0s
+    Aug GBM trained in 34s
+  R14: GBM=77.8  Prior=67.9  GBM+feat=78.4  (66s, 7 left, ETA 461s)

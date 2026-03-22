@@ -1,0 +1,48 @@
+======================================================================
+  V3: GBM + Distance Priors + n_settlements Expansion Rate
+======================================================================
+Train: 100 samples (R1-R20)
+Test:  5 samples (R21)
+
+--- Training on R1-R20 ---
+  Features: (160000, 41) (0.4s)
+  Class 0: 7.1s
+  Class 1: 6.7s
+  Class 2: 6.0s
+  Class 3: 6.6s
+  Class 4: 6.3s
+  Class 5: 6.0s
+  Total: 39s
+  Training complete (39s)
+
+--- R21 Validation ---
+  Actual live: 84.81  seeds=[87.83, 78.40, 87.89, 83.44, 86.49]
+  V2 default:  85.68
+  Seed 0: est_exp=0.059 (gt=0.054)  v3_estimated=87.8  v3_default=85.8
+  Seed 1: est_exp=0.055 (gt=0.063)  v3_estimated=88.0  v3_default=85.8
+  Seed 2: est_exp=0.069 (gt=0.053)  v3_estimated=86.6  v3_default=85.1
+  Seed 3: est_exp=0.067 (gt=0.065)  v3_estimated=87.8  v3_default=86.3
+  Seed 4: est_exp=0.056 (gt=0.070)  v3_estimated=88.3  v3_default=85.5
+
+  ==================================================
+  R21 RESULTS
+  ==================================================
+  Actual live:          84.81
+  V2 (default exp=0.1): 85.68
+  V3 (default exp=0.1): 85.69
+  V3 (estimated exp):   87.71  <-- NEW
+  Delta vs actual:      +2.90
+  Delta vs V2:          +2.03
+
+--- Retraining on R1-R21 ---
+  105 samples
+  Features: (168000, 41) (0.4s)
+  Class 0: 6.9s
+  Class 1: 6.6s
+  Class 2: 9.3s
+  Class 3: 7.2s
+  Class 4: 6.7s
+  Class 5: 6.5s
+  Total: 43s
+  Saved to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints_v3
+  Done (44s)

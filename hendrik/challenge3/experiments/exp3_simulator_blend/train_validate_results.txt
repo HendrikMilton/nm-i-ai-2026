@@ -1,0 +1,48 @@
+======================================================================
+  Train on R1-R20, Validate on R21 (actual: 84.81)
+======================================================================
+Train: 100 samples (R1-R20)
+Test:  5 samples (R21)
+
+--- Training GBM + distance prior features on R1-R20 ---
+  Features built: (160000, 41) (0.4s)
+  Class 0: 7.0s
+  Class 1: 6.6s
+  Class 2: 5.8s
+  Class 3: 6.5s
+  Class 4: 6.2s
+  Class 5: 5.9s
+  Total training: 38s
+
+--- Validating on R21 ---
+  Actual live score: 84.81
+  Actual seed scores: [87.83, 78.40, 87.89, 83.44, 86.49]
+  Seed 0: GT_params=83.2  Obs_params=86.9  Default=85.8  (actual=?)
+  Seed 1: GT_params=85.3  Obs_params=76.1  Default=85.8  (actual=?)
+  Seed 2: GT_params=86.0  Obs_params=87.9  Default=85.1  (actual=?)
+  Seed 3: GT_params=85.3  Obs_params=83.4  Default=86.3  (actual=?)
+  Seed 4: GT_params=87.9  Obs_params=84.1  Default=85.4  (actual=?)
+
+  ==================================================
+  R21 RESULTS
+  ==================================================
+  Actual live score:     84.81
+  GT params (oracle):    85.53  (delta vs actual: +0.72)
+  Obs params (realistic):83.70  (delta vs actual: -1.11)
+  Default params:        85.68  (delta vs actual: +0.87)
+
+  PAUSING — check results before retraining on R1-R21.
+  To retrain: python3 train_validate.py --retrain
+
+--- Retraining on R1-R21 (all data) ---
+  105 samples
+  Features built: (168000, 41) (0.4s)
+  Class 0: 6.9s
+  Class 1: 6.5s
+  Class 2: 6.7s
+  Class 3: 6.6s
+  Class 4: 6.3s
+  Class 5: 6.2s
+  Total training: 39s
+  Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints_v2
+  Done! Checkpoints saved.
