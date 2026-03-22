@@ -285,13 +285,36 @@ def main():
 
     for seed_idx in range(N_SEEDS):
         grid = seed_grids[seed_idx]
-        obs_probs, n_obs = None, None
 
+        # Extract settlement_stats from query responses
+        settlement_stats = None
         if seed_idx in seed_obs:
-            obs_probs, n_obs, _ = seed_obs[seed_idx]
+            _, _, query_grids = seed_obs[seed_idx]
+            if query_grids:
+                # Aggregate settlement stats from all query responses
+                all_settlements = []
+                for qg in query_grids:
+                    all_settlements.extend(qg.get("settlements", []))
+                if all_settlements:
+                    alive = [s for s in all_settlements if s.get("alive", True)]
+                    if alive:
+                        settlement_stats = {
+                            "mean_population": np.mean([s["population"] for s in alive]),
+                            "mean_food": np.mean([s["food"] for s in alive]),
+                            "mean_wealth": np.mean([s["wealth"] for s in alive]),
+                            "mean_defense": np.mean([s["defense"] for s in alive]),
+                            "n_factions": len(set(s.get("owner_id", 0) for s in alive)),
+                            "port_ratio": np.mean([1 if s.get("has_port") else 0 for s in alive]),
+                            "alive_ratio": len(alive) / max(len(all_settlements), 1),
+                            "n_settlements": len(all_settlements),
+                        }
+                        print(f"  Seed {seed_idx}: settlement_stats extracted (n_sett={settlement_stats['n_settlements']})")
 
-        # predict_grid estimates hidden params from obs or uses defaults
-        pred = solve.predict_grid(solve._models, grid, obs_probs=obs_probs, n_obs=n_obs)
+        # Also save settlement_stats to submit file
+        if settlement_stats:
+            save_data["seeds"][str(seed_idx)]["settlement_stats"] = settlement_stats
+
+        pred = solve.predict_grid(solve._models, grid, settlement_stats=settlement_stats)
         print(f"  Seed {seed_idx}: pred shape={pred.shape}, sum check={pred.sum(axis=-1).mean():.4f}")
 
         # Submit

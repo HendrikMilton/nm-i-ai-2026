@@ -1,7 +1,6 @@
 """
 Challenge 3: Astar Island — Per-cell LightGBM prediction.
-Uses 3 round-level hidden params (settle_survive, spread_tendency, port_activity)
-derived from GT (training) or observations (inference).
+V3: base features + distance prior features + n_settlements expansion rate estimation.
 """
 
 import json
@@ -12,7 +11,7 @@ import time
 from pathlib import Path
 
 import numpy as np
-from scipy.ndimage import distance_transform_edt, gaussian_filter
+from scipy.ndimage import distance_transform_edt, gaussian_filter, convolve
 import lightgbm as lgb
 import joblib
 
@@ -28,8 +27,10 @@ PROB_FLOOR = 0.01
 TERRAIN_TO_CLASS = {0: 0, 10: 0, 11: 0, 1: 1, 2: 2, 3: 3, 4: 4, 5: 5}
 
 CHECKPOINT_DIR = Path(__file__).parent / "checkpoints"
+CHECKPOINT_V3_DIR = Path(__file__).parent / "checkpoints_v3"
 V2_DATA_DIR = Path(__file__).parent / "../../elias/logs/offline"
 ROUND_DATA_DIR = Path(__file__).parent / "round_data"
+DISTANCE_PRIOR_PATH = Path(__file__).parent / "../../arian/distance_priors.json"
 
 # Default hidden params (median warm round values)
 DEFAULT_SETTLE_SURVIVE = 0.30
@@ -59,6 +60,97 @@ DEFAULT_SETTLEMENT_STATS = {
     "mean_defense": 0.9, "n_factions": 15, "port_ratio": 0.05,
     "alive_ratio": 0.8,
 }
+
+
+# ============================================================
+# Distance prior lookup (V3)
+# ============================================================
+_PRIOR_LOOKUP = None
+_PRIOR_RATE_KEYS = None
+_PRIOR_RATE_VALS = None
+_PRIOR_DEFAULT = np.array([1.0/6]*6, dtype=np.float32)
+_USE_V3 = False  # set True when V3 models are loaded
+
+
+def _load_distance_priors():
+    """Load and preprocess distance priors into fast lookup."""
+    global _PRIOR_LOOKUP, _PRIOR_RATE_KEYS, _PRIOR_RATE_VALS
+    if _PRIOR_LOOKUP is not None:
+        return True
+    if not DISTANCE_PRIOR_PATH.exists():
+        log.warning(f"Distance priors not found at {DISTANCE_PRIOR_PATH}")
+        return False
+    t0 = time.time()
+    with open(DISTANCE_PRIOR_PATH) as f:
+        raw = json.load(f)
+    _PRIOR_RATE_KEYS = sorted(raw.keys(), key=float)
+    _PRIOR_RATE_VALS = np.array([float(k) for k in _PRIOR_RATE_KEYS])
+    _PRIOR_LOOKUP = {}
+    for rk in _PRIOR_RATE_KEYS:
+        lookup = {}
+        for str_key, probs in raw[rk].items():
+            parts = str_key.split("_")
+            t, d, nf, ic = int(parts[0]), int(parts[1]), int(parts[2]), int(parts[3])
+            int_key = t * 10000 + d * 100 + nf * 10 + ic
+            lookup[int_key] = np.array(probs, dtype=np.float32)
+        _PRIOR_LOOKUP[rk] = lookup
+    log.info(f"Loaded distance priors ({len(_PRIOR_RATE_KEYS)} rates) in {time.time()-t0:.1f}s")
+    return True
+
+
+def _find_nearest_rate(expansion_rate):
+    idx = np.argmin(np.abs(_PRIOR_RATE_VALS - expansion_rate))
+    return _PRIOR_RATE_KEYS[idx]
+
+
+def estimate_expansion_rate(grid, settlement_stats):
+    """Estimate expansion rate from n_settlements (R²=0.995)."""
+    if not settlement_stats:
+        return 0.1
+    n_sett = settlement_stats.get("n_settlements", 0)
+    if n_sett == 0:
+        return 0.1
+    grid = np.asarray(grid)
+    n_land = int((grid != 10).sum())
+    if n_land == 0:
+        return 0.1
+    exp_rate = 0.759 * (n_sett / n_land) - 0.004
+    return max(0.001, min(0.5, exp_rate))
+
+
+def compute_prior_features(grid, expansion_rate):
+    """Compute 6 distance prior probability features per cell. Returns (H, W, 6)."""
+    grid = np.asarray(grid, dtype=np.int32)
+    h, w = grid.shape
+    rate_key = _find_nearest_rate(expansion_rate)
+    lookup = _PRIOR_LOOKUP[rate_key]
+
+    settle_mask = np.isin(grid, [1, 2])
+    if settle_mask.any():
+        dist_map = np.clip(distance_transform_edt(~settle_mask).astype(np.int32), 0, 20)
+    else:
+        dist_map = np.full((h, w), 20, dtype=np.int32)
+
+    kernel = np.array([[1,1,1],[1,0,1],[1,1,1]], dtype=np.int32)
+    forest = (grid == 4).astype(np.int32)
+    n_forest = np.clip(convolve(forest, kernel, mode='constant', cval=0), 0, 8)
+    ocean = (grid == 10).astype(np.int32)
+    ocean_nbr = convolve(ocean, kernel, mode='constant', cval=0)
+    is_coastal = ((ocean_nbr > 0) & (ocean == 0)).astype(np.int32)
+
+    int_keys = grid * 10000 + dist_map * 100 + n_forest * 10 + is_coastal
+    prior_probs = np.zeros((h, w, 6), dtype=np.float32)
+    flat_keys = int_keys.ravel()
+    flat_priors = prior_probs.reshape(-1, 6)
+    for i, k in enumerate(flat_keys):
+        p = lookup.get(int(k))
+        if p is not None:
+            flat_priors[i] = p
+        else:
+            k2 = int(k) ^ 1
+            p2 = lookup.get(k2)
+            flat_priors[i] = p2 if p2 is not None else _PRIOR_DEFAULT
+    return prior_probs
 
 
 # ============================================================
@@ -432,44 +524,54 @@ def save_models(models):
 
 
 def load_models():
+    """Load V3 models from checkpoints_v3/."""
     models = []
     for k in range(N_CLASSES):
-        p = CHECKPOINT_DIR / f"lgbm_class_{k}.joblib"
+        p = CHECKPOINT_V3_DIR / f"lgbm_v3_class_{k}.joblib"
         if not p.exists():
+            log.error(f"V3 checkpoint missing: {p}")
             return None
         models.append(joblib.load(p))
-    # Verify feature count matches
-    expected = len(FEATURE_NAMES)
+    expected = len(FEATURE_NAMES) + 6  # 35 base + 6 prior features = 41
     actual = models[0].n_features_
     if actual != expected:
-        log.warning(f"Checkpoint has {actual} features, expected {expected}. Retraining.")
+        log.error(f"V3 checkpoint has {actual} features, expected {expected}!")
         return None
-    log.info(f"Loaded {len(models)} models from {CHECKPOINT_DIR}")
+    log.info(f"Loaded V3 models from {CHECKPOINT_V3_DIR} ({actual} features)")
     return models
 
 
 # ============================================================
-# Prediction
+# Prediction (V3: base features + distance prior features)
 # ============================================================
 def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_activity=None,
                  obs_probs=None, n_obs=None, settlement_stats=None):
-    """Predict 40x40x6 probability distribution.
+    """Predict 40x40x6 probability distribution using V3 model.
 
-    Hidden params can be provided directly, or estimated from obs, or use defaults.
-    Settlement stats from query API are optional extra features.
+    Uses default hidden params + expansion rate estimated from settlement_stats.
     """
     grid = np.asarray(grid, dtype=np.int32)
 
-    # Determine hidden params
-    if settle_survive is not None and spread_tendency is not None and port_activity is not None:
-        ss, st, pa = settle_survive, spread_tendency, port_activity
-    elif obs_probs is not None and n_obs is not None:
-        ss, st, pa = compute_hidden_params_from_obs(grid, obs_probs, n_obs)
-        log.info(f"  Estimated params from obs: ss={ss:.3f} st={st:.3f} pa={pa:.3f}")
-    else:
-        ss, st, pa = DEFAULT_SETTLE_SURVIVE, DEFAULT_SPREAD_TENDENCY, DEFAULT_PORT_ACTIVITY
+    # Hidden params: use defaults (V3 doesn't benefit from obs-derived params)
+    ss = settle_survive if settle_survive is not None else DEFAULT_SETTLE_SURVIVE
+    st = spread_tendency if spread_tendency is not None else DEFAULT_SPREAD_TENDENCY
+    pa = port_activity if port_activity is not None else DEFAULT_PORT_ACTIVITY
 
-    X = extract_features(grid, ss, st, pa, settlement_stats)
+    # Expansion rate from settlement_stats (the key V3 improvement)
+    exp_rate = estimate_expansion_rate(grid, settlement_stats)
+    log.info(f"  V3 predict: exp_rate={exp_rate:.3f} (n_sett={settlement_stats.get('n_settlements', '?') if settlement_stats else '?'})")
+
+    # Base features (35)
+    X_base = extract_features(grid, ss, st, pa, settlement_stats)
+
+    # Prior features (6)
+    prior = compute_prior_features(grid, exp_rate)
+    prior_flat = prior.reshape(GRID_SIZE * GRID_SIZE, 6)
+
+    # Concatenate: 41 features
+    X = np.zeros((GRID_SIZE * GRID_SIZE, len(FEATURE_NAMES) + 6), dtype=np.float32)
+    X[:, :len(FEATURE_NAMES)] = X_base
+    X[:, len(FEATURE_NAMES):] = prior_flat
 
     preds = np.zeros((GRID_SIZE * GRID_SIZE, N_CLASSES), dtype=np.float64)
     for k, model in enumerate(models):
@@ -520,19 +622,16 @@ def _ensure_models():
     global _models
     if _models is not None:
         return
+    # Load distance priors (required for V3)
+    if not _load_distance_priors():
+        log.error("Cannot load distance priors! V3 will not work.")
+        _models = []
+        return
     _models = load_models()
     if _models is not None:
         return
-    log.info("Training models from scratch...")
-    samples = load_v2_data()
-    if not samples:
-        log.error("No training data!")
-        _models = []
-        return
-    X, Y = build_training_arrays(samples)
-    log.info(f"Training: X={X.shape}, Y={Y.shape}")
-    _models = train_models(X, Y)
-    save_models(_models)
+    log.error("V3 checkpoints not found! Run train_v3.py --retrain first.")
+    _models = []
 
 
 # ============================================================
@@ -547,7 +646,8 @@ def predict(body: dict) -> dict:
     if grid.shape != (GRID_SIZE, GRID_SIZE):
         return {"error": f"expected {GRID_SIZE}x{GRID_SIZE}, got {grid.shape}"}
 
-    pred = predict_grid(_models, grid)
+    settlement_stats = body.get("settlement_stats")
+    pred = predict_grid(_models, grid, settlement_stats=settlement_stats)
     return {"prediction": pred.tolist()}
 
 
