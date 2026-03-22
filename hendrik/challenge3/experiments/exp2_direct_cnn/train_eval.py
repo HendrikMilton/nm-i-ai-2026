@@ -190,13 +190,21 @@ def entropy_weighted_kl_loss(pred_logits, gt):
 # Training + prediction function for LOO CV
 # ============================================================
 def train_and_predict(train_samples, test_samples):
-    """Train U-Net on train_samples, predict on test_samples."""
+    """Train U-Net on train_samples, predict on test_samples.
+    Uses a round-based val split from train_samples for early stopping.
+    """
     in_channels = 28  # 8 + 7 + 4 + 6 + 3
+
+    # Split train into train/val by round (hold out 1 round for validation)
+    rounds_in_train = sorted(set(s["round"] for s in train_samples))
+    val_round = rounds_in_train[-1]  # hold out last round
+    actual_train = [s for s in train_samples if s["round"] != val_round]
+    val_samples = [s for s in train_samples if s["round"] == val_round]
 
     # Prepare training data with D4 augmentation
     train_x_list = []
     train_y_list = []
-    for s in train_samples:
+    for s in actual_train:
         x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
         gt = s["gt"]
         for xa, ga in d4_augment(x, gt):
@@ -206,15 +214,24 @@ def train_and_predict(train_samples, test_samples):
     train_x = torch.tensor(np.stack(train_x_list), dtype=torch.float32)
     train_y = torch.tensor(np.stack(train_y_list), dtype=torch.float32)
 
+    # Prepare val data (no augmentation)
+    val_x_list = []
+    val_y_list = []
+    for s in val_samples:
+        x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
+        val_x_list.append(x)
+        val_y_list.append(s["gt"].transpose(2, 0, 1))
+    val_x = torch.tensor(np.stack(val_x_list), dtype=torch.float32).to(DEVICE)
+    val_y = torch.tensor(np.stack(val_y_list), dtype=torch.float32).to(DEVICE)
+
     # Model
     model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
-    n_train = len(train_x)
-    batch_size = min(32, n_train)
+    batch_size = min(32, len(train_x))
     n_epochs = 200
-    best_loss = float('inf')
+    best_val_loss = float('inf')
     patience = 20
     no_improve = 0
     best_state = None
@@ -223,10 +240,8 @@ def train_and_predict(train_samples, test_samples):
     loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
                                           pin_memory=True, num_workers=0)
 
-    model.train()
     for epoch in range(n_epochs):
-        epoch_loss = 0.0
-        n_batches = 0
+        model.train()
         for bx, by in loader:
             bx, by = bx.to(DEVICE), by.to(DEVICE)
             optimizer.zero_grad()
@@ -234,13 +249,16 @@ def train_and_predict(train_samples, test_samples):
             loss = entropy_weighted_kl_loss(logits, by)
             loss.backward()
             optimizer.step()
-            epoch_loss += loss.item()
-            n_batches += 1
         scheduler.step()
 
-        avg_loss = epoch_loss / max(n_batches, 1)
-        if avg_loss < best_loss - 1e-5:
-            best_loss = avg_loss
+        # Validate
+        model.eval()
+        with torch.no_grad():
+            val_logits = model(val_x)
+            val_loss = entropy_weighted_kl_loss(val_logits, val_y).item()
+
+        if val_loss < best_val_loss - 1e-5:
+            best_val_loss = val_loss
             no_improve = 0
             best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
         else:

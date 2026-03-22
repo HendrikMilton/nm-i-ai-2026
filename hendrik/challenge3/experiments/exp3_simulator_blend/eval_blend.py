@@ -123,7 +123,7 @@ def main():
     all_sim_scores = []
     all_blend_scores = {a: [] for a in alphas}
 
-    n_sims = 100  # MC sims per seed (balance speed vs quality)
+    n_sims = 30  # MC sims per seed (30 is enough for stable averages)
 
     total_start = time.time()
 
