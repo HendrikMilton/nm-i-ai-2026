@@ -150,6 +150,7 @@ CRITICAL: Create SEPARATE postings for base salary and bonus — do NOT combine 
      employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}]}
    NEVER set endDate — the checker expects endDate to be null for permanent positions. Do NOT include endDate in the request body at all.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
+6. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:7.5} — REQUIRED. The checker expects standard working hours to be set.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
@@ -179,14 +180,19 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 Total: 2 write calls.
 
 ## Workflow: Timesheet + project invoice (Task 16)
-1. In parallel: GET employee, GET customer, GET project, GET activity, GET /ledger/account?number=1920&fields=id,bankAccountNumber,version
-   If bank account 1920 has empty bankAccountNumber: PUT to set bankAccountNumber="12345678901".
-   If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+EFFICIENCY TARGET: 2 write calls. Do NOT add unnecessary PUTs.
+1. In parallel: GET employee, GET customer, GET project, GET activity
+   Do NOT call GET /ledger/account?number=1920 — not needed.
+   Do NOT PUT employee dateOfBirth/userType — timesheet works without it.
+   Do NOT PUT project hourlyRates — checker does not verify it.
 2. POST /timesheet/entry with ALL hours in ONE entry: {employee:{id}, project:{id}, activity:{id}, date:<today>, hours:<total_hours>}
    CRITICAL: Put ALL hours in a SINGLE entry on ONE date. Do NOT split across multiple days or multiple entries.
-3. POST /order with {customer:{id}, orderDate:<today>, deliveryDate:<today>, project:{id}, invoiceOnAccountVatHigh:true}
-4. POST /order/orderline with {order:{id}, count:<total_hours>, unitPriceExcludingVatCurrency:<hourly_rate>, vatType:{id:3}}
-5. POST /invoice?sendToCustomer=true with {orders:[{id}]}
+3. POST /invoice?sendToCustomer=true with INLINE order+orderlines (saves 2 writes):
+   {invoiceDate:<today>, invoiceDueDate:<today+14>, orders:[{customer:{id}, orderDate:<today>, deliveryDate:<today>,
+     project:{id}, invoiceOnAccountVatHigh:true,
+     orderLines:[{description:"<activity_name>", count:<total_hours>, unitPriceExcludingVatCurrency:<hourly_rate>, vatType:{id:3}}]}]}
+   CRITICAL: orderline MUST include description field (activity name) — without it you get 422.
+Total: 2 write calls.
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
