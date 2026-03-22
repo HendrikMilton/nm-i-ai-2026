@@ -51,6 +51,41 @@ If so, we need: POST /supplierInvoice → sendToLedger → PUT /:addPayment or r
 **Task 14** — 12/14 variant has Check 5 failing. This is the "credit note" task with more checks.
 Check 5 could be about the credit note date or amount. The 8/8 variant works perfectly though.
 
+### Round 3 (09:27-09:30)
+
+| 09:27 | T18 | 8/8 | 3p/0f | 22.0s | 0 | perfect |
+| 09:28 | T22 | 0/10 | 0p/5f | 48.0s | 0 | still 0. supplierInvoice approach not working |
+| 09:29 | T21 | 0/14 | 0p/10f | ?s | ? | **DISASTER** — agent too slow, scorer timed out |
+
+**Task 21 — 0/14 timeout issue**: Agent spent 1.5 min on occupation code lookup before
+creating employee. POST /employee happened at 09:31:20 but scoring was already done.
+The employee creation is the FIRST thing that should happen — not the last.
+System prompt says "create employee first" but agent doesn't follow it on this variant.
+This is a priority ordering issue — employee should be step 1, occupation code lookup in parallel.
+
+**Task 22 — still 0/5 consistently**: 3 attempts now, all 0/5 with supplierInvoice approach.
+The approach itself seems correct (supplier created, invoice created, sent to ledger).
+Need to investigate: maybe payment registration is required, or maybe the expense account
+mapping is wrong, or maybe we need to include the receipt PDF as attachment on the voucher.
+
+### Round 4 (~09:31-09:35) — slow, one long-running task
+
+50/300 daily submissions used. Autoloop running but waiting on a long processing task.
+
+## Patterns so far
+
+**Consistently perfect:** T02, T03, T04, T05, T07, T08, T09, T10, T13, T15, T16, T17, T18, T25, T26
+**Improved:** T11 (0→8/8!), T19 (0→20/22→8/8), T20 (2→7/10), T21 (12→8/8 sometimes)
+**Still broken:** T22 (0/10 always), T27 (2/10), T30 (0/10)
+**Inconsistent:** T21 (8/8 or 0/14 - speed issue), T24 (10/10 or 7.5/10), T28 (7/7 or 5/10), T29 (8/11)
+
+**Biggest remaining opportunities:**
+1. T22 — 0/10, worth 4.5pts. supplierInvoice approach still fails. Maybe needs payment step.
+2. T30 — 0/10, worth 4.5pts. Haven't seen a run with the new prompt yet.
+3. T27 — 2/10, currency/disagio. No workflow in prompt for this.
+4. T21 — sometimes 0/14 due to slowness. Need to ensure employee created FIRST.
+5. T29 — stuck at 8/11. 2 checks always fail.
+
 ### Task 27 — currency/disagio
 This is a currency exchange loss task. Agent finds invoice, calculates disagio, but 3 checks fail.
 Likely needs a specific voucher for the exchange difference on account 8160 (Disagio).
