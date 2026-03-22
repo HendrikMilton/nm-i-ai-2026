@@ -10,3 +10,4 @@ runs/
 # Pretrained model weights
 *.pt
 *.onnx
+*.zip
