@@ -297,25 +297,20 @@ CRITICAL: Create each project and activity EXACTLY ONCE. Duplicate projects caus
    Without this step, 3 checks FAIL and the task scores near 0.
 
 ## Workflow: Bank reconciliation from CSV (Task 23)
-CRITICAL: The CSV file content is provided as text. Read it carefully line by line.
+NEVER create manual ledger vouchers (POST /ledger/voucher) for ANY CSV line — not for suppliers, not for Skattetrekk, not for anything.
+Only TWO types of write operations: (1) PUT /invoice/:payment for customer payments, (2) bank reconciliation + adjustments for everything else.
 1. In parallel: GET /invoice (open, fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding),
-   GET /invoice/paymentType, GET /supplierInvoice?invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,invoiceNumber,supplier(id,name),amount (do NOT use amountOutstanding field),
-   GET /ledger/accountingPeriod?fields=id,name,start,end,number (do NOT request year field — causes 400),
-   GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id,
-   GET /ledger/account?number=2400&fields=id, GET /ledger/account?number=7770&fields=id
-2. Parse CSV carefully. Uses semicolons (;) as separator: Dato;Forklaring;Inn;Ut;Saldo
-   Two categories only:
-   - "Innbetaling" in description → customer payment (PUT /invoice/:payment)
-   - EVERYTHING ELSE → reconciliation adjustment:
-     * If INN column filled → Renteinntekter adjustment type (money IN to account)
-     * If UT column filled → Bankgebyr adjustment type (money OUT of account)
-   This covers: supplier payments (Leverandør/Fornecedor/Fournisseur/Lieferant), Bankgebyr, Renteinntekter, Skattetrekk, and any other line types.
-   CRITICAL: Accounting period = period containing the LAST transaction date in the CSV (often February, not January).
-   Closing balance = the LAST Saldo value in the CSV.
+   GET /invoice/paymentType, GET /ledger/accountingPeriod?fields=id,name,start,end,number (do NOT request year field — causes 400),
+   GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id
+2. Parse CSV (semicolons separator: Dato;Forklaring;Inn;Ut;Saldo). Two categories ONLY:
+   - "Innbetaling" in description → customer payment (step 3)
+   - EVERYTHING ELSE (supplier payments, Bankgebyr, Renteinntekter, Skattetrekk, ANY other type) → reconciliation adjustment (step 5)
+   Closing balance = LAST Saldo value. Accounting period = period containing the LAST transaction date (often February).
 3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<Inn_amount>
    Match by invoice number from CSV description (e.g. "Faktura 1001" → invoiceNumber 1). Use date FROM CSV, NOT today.
 4. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_LAST_CSV_date>},
    bankAccountClosingBalanceCurrency:<LAST_SALDO_FROM_CSV>, isClosed:false, type:"MANUAL"}
+   Do this IMMEDIATELY after customer payments — do NOT create any vouchers first.
 5. Add ALL non-Innbetaling lines as adjustments in ONE call:
    PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
    Amount MUST be positive (negative causes 422). paymentType: Bankgebyr for UT items, Renteinntekter for INN items.
