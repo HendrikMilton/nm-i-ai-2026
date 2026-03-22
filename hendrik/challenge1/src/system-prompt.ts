@@ -145,7 +145,7 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
    CRITICAL: Extract the employee's home address from the contract (addressLine1, postalCode, city). This is often near the personal details section. The address check WILL FAIL without it.
 4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
 5. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver",
-     employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}]}
+     employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}]}
    NEVER set endDate — the checker expects endDate to be null for permanent positions. Do NOT include endDate in the request body at all.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
@@ -156,8 +156,8 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth, email:"<firstname.lastname@example.org>" (generate from name, lowercase, replace special chars: ø→o, å→a, æ→ae, ü→u, ö→o, ä→a, é→e, á→a, ñ→n, í→i, ó→o, ú→u), nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}}
    CRITICAL: Extract ALL personal details from the offer letter — nationalIdentityNumber (fødselsnummer), bankAccountNumber, and address are often present and WILL be checked.
    HARD LIMIT on occupation code search: Maximum 2 GET calls. After 2 failed searches, use "KONTORMEDARBEIDER" as fallback. Creating the employee is more important than the perfect code.
-4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, shiftDurationHours:<hours_from_offer>, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
-   CRITICAL: shiftDurationHours MUST match the working hours from the offer letter (e.g. 6.0, 7.5), NOT always 7.5.
+4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
+   CRITICAL: Do NOT include shiftDurationHours — omit it entirely. The Tripletex UI leaves it at 0.0 (not set), and setting it causes Check 5 to fail.
    NEVER set endDate for permanent positions.
 5. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:<hours_from_offer>} — REQUIRED when offer mentions "arbeidstid" / working hours
 
@@ -289,16 +289,17 @@ Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
 ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /resultbudget (400), or /ledger/account with numberFrom/numberTo ranges.
 CRITICAL: Create each project and activity EXACTLY ONCE. Duplicate projects cause ALL checks to fail.
-1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000),
+1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=4000&accountNumberTo=7999, count=1000),
    fields=id,account(id,number,name),amount. Also GET /employee?fields=id&count=1 (for project manager).
+   CRITICAL: Use range 4000-7999 (NOT 6000-7999). Accounts in 4000-5999 are valid expense accounts.
 2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
-3. Create all projects and activities in ONE step — POST /project × 3 and POST /activity × 3 in parallel:
-   Project: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
-   Activity: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
-   Do NOT create projects or activities in any other step. Do NOT call POST /project or POST /activity more than once per name.
-4. CRITICAL — DO NOT SKIP: Link each activity to its project ONE AT A TIME sequentially:
-   POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
-   Without this step, 3 checks FAIL and the task scores near 0.
+3. Create projects SEQUENTIALLY (one at a time, biggest increase first) — parallel creation gives duplicate project numbers.
+   POST /project with {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
+   Wait for response before creating the next project. Each project gets a unique auto-incremented number.
+4. For each project, create a PROJECT-SPECIFIC activity linked directly to the project:
+   POST /project/projectActivity with {project:{id}, activity:{name:<account_name>, activityType:"PROJECT_SPECIFIC_ACTIVITY", isGeneral:false, isChargeable:false}, startDate:today}
+   This creates the activity AND links it to the project in one call. Do NOT use PROJECT_GENERAL_ACTIVITY (shared across projects).
+   Create these ONE AT A TIME sequentially, matching each activity to its project.
 
 ## Workflow: Bank reconciliation from CSV (Task 23)
 NEVER create manual ledger vouchers (POST /ledger/voucher) for ANY CSV line.
@@ -323,7 +324,11 @@ THREE types of write operations: (1) PUT /invoice/:payment for customer payments
    Do this IMMEDIATELY after invoice payments — do NOT create any vouchers first.
 6. Add ALL remaining non-invoice lines as adjustments in ONE call:
    PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
-   Amount MUST be positive (negative causes 422). paymentType: Bankgebyr for UT items, Renteinntekter for INN items.
+   Amount MUST be positive (negative causes 422).
+   CRITICAL: paymentType is determined ONLY by which CSV column has the amount, NEVER by description text:
+   - Amount in Ut column → paymentType "Bankgebyr" (money going OUT, always)
+   - Amount in Inn column → paymentType "Renteinntekter" (money coming IN, always)
+   WARNING: Descriptions are TRAPS — e.g. "Renteinntekter" can appear in the Ut column, "Bankgebyr" in Inn. IGNORE the description when choosing paymentType.
 7. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
 8. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step6>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
    Only succeeds when avvik = 0 (accounting balance = bank statement closing balance).
