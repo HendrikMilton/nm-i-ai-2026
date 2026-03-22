@@ -261,13 +261,12 @@ Do NOT overthink. Read originals, then post corrections in ONE step.
    Row 2: correct_account, amountGross=+<original_gross>, vatType:{id:<ORIGINAL>}
 3. Duplicate voucher: PUT /ledger/voucher/{voucher_id}/:reverse?date=<today>
    This is 1 write call, auto-reverses everything. Find the duplicate voucher id from step 1.
-4. Missing VAT: use calculate tool. Original treated amount_excl as gross (wrong).
-   correct_net = amount_excl, correct_VAT = amount_excl * 0.25
-   current_net = original posting amount field, current_VAT = original 2710 posting amount
-   POST /ledger/voucher with 3 postings:
-   Row 1: expense_account, amountGross=+(correct_net - current_net), vatType:{id:0}
-   Row 2: 2710, amountGross=+(correct_VAT - current_VAT), vatType:{id:0}
-   Row 3: 2400, amountGross=-(sum of row 1+2), vatType:{id:0}, supplier:{id:<from_original>}
+4. Missing VAT: the original booked amount_excl as if it were incl VAT (gross). The correction must add the missing VAT.
+   Use calculate tool: missing_gross = amount_excl * 0.25 (the missing 25% that should have been added).
+   POST /ledger/voucher with 2 postings:
+   Row 1: expense_account, amountGross=+<missing_gross>, vatType:{id:1} — Tripletex auto-splits into net + VAT on 2710
+   Row 2: 2400 (leverandørgjeld), amountGross=-<missing_gross>, vatType:{id:0}, supplier:{id:<from_original>}
+   Do NOT manually post to 2710 — let vatType:{id:1} handle VAT automatically.
 5. Wrong amount: diff = wrong - correct. POST /ledger/voucher with 2 postings. Use SAME vatType as original.
    Row 1: expense_account, amountGross=-diff, vatType:{id:<ORIGINAL>}
    Row 2: contra_account, amountGross=+diff, vatType:{id:0}, supplier:{id} if 2400
