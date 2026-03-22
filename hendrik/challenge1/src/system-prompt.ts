@@ -8,7 +8,6 @@ const dummyNorwegianBankNumber = '12345678903';
 const dummyEmail = 'post@example.org';
 
 const workflows = `
-
 ## Workflow: Receipt/expense registration (Task 22)
 Triggered by: "kvittering" / "receipt" / "recibo" / "Quittung" + item name + department name.
 IMPORTANT: Only use the endpoints specified below, don't call anything else not specified
@@ -106,37 +105,6 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
    are visible in ledger queries. WITHOUT THIS STEP, ledger posting checks WILL FAIL.
    Total: 3 write calls (4 if supplier created).
 
-
-## Workflow: Create invoice
-1. Find/create customer: GET /customer?organizationNumber=X or POST /customer
-2. For each product: GET /product?number=X, create only if not found
-3. Ensure bank account: GET /ledger/account?number=1920&fields=id,bankAccountNumber,version → if empty, PUT with bankAccountNumber="${dummyNorwegianBankNumber}"
-4. POST /invoice?sendToCustomer=true with INLINE order+orderlines (saves 2+ write calls):
-   {invoiceDate, invoiceDueDate, orders:[{customer:{id}, orderDate:<invoiceDate>, deliveryDate:<invoiceDate>,
-     orderLines:[{product:{id}, count, unitPriceExcludingVatCurrency, vatType:{id}}, ...]}]}
-   This creates order, orderlines, and invoice in ONE call.
-
-## Workflow: Register payment on existing invoice
-1. GET /customer?organizationNumber=X and GET /invoice/paymentType?fields=id,description (parallel)
-2. GET /invoice?customerId=X&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,amount,amountOutstanding
-3. PUT /invoice/{id}/:payment with QUERY PARAMS: paymentDate, paymentTypeId (use "Betalt til bank" id), paidAmount (total incl VAT = the "amount" field)
-
-## Workflow: Reverse payment (bank return)
-Same as payment but use NEGATIVE paidAmount: paidAmount=-<amount>
-This is a CUSTOMER INVOICE operation — never use supplier invoice or voucher.
-
-
-## Workflow: Fixed-price project with milestone invoice (Task 15)
-EFFICIENCY TARGET: exactly 6 API calls (2 GET + 4 write). Do NOT add extra calls.
-1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager(id))
-   The project response includes projectManager with their id — do NOT call GET /employee.
-   Do NOT call GET /ledger/account?number=1920 — it is not needed for this task.
-2. PUT /project to set isFixedPrice=true, fixedprice=<amount>, projectManager:{id} (from step 1)
-3. POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
-4. POST /order/orderline with {order:{id}, description:"Milestone payment - X%", count:1, unitPriceExcludingVatCurrency:<milestone_amount>, vatType:{id:3}}
-5. POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders:[{id}]}
-Total: 4 write calls, 2 GET calls = 6 API calls. Do NOT exceed this.
-
 ## Workflow: Payroll (salary transaction) (Task 12)
 IMPORTANT: Don't use any api calls not specified here. Only use follow calls:
 1. In parallel: GET /employee?email=X&fields=id,firstName,lastName,bankAccountNumber,dateOfBirth,version,
@@ -163,8 +131,6 @@ IMPORTANT: Don't use any api calls not specified here. Only use follow calls:
    }
    CRITICAL: Use separate specifications for base salary and bonus — do NOT combine.
    CRITICAL: generateTaxDeduction=true auto-creates tax deduction. Do NOT add tax specs manually.
-   CRITICAL: isHistorical MUST be false (true + generateTaxDeduction = 422).
-   If generateTaxDeduction fails with 422, retry with generateTaxDeduction=false.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
@@ -265,10 +231,6 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
    POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
    POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}} — use EXACTLY "Project invoice" as description, do NOT append project name
    POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
-
-## Workflow: Credit note
-1. GET /customer to find customer, GET /invoice?customerId=X&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31 to find invoice
-2. PUT /invoice/{id}/:createCreditNote?date=YYYY-MM-DD — date as QUERY PARAM, empty body
 
 ## Workflow: Simplified year-end closing / årsoppgjør (Task 30)
 Post depreciation, prepaid reversal, and tax provision as separate vouchers.
