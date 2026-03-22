@@ -139,11 +139,15 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
    2411→"Revisor", 2412→"Rådgiver", 3120→"Dataoperatør", 3512→"IKT-brukerstøtte",
    3313→"Regnskapsfører", 4110→"Kontormedarbeider", 5223→"Butikkmedarbeider"
    Search: GET /employee/employment/occupationCode?nameNO=<norwegian_title>&count=5
-   If no match, try shorter/broader terms. Pick the FIRST result. Do NOT spend more than 2 GET calls on this.
+   IMPORTANT: Match the SPECIFIC level from the STYRK description. If STYRK title ends in:
+   "-assistenter" → search for "assistent", "-direktører" → "direktør", "-konsulenter" → "konsulent", "-ledere" → "leder"
+   Do NOT just pick the first/generic result — pick the one matching the correct level (e.g. INNKJØPSASSISTENT not INNKJØPER for 3323).
+   If no match, try shorter/broader terms. Do NOT spend more than 2 GET calls on this.
    If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
 4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
-5. POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
+5. POST /employee/employment with {employee:{id}, startDate, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
+   Do NOT set endDate for permanent positions ("Fast stilling") — the checker expects endDate to be null.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
