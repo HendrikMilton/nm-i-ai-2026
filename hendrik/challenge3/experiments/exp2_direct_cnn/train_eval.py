@@ -189,10 +189,14 @@ def entropy_weighted_kl_loss(pred_logits, gt):
 # ============================================================
 # Training + prediction function for LOO CV
 # ============================================================
+_fold_times = []
+
 def train_and_predict(train_samples, test_samples):
     """Train U-Net on train_samples, predict on test_samples.
     Uses a round-based val split from train_samples for early stopping.
     """
+    import time as _time
+    fold_start = _time.time()
     in_channels = 28  # 8 + 7 + 4 + 6 + 3
 
     # Split train into train/val by round (hold out 1 round for validation)
@@ -264,7 +268,14 @@ def train_and_predict(train_samples, test_samples):
         else:
             no_improve += 1
             if no_improve >= patience:
+                print(f"    Early stop at epoch {epoch+1}, best val_loss={best_val_loss:.4f}")
                 break
+
+    fold_elapsed = _time.time() - fold_start
+    _fold_times.append(fold_elapsed)
+    avg_fold = np.mean(_fold_times)
+    remaining = 21 - len(_fold_times)  # approx folds
+    print(f"    Fold done in {fold_elapsed:.0f}s (avg {avg_fold:.0f}s), ~{remaining} folds left, ETA ~{avg_fold*remaining:.0f}s")
 
     # Restore best model
     if best_state is not None:
