@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Fetches per-task scores for the top 20 teams and computes average score per task.
+Fetches per-task scores for the top 5 teams and computes average score per task.
 Usage: ACCESS_TOKEN=xxx python3 scripts/leaderboard-analysis.py
 """
 
@@ -35,29 +35,29 @@ def main():
 
     # 1. Get full leaderboard
     leaderboard = fetch_json(f"{BASE}/leaderboard")
-    top20 = leaderboard[:20]
+    top5 = leaderboard[:5]
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
-    w(f"# Leaderboard Analysis — Top 20 Teams")
+    w(f"# Leaderboard Analysis — Top 5 Teams")
     w(f"*Generated {now}*")
     w()
 
-    w("## Top 20 Teams")
+    w("## Top 5 Teams")
     w()
     w("| Rank | Score | Tasks | Team |")
     w("|------|------:|------:|------|")
-    for t in top20:
+    for t in top5:
         w(f"| #{t['rank']} | {t['total_score']:.2f} | {t['tasks_touched']} | {t['team_name']} |")
 
     # 2. Fetch per-task scores for each top-20 team (parallel)
-    print(f"\nFetching per-task scores for {len(top20)} teams...")
+    print(f"\nFetching per-task scores for {len(top5)} teams...")
 
     def fetch_team_tasks(team):
         tasks = fetch_json(f"{BASE}/leaderboard/{team['team_id']}")
         return (team, tasks)
 
     with ThreadPoolExecutor(max_workers=10) as pool:
-        team_tasks = list(pool.map(fetch_team_tasks, top20))
+        team_tasks = list(pool.map(fetch_team_tasks, top5))
 
     # 3. Aggregate: average score per task across top 20
     task_scores: dict[str, list[float]] = {}
@@ -69,7 +69,7 @@ def main():
     sorted_task_ids = sorted(task_scores.keys(), key=lambda x: int(x))
 
     w()
-    w("## Average Score Per Task (Top 20 Teams)")
+    w("## Average Score Per Task (Top 5 Teams)")
     w()
     w("| Task | Avg | Max | Min | Teams w/ score |")
     w("|------|----:|----:|----:|:--------------:|")
@@ -88,7 +88,7 @@ def main():
 
     # 4. Score matrix: top 20 × tasks
     w()
-    w("## Score Matrix (Top 20 x Tasks)")
+    w("## Score Matrix (Top 5 x Tasks)")
     w()
     header = "| Team |" + "|".join(f" {tid} " for tid in sorted_task_ids) + "|"
     sep = "|------|" + "|".join("----:" for _ in sorted_task_ids) + "|"
