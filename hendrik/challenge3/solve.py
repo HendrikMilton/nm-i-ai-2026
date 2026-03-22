@@ -591,6 +591,19 @@ def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_a
         pred[mountain_mask] = 0.0
         pred[mountain_mask, 5] = 1.0
 
+    # Bayesian Dirichlet update with observations (if available)
+    EQUIV_SAMPLES = 30
+    if obs_probs is not None and n_obs is not None:
+        obs_probs = np.asarray(obs_probs, dtype=np.float32)
+        n_obs = np.asarray(n_obs, dtype=np.float32)
+        observed = n_obs > 0
+        if observed.any():
+            obs_counts = obs_probs * n_obs[:, :, np.newaxis]
+            alpha = pred * EQUIV_SAMPLES + obs_counts
+            alpha_sum = alpha.sum(axis=-1, keepdims=True)
+            pred[observed] = (alpha / alpha_sum)[observed]
+            log.info(f"  Bayesian update: {observed.sum()} cells, equiv={EQUIV_SAMPLES}")
+
     # Per-class floors and renormalize
     for k in range(N_CLASSES):
         pred[:, :, k] = np.clip(pred[:, :, k], CLASS_FLOORS[k], None)

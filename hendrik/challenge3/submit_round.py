@@ -322,7 +322,13 @@ def main():
             except Exception:
                 pass
 
-        pred = solve.predict_grid(solve._models, grid, settlement_stats=settlement_stats)
+        # Get observation data for Bayesian update
+        obs_probs_arr, n_obs_arr = None, None
+        if seed_idx in seed_obs:
+            obs_probs_arr, n_obs_arr, _ = seed_obs[seed_idx]
+
+        pred = solve.predict_grid(solve._models, grid, settlement_stats=settlement_stats,
+                                   obs_probs=obs_probs_arr, n_obs=n_obs_arr)
         print(f"  Seed {seed_idx}: pred shape={pred.shape}, sum check={pred.sum(axis=-1).mean():.4f}")
 
         # Submit
