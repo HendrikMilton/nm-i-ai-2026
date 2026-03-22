@@ -283,15 +283,29 @@ def train_and_predict(train_samples, test_samples):
     model.to(DEVICE)
     model.eval()
 
-    # Predict test samples
+    # Predict test samples with TTA (D4 augmentation at test time)
     predictions = []
     with torch.no_grad():
         for s in test_samples:
             x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
-            xt = torch.tensor(x[None], dtype=torch.float32).to(DEVICE)
-            logits = model(xt)
-            probs = F.softmax(logits, dim=1)[0].cpu().numpy()  # (6, H, W)
-            pred = probs.transpose(1, 2, 0)  # (H, W, 6)
+            # TTA: average predictions over all 8 D4 transforms
+            avg_pred = np.zeros((GRID_SIZE, GRID_SIZE, N_CLASSES), dtype=np.float32)
+            for k in range(4):
+                for flip in [False, True]:
+                    xa = np.rot90(x, k, axes=(1, 2)).copy()
+                    if flip:
+                        xa = np.flip(xa, axis=2).copy()
+                    xt = torch.tensor(xa[None], dtype=torch.float32).to(DEVICE)
+                    logits = model(xt)
+                    probs = F.softmax(logits, dim=1)[0].cpu().numpy()  # (6, H, W)
+                    p = probs.transpose(1, 2, 0)  # (H, W, 6)
+                    # Undo flip
+                    if flip:
+                        p = np.flip(p, axis=1).copy()
+                    # Undo rotation
+                    p = np.rot90(p, -k, axes=(0, 1)).copy()
+                    avg_pred += p
+            pred = avg_pred / 8.0
 
             # Static overrides
             grid = s["grid"]
