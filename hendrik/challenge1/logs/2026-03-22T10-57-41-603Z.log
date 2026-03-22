@@ -1,0 +1,7 @@
+[2026-03-22T10:57:41.603Z] [AGENT] model=claude-opus-4-6 prompt="Enviámos uma fatura de 13986 EUR ao Porto Alegre Lda (org. nº 906918129) quando a taxa de câmbio era 10.37 NOK/EUR. O cliente pagou agora, mas a taxa é 11.31 NOK/EUR. Registe o pagamento e lance a diferença cambial (agio) na conta correta."
+[2026-03-22T10:57:47.161Z] [API] GET /customer?organizationNumber=906918129&fields=id%2Cname → 200
+[2026-03-22T10:57:47.161Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":108587575,"name":"Porto Alegre Lda"}]}
+[2026-03-22T10:57:47.233Z] [API] GET /invoice/paymentType?fields=id%2Cdescription → 200
+[2026-03-22T10:57:47.233Z] [API] ← {"fullResultSize":2,"from":0,"count":2,"versionDigest":"'If-None-Match' header not specified","values":[{"id":39779299,"description":"Kontant"},{"id":39779300,"description":"Betalt til bank"}]}
+[2026-03-22T10:57:50.900Z] [API] GET /invoice?customerId=108587575&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id%2CinvoiceNumber%2Camount%2CamountOutstanding%2Ccurrency%28code%29 → 200
+[2026-03-22T10:57:50.900Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":2147697400,"invoiceNumber":1,"amount":17482.5,"amountOutstanding":17482.50,"currency":{"code":"NOK"}}]}
