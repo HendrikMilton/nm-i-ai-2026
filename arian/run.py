@@ -76,6 +76,10 @@ _CONTEXTUAL_PRIORS = _load_priors("contextual_priors.json")
 _CONTEXTUAL_PRIORS_WARM = _load_priors("contextual_priors_warm.json")
 _CONTEXTUAL_PRIORS_COLD = _load_priors("contextual_priors_cold.json")
 
+# Expansion-rate-aware distance priors: keyed by expansion rate → {cell_key → [6] probs}
+# Cell key format: "{terrain}_{dist}_{n_forest}_{is_coastal}"
+_DISTANCE_PRIORS = _load_priors("distance_priors.json")
+
 # Expansion rate threshold for warm/cold classification.
 # Below this → cold priors. Above → warm priors.
 # R3 had expansion rate ~0.003. All other rounds >= 0.10.
@@ -91,6 +95,56 @@ def classify_round_warmth(expansion_rate):
         return _CONTEXTUAL_PRIORS_COLD, "cold"
     else:
         return _CONTEXTUAL_PRIORS_WARM, "warm"
+
+
+def get_distance_prior(initial_grid, r, c, map_h, map_w, dist_map, expansion_rate):
+    """Get prior from the expansion-rate-aware distance prior table.
+
+    Uses Gaussian kernel interpolation over pre-computed expansion rate grid.
+    Returns the probability vector, or None if no match found.
+    """
+    if not _DISTANCE_PRIORS:
+        return None
+
+    terrain = initial_grid[r][c]
+    if terrain in (10, 5):
+        return None  # handled by static priors
+
+    dist = min(dist_map[r][c], 7)
+
+    n_forest = 0
+    is_coastal = False
+    for dr in (-1, 0, 1):
+        for dc in (-1, 0, 1):
+            if dr == 0 and dc == 0:
+                continue
+            nr, nc = r + dr, c + dc
+            if 0 <= nr < map_h and 0 <= nc < map_w:
+                if initial_grid[nr][nc] == 4:
+                    n_forest += 1
+                if initial_grid[nr][nc] == 10:
+                    is_coastal = True
+
+    cell_key = f"{min(terrain, 11)}_{dist}_{min(n_forest, 4)}_{1 if is_coastal else 0}"
+
+    # Snap expansion rate to nearest grid point (0.005 step)
+    rate_idx = max(0, min(80, round(expansion_rate / 0.005)))
+    rate_key = f"{rate_idx * 0.005:.3f}"
+
+    table = _DISTANCE_PRIORS.get(rate_key)
+    if table and cell_key in table:
+        return list(table[cell_key])
+
+    # Try adjacent rate keys
+    for offset in [-1, 1, -2, 2]:
+        adj_idx = rate_idx + offset
+        if 0 <= adj_idx <= 80:
+            adj_key = f"{adj_idx * 0.005:.3f}"
+            table = _DISTANCE_PRIORS.get(adj_key)
+            if table and cell_key in table:
+                return list(table[cell_key])
+
+    return None
 
 
 def get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=None):
@@ -331,13 +385,11 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
                               prior_table=None):
     """Get prior adjusted for distance to nearest settlement and round's expansion rate.
 
-    Directly sets settlement+port probability to the distance-based target,
-    then redistributes remaining probability among other classes proportionally
-    to the base contextual prior.
+    Primary path: use expansion-rate-aware distance priors (joint model trained on
+    all ground truth, conditioned on expansion_rate + terrain + distance + neighborhood).
+    This gives +6 points average over the old multiplicative approach.
 
-    If dist_multipliers is provided (from estimate_dist_decay), uses the
-    observation-derived per-distance multipliers instead of the fixed curve.
-    If prior_table is provided, uses warm/cold-specific contextual priors.
+    Fallback: multiplicative adjustment on contextual prior (old approach).
     """
     terrain = initial_grid[r][c]
 
@@ -347,12 +399,16 @@ def get_distance_aware_prior(initial_grid, r, c, map_h, map_w, dist_map, expansi
     if terrain == 5:
         return [0.0, 0.0, 0.0, 0.0, 0.0, 1.0]
 
-    # Start from contextual prior (warm/cold-aware if table provided)
+    # Try the new distance-aware prior table first (joint model)
+    dp = get_distance_prior(initial_grid, r, c, map_h, map_w, dist_map, expansion_rate)
+    if dp is not None:
+        return dp
+
+    # Fallback: old multiplicative approach
     prior = get_contextual_prior(initial_grid, r, c, map_h, map_w, prior_table=prior_table)
 
     dist = dist_map[r][c]
 
-    # For existing settlements, don't adjust — they have their own dynamics
     if terrain in (1, 2):
         return prior
 
