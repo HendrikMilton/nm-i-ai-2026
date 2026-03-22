@@ -140,7 +140,7 @@ def main():
         fused_boxes, fused_scores, fused_labels = weighted_boxes_fusion(
             boxes_list, scores_list, labels_list,
             weights=[1, 1, 1],
-            iou_thr=0.5,
+            iou_thr=0.6,
             skip_box_thr=0.0001,
         )
 
