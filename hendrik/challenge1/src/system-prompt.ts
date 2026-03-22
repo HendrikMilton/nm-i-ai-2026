@@ -73,7 +73,7 @@ CRITICAL: Create each project and activity EXACTLY ONCE. Duplicate projects caus
    CRITICAL: Use range 4000-7999 (NOT 6000-7999). Accounts in 4000-5999 are valid expense accounts.
 2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
 3. Create projects SEQUENTIALLY (one at a time, biggest increase first) — parallel creation gives duplicate project numbers.
-   POST /project with {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
+   POST /project with {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true, generalProjectActivitiesPerProjectOnly:true}
    Wait for response before creating the next project. Each project gets a unique auto-incremented number.
 4. For each project, create a PROJECT-SPECIFIC activity linked directly to the project:
    POST /project/projectActivity with {project:{id}, activity:{name:<account_name>, activityType:"PROJECT_SPECIFIC_ACTIVITY", isGeneral:false, isChargeable:false}, startDate:today}
