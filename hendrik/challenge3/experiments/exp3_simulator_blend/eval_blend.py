@@ -50,35 +50,37 @@ def extract_settlements_from_grid(grid):
     return settlements
 
 
+def _run_single_sim(args):
+    """Worker for parallel MC."""
+    grid_list, settlements, params, seed = args
+    sim = Simulator(grid_list, settlements, params=params, seed=seed)
+    sim.run()
+    cg = sim.get_class_grid()
+    h, w = len(cg), len(cg[0])
+    return [cg[r][c] for r in range(h) for c in range(w)]
+
+
 def run_simulator_mc(grid_list, settlements, n_sims=200, params=None, base_seed=42):
-    """Run Monte Carlo simulations and average to get probability predictions.
+    """Run parallel Monte Carlo simulations and average to get probability predictions."""
+    from concurrent.futures import ProcessPoolExecutor
 
-    Args:
-        grid_list: 2D list of terrain codes
-        settlements: list of settlement dicts for Simulator
-        n_sims: number of MC runs
-        params: simulator params dict (defaults to DEFAULT_PARAMS)
-        base_seed: RNG seed base
-
-    Returns:
-        np.ndarray of shape (H, W, 6) with class probabilities
-    """
     params = params or DEFAULT_PARAMS
     h = len(grid_list)
     w = len(grid_list[0])
 
+    tasks = [(grid_list, settlements, params, base_seed + i) for i in range(n_sims)]
+    n_workers = min(n_sims, max(1, os.cpu_count() - 1))
+
     counts = np.zeros((h, w, 6), dtype=np.int32)
 
-    for i in range(n_sims):
-        seed = base_seed + i
-        sim = Simulator(grid_list, settlements, params=params, seed=seed)
-        sim.run()
-        cg = sim.get_class_grid()
-        for r in range(h):
-            for c in range(w):
-                counts[r, c, cg[r][c]] += 1
+    with ProcessPoolExecutor(max_workers=n_workers) as pool:
+        for flat in pool.map(_run_single_sim, tasks):
+            idx = 0
+            for r in range(h):
+                for c in range(w):
+                    counts[r, c, flat[idx]] += 1
+                    idx += 1
 
-    # Convert to probabilities with floor
     probs = counts.astype(np.float64) / n_sims
     probs = np.clip(probs, PROB_FLOOR, None)
     probs = probs / probs.sum(axis=-1, keepdims=True)
