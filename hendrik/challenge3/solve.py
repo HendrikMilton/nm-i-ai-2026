@@ -602,16 +602,8 @@ def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_a
         preds[:, k] = model.predict(X)
 
     pred = preds.reshape(GRID_SIZE, GRID_SIZE, N_CLASSES)
-
-    # Static overrides
     ocean_mask = grid == 10
     mountain_mask = grid == 5
-    if ocean_mask.any():
-        pred[ocean_mask] = 0.0
-        pred[ocean_mask, 0] = 1.0
-    if mountain_mask.any():
-        pred[mountain_mask] = 0.0
-        pred[mountain_mask, 5] = 1.0
 
     # Bayesian Dirichlet update with observations (if available)
     EQUIV_SAMPLES = 30
@@ -630,6 +622,14 @@ def predict_grid(models, grid, settle_survive=None, spread_tendency=None, port_a
     for k in range(N_CLASSES):
         pred[:, :, k] = np.clip(pred[:, :, k], CLASS_FLOORS[k], None)
     pred = pred / pred.sum(axis=-1, keepdims=True)
+
+    # Static overrides LAST (after all processing)
+    if ocean_mask.any():
+        pred[ocean_mask] = 0.0
+        pred[ocean_mask, 0] = 1.0
+    if mountain_mask.any():
+        pred[mountain_mask] = 0.0
+        pred[mountain_mask, 5] = 1.0
     return pred
 
 
