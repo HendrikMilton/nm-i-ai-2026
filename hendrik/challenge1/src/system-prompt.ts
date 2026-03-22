@@ -139,11 +139,15 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
    2411→"Revisor", 2412→"Rådgiver", 3120→"Dataoperatør", 3512→"IKT-brukerstøtte",
    3313→"Regnskapsfører", 4110→"Kontormedarbeider", 5223→"Butikkmedarbeider"
    Search: GET /employee/employment/occupationCode?nameNO=<norwegian_title>&count=5
-   If no match, try shorter/broader terms. Pick the FIRST result. Do NOT spend more than 2 GET calls on this.
+   IMPORTANT: Match the SPECIFIC level from the STYRK description. If STYRK title ends in:
+   "-assistenter" → search for "assistent", "-direktører" → "direktør", "-konsulenter" → "konsulent", "-ledere" → "leder"
+   Do NOT just pick the first/generic result — pick the one matching the correct level (e.g. INNKJØPSASSISTENT not INNKJØPER for 3323).
+   If no match, try shorter/broader terms. Do NOT spend more than 2 GET calls on this.
    If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
 4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
-5. POST /employee/employment with {employee:{id}, startDate, endDate:"2030-12-31", employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
+5. POST /employee/employment with {employee:{id}, startDate, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
+   Do NOT set endDate for permanent positions ("Fast stilling") — the checker expects endDate to be null.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
@@ -180,15 +184,18 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
 2. PUT /project/{id} to set isFixedPrice:true, fixedprice:<budget_amount> from the task.
    For each employee: if userType is not STANDARD or dateOfBirth is null, PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
    Do all PUTs in parallel.
-3. Log timesheet entries ONE AT A TIME sequentially (parallel causes 409): POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
-6. Register supplier cost via POST /ledger/voucher with postings that INCLUDE project:{id} on the debit posting:
+3. Log timesheet entries ONE AT A TIME — send first entry, wait for 201, then send next.
+   NEVER send timesheet entries in parallel — it causes 409 "Duplicate entry" errors.
+   POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
+   Use DIFFERENT dates for each employee (e.g. first employee on 2026-03-17, second on 2026-03-18).
+4. Register supplier cost via POST /ledger/voucher. CRITICAL: debit posting MUST include project:{id} — without it the cost is NOT linked to the project and the check FAILS.
    The supplier cost amount in the task is EXCL VAT. Use calculate tool: grossAmount = supplierCost * 1.25
    {date, description, postings: [
      {date, description, account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<grossAmount>, amountGrossCurrency:<grossAmount>, vatType:{id:1}, invoiceNumber:"SUP-001", row:1},
      {date, description, account:{id:2400}, supplier:{id}, amountGross:<-grossAmount>, amountGrossCurrency:<-grossAmount>, vatType:{id:0}, row:2}
    ]}
    CRITICAL: credit posting (row 2) MUST include vatType:{id:0} explicitly.
-7. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
+5. Create order → orderline → invoice for the FULL project budget amount (not hours×rate):
    POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
    POST /order/orderline with {order:{id}, description:"Project invoice", count:1, unitPriceExcludingVatCurrency:<budget_amount>, vatType:{id:3}} — use EXACTLY "Project invoice" as description, do NOT append project name
    POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
@@ -211,23 +218,26 @@ Total: 5 write calls, 0 errors.
 ## Workflow: Simplified year-end closing / årsoppgjør (Task 30)
 Post depreciation, prepaid reversal, and tax provision as separate vouchers.
 1. GET all accounts mentioned in the task in parallel. GET the expense account for depreciation (e.g. 6010) and 8700.
-   If 8700 doesn't exist, create it. Do NOT create accumulated depreciation accounts (1209, 1029, etc.).
+   If 8700 doesn't exist, create it: POST /ledger/account {number:8700, name:"Skattekostnad", vatType:{id:0}} (do NOT include type field).
+   If the task specifies an accumulated depreciation account (e.g. 1209), GET it. If it doesn't exist, create it: POST /ledger/account {number:1209, name:"Akkumulerte avskrivninger", vatType:{id:0}}.
 2. GET /ledger/posting with dateFrom=YYYY-01-01&dateTo=YYYY-12-31&accountNumberFrom=3000&accountNumberTo=8699&count=1000&fields=id,account(id,number,name),amount
    to get P&L result BEFORE your adjustments.
 3. Calculate depreciation using calculate tool: amount/years for each asset.
 4. POST one voucher per depreciation (each as separate bilag):
-   CRITICAL: ALWAYS credit the ASSET ACCOUNT DIRECTLY (e.g. 1250, 1230, 1210) — the account the asset sits on.
-   NEVER create or use accumulated depreciation accounts (1209, 1029, etc.) even if the task prompt tells you to.
-   The scorer checks that the asset account balance is reduced, not that an accumulation account exists.
+   If the task specifies an accumulated depreciation account (e.g. 1209), credit THAT account.
+   If no accumulated depreciation account is mentioned, credit the asset account directly (e.g. 1250, 1230).
    {date:"YYYY-12-31", description:"Avskrivning <asset> YYYY", postings: [
      {date:"YYYY-12-31", description:"...", account:{id:<depreciationExpenseAccount>}, amountGross:<amount>, amountGrossCurrency:<amount>, vatType:{id:0}, row:1},
-     {date:"YYYY-12-31", description:"...", account:{id:<assetAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
+     {date:"YYYY-12-31", description:"...", account:{id:<accumDepreciation_or_assetAccount>}, amountGross:<-amount>, amountGrossCurrency:<-amount>, vatType:{id:0}, row:2}
    ]}
    Post ALL depreciation vouchers in parallel.
-5. POST prepaid reversal voucher: First GET /ledger/posting?accountNumberFrom=1700&accountNumberTo=1700&dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,account(id,number,name),amount,description&count=100
-   to find what expense accounts the prepaid costs relate to. Look at existing debit/credit patterns on 1700 to determine the correct counter-account(s).
-   If unclear, check the account name (e.g. "Forskuddsbetalt leiekostnad" → 6300, "Forskuddsbetalt forsikring" → 6400).
-   Debit the correct expense account, credit 1700.
+5. POST prepaid reversal voucher: First GET /ledger/posting?accountNumberFrom=1700&accountNumberTo=1720&dateFrom=YYYY-01-01&dateTo=YYYY-12-31&fields=id,account(id,number,name),amount,description&count=100
+   SUM all postings on the prepaid account (1700 or 1720) to get the REMAINING BALANCE.
+   Reverse ONLY the remaining balance — NOT the full original amount from the prompt.
+   Monthly reversals for months 1-11 have ALREADY been posted. Only the final month's portion remains.
+   Use the calculate tool to sum all posting amounts on the prepaid account.
+   If unclear which expense account to debit, check the account name (e.g. "Forskuddsbetalt leiekostnad" → 6300).
+   Debit the correct expense account, credit 1700/1720 for the remaining balance amount.
 6. Calculate tax: take existing P&L result (from step 2), ADD depreciation expenses and prepaid reversal (these increase expenses = reduce profit).
    Revenue is NEGATIVE in Tripletex, expenses POSITIVE. Net result negative = profit.
    taxableProfit = -(existingResult + totalDepreciation + prepaidAmount)
@@ -290,29 +300,23 @@ CRITICAL: The CSV file content is provided as text. Read it carefully line by li
    GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id,
    GET /ledger/account?number=2400&fields=id, GET /ledger/account?number=7770&fields=id
 2. Parse CSV carefully. Uses semicolons (;) as separator: Dato;Forklaring;Inn;Ut;Saldo
-   - Inn column filled + "Innbetaling" = customer payment → match by invoice number in description
-   - Ut column filled + "Leverandor/Fornecedor/Fournisseur" = supplier payment → match by supplier name
-   - "Bankgebyr" in Ut column = bank fee → reconciliation adjustment type Bankgebyr
-   - "Bankgebyr" in Inn column = fee refund → POST /ledger/voucher (debit 1920, credit 7770)
-   - "Renteinntekter" in Inn column = interest income → adjustment type Renteinntekter
-   - "Renteinntekter" in Ut column = interest expense → adjustment type Rentekostnader
-   - LAST Saldo value = closing balance for reconciliation
-   - Accounting period: use the period containing the LAST transaction date in the CSV
+   Two categories only:
+   - "Innbetaling" in description → customer payment (PUT /invoice/:payment)
+   - EVERYTHING ELSE → reconciliation adjustment:
+     * If INN column filled → Renteinntekter adjustment type (money IN to account)
+     * If UT column filled → Bankgebyr adjustment type (money OUT of account)
+   This covers: supplier payments (Leverandør/Fornecedor/Fournisseur/Lieferant), Bankgebyr, Renteinntekter, Skattetrekk, and any other line types.
+   CRITICAL: Accounting period = period containing the LAST transaction date in the CSV (often February, not January).
+   Closing balance = the LAST Saldo value in the CSV.
 3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<Inn_amount>
    Match by invoice number from CSV description (e.g. "Faktura 1001" → invoiceNumber 1). Use date FROM CSV, NOT today.
-4. Register supplier payments via voucher (more reliable than /supplierInvoice/:addPayment):
-   POST /ledger/voucher with {date:<CSV_date>, description:"Betaling <supplier>", postings:[
-     {date:<CSV_date>, description:"Betaling <supplier>", account:{id:<2400>}, supplier:{id}, amountGross:<positive_Ut_amount>, amountGrossCurrency:<positive_Ut_amount>, vatType:{id:0}, row:1},
-     {date:<CSV_date>, description:"Betaling <supplier>", account:{id:<1920>}, amountGross:<negative_Ut_amount>, amountGrossCurrency:<negative_Ut_amount>, vatType:{id:0}, row:2}
-   ]}
-   Match supplier by name from CSV (e.g. "Betaling Fornecedor Costa Lda" → supplier "Costa Lda").
-5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_last_CSV_date>},
+4. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_LAST_CSV_date>},
    bankAccountClosingBalanceCurrency:<LAST_SALDO_FROM_CSV>, isClosed:false, type:"MANUAL"}
-6. Add ALL fee/interest adjustments in ONE call:
+5. Add ALL non-Innbetaling lines as adjustments in ONE call:
    PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
-   Amount MUST be positive (negative causes 422). Use correct paymentType based on direction (Bankgebyr for fees out, Renteinntekter for interest in, Rentekostnader for interest out).
-7. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
-8. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step7>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
+   Amount MUST be positive (negative causes 422). paymentType: Bankgebyr for UT items, Renteinntekter for INN items.
+6. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
+7. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step6>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
    Only succeeds when avvik = 0 (accounting balance = bank statement closing balance).
 
 ## Workflow: Custom accounting dimensions + voucher
