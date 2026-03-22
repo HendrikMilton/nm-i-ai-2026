@@ -1,0 +1,44 @@
+2026-03-21 19:56:13,358 INFO Auto-loop started (interval=3600s, once=True)
+2026-03-21 19:56:13,358 INFO State: {'last_submitted_round': None, 'last_trained_round': None}
+2026-03-21 19:56:13,358 INFO Checking for active round...
+2026-03-21 19:56:13,771 INFO Active round: R17 (3eb0c25d-28fa-48ca-b8e1-fc249e3918e9)
+2026-03-21 19:56:13,771 INFO Fetching per-seed grids...
+2026-03-21 19:56:14,564 INFO Loaded 5 per-seed grids
+2026-03-21 19:56:14,747 INFO Querying seed 0 (9 viewports)...
+2026-03-21 19:56:26,777 INFO   Coverage: 1444/1600
+2026-03-21 19:56:26,777 INFO   Settlements: pop=1.12 food=0.68 factions=39
+2026-03-21 19:56:26,777 INFO Querying seed 1 (9 viewports)...
+2026-03-21 19:56:35,556 INFO   Coverage: 1444/1600
+2026-03-21 19:56:35,556 INFO   Settlements: pop=1.06 food=0.70 factions=46
+2026-03-21 19:56:35,556 INFO Querying seed 2 (9 viewports)...
+2026-03-21 19:56:43,843 INFO   Coverage: 1444/1600
+2026-03-21 19:56:43,843 INFO   Settlements: pop=1.11 food=0.68 factions=38
+2026-03-21 19:56:43,843 INFO Querying seed 3 (9 viewports)...
+2026-03-21 19:56:58,084 INFO   Coverage: 1444/1600
+2026-03-21 19:56:58,084 INFO   Settlements: pop=1.05 food=0.72 factions=43
+2026-03-21 19:56:58,085 INFO Querying seed 4 (9 viewports)...
+2026-03-21 19:57:05,613 INFO   Coverage: 1444/1600
+2026-03-21 19:57:05,613 INFO   Settlements: pop=1.06 food=0.73 factions=38
+2026-03-21 19:57:05,713 INFO Saved to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/round_data/round_17_submit.json
+2026-03-21 19:57:05,714 INFO Submitting predictions...
+2026-03-21 19:57:06,747 INFO Training models from scratch...
+2026-03-21 19:57:08,344 INFO Loaded 80 samples from 16 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+2026-03-21 19:57:08,538 INFO Training: X=(128000, 35), Y=(128000, 6)
+2026-03-21 19:57:14,929 INFO   Class 0/6: 6.4s (total 6s)
+2026-03-21 19:57:20,315 INFO   Class 1/6: 5.4s (total 12s)
+2026-03-21 19:57:25,997 INFO   Class 2/6: 5.7s (total 17s)
+2026-03-21 19:57:31,454 INFO   Class 3/6: 5.5s (total 23s)
+2026-03-21 19:57:36,602 INFO   Class 4/6: 5.1s (total 28s)
+2026-03-21 19:57:41,654 INFO   Class 5/6: 5.1s (total 33s)
+2026-03-21 19:57:41,925 INFO Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints
+2026-03-21 19:57:41,926 INFO   Estimated params from obs: ss=0.509 st=0.578 pa=0.000
+2026-03-21 19:57:42,441 INFO Seed 0: SUBMITTED — accepted
+2026-03-21 19:57:42,441 INFO   Estimated params from obs: ss=0.505 st=0.542 pa=0.250
+2026-03-21 19:57:42,893 INFO Seed 1: SUBMITTED — accepted
+2026-03-21 19:57:42,893 INFO   Estimated params from obs: ss=0.460 st=0.548 pa=0.000
+2026-03-21 19:57:43,315 INFO Seed 2: SUBMITTED — accepted
+2026-03-21 19:57:43,316 INFO   Estimated params from obs: ss=0.459 st=0.669 pa=0.250
+2026-03-21 19:57:44,107 INFO Seed 3: SUBMITTED — accepted
+2026-03-21 19:57:44,108 INFO   Estimated params from obs: ss=0.424 st=0.622 pa=0.250
+2026-03-21 19:57:44,526 INFO Seed 4: SUBMITTED — accepted
+2026-03-21 19:57:47,617 INFO Single iteration complete (--once)

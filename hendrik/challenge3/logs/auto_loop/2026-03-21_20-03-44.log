@@ -1,0 +1,493 @@
+2026-03-21 20:03:44,121 INFO Auto-loop started (interval=1800s, once=False)
+2026-03-21 20:03:44,121 INFO State: {'last_submitted_round': 17, 'last_trained_round': None}
+2026-03-21 20:03:44,122 INFO Checking for active round...
+2026-03-21 20:03:44,307 INFO Active round: R17 (3eb0c25d-28fa-48ca-b8e1-fc249e3918e9)
+2026-03-21 20:03:44,307 INFO Already submitted R17. Checking for completed rounds...
+2026-03-21 20:03:44,307 INFO Fetching latest data to check if R16 completed...
+2026-03-21 20:04:25,184 INFO Fetched latest round data
+2026-03-21 20:04:25,227 INFO R16 completed! Score: 78.823
+2026-03-21 20:04:25,227 INFO Holdout eval: excluding R16
+2026-03-21 20:04:27,866 INFO Loaded 75 samples from 15 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
+2026-03-21 20:04:28,046 INFO Training: 75 samples, X=(120000, 35)
+2026-03-21 20:04:32,204 INFO   Class 0/6: 4.2s (total 4s)
+2026-03-21 20:04:36,029 INFO   Class 1/6: 3.8s (total 8s)
+2026-03-21 20:04:39,602 INFO   Class 2/6: 3.6s (total 12s)
+2026-03-21 20:04:43,460 INFO   Class 3/6: 3.9s (total 15s)
+2026-03-21 20:04:47,086 INFO   Class 4/6: 3.6s (total 19s)
+2026-03-21 20:04:50,613 INFO   Class 5/6: 3.5s (total 23s)
+2026-03-21 20:04:50,808 INFO   Estimated params from obs: ss=0.244 st=0.294 pa=0.000
+2026-03-21 20:04:51,113 INFO   Estimated params from obs: ss=0.300 st=0.450 pa=0.150
+2026-03-21 20:04:51,446 INFO   Estimated params from obs: ss=0.300 st=0.450 pa=0.150
+2026-03-21 20:04:51,754 INFO   Estimated params from obs: ss=0.240 st=0.333 pa=0.040
+2026-03-21 20:04:52,060 INFO   Estimated params from obs: ss=0.459 st=0.218 pa=0.014
+2026-03-21 20:04:52,236 INFO Holdout R16: default=82.0, obs=80.7, actual=78.823
+2026-03-21 20:04:52,236 INFO   seeds: [81.3 80.7 82.8 82.2 82.9]
+2026-03-21 20:04:52,236 INFO Eval log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/eval/holdout_R16_20260321_200425.txt
+2026-03-21 20:04:52,247 INFO Full retrain on all data...
+2026-03-21 20:04:53,821 INFO Loaded 80 samples from 16 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+2026-03-21 20:04:54,014 INFO Training: 80 samples, X=(128000, 35)
+2026-03-21 20:04:57,826 INFO   Class 0/6: 3.8s (total 4s)
+2026-03-21 20:05:01,610 INFO   Class 1/6: 3.8s (total 8s)
+2026-03-21 20:05:05,164 INFO   Class 2/6: 3.6s (total 11s)
+2026-03-21 20:05:09,159 INFO   Class 3/6: 4.0s (total 15s)
+2026-03-21 20:05:12,889 INFO   Class 4/6: 3.7s (total 19s)
+2026-03-21 20:05:16,583 INFO   Class 5/6: 3.7s (total 23s)
+2026-03-21 20:05:16,821 INFO Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints
+2026-03-21 20:05:18,371 INFO Loaded 80 samples from 16 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+2026-03-21 20:05:31,461 INFO Full retrain complete: 24.3s, 35 features
+2026-03-21 20:05:31,462 INFO Training log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/training/full_retrain_20260321_200452.txt
+2026-03-21 20:05:31,466 INFO Sleeping 1800s...
+2026-03-21 20:10:31,467 INFO   [heartbeat] 1500s remaining
+2026-03-21 20:15:31,467 INFO   [heartbeat] 1200s remaining
+2026-03-21 20:20:31,468 INFO   [heartbeat] 900s remaining
+2026-03-21 20:25:31,468 INFO   [heartbeat] 600s remaining
+2026-03-21 20:30:31,469 INFO   [heartbeat] 300s remaining
+2026-03-21 20:35:31,469 INFO Checking for active round...
+2026-03-21 20:35:32,251 INFO Active round: R17 (3eb0c25d-28fa-48ca-b8e1-fc249e3918e9)
+2026-03-21 20:35:32,251 INFO Already submitted R17. Checking for completed rounds...
+2026-03-21 20:35:32,251 INFO Sleeping 1800s...
+2026-03-21 20:40:32,251 INFO   [heartbeat] 1500s remaining
+2026-03-21 20:45:32,252 INFO   [heartbeat] 1200s remaining
+2026-03-21 20:50:32,252 INFO   [heartbeat] 900s remaining
+2026-03-21 20:55:32,252 INFO   [heartbeat] 600s remaining
+2026-03-21 21:00:32,253 INFO   [heartbeat] 300s remaining
+2026-03-21 21:05:32,253 INFO Checking for active round...
+2026-03-21 21:05:34,451 INFO Active round: R18 (b0f9d1bf-4b71-4e6e-816c-19c718d29056)
+2026-03-21 21:05:34,451 INFO Fetching per-seed grids...
+2026-03-21 21:05:35,300 INFO Loaded 5 per-seed grids
+2026-03-21 21:05:35,353 ERROR Iteration error: API 429: Rate exceeded.
+Traceback (most recent call last):
+  File "/home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/../../elias/shared/utils.py", line 35, in call_api
+    with urllib.request.urlopen(req) as resp:
+         ^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 215, in urlopen
+    return opener.open(url, data, timeout)
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 521, in open
+    response = meth(req, response)
+               ^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 630, in http_response
+    response = self.parent.error(
+               ^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 559, in error
+    return self._call_chain(*args)
+           ^^^^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 492, in _call_chain
+    result = func(*args)
+             ^^^^^^^^^^^
+  File "/usr/lib/python3.12/urllib/request.py", line 639, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 429: Too Many Requests
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/auto_loop.py", line 541, in main
+    state = run_iteration(state)
+            ^^^^^^^^^^^^^^^^^^^^
+  File "/home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/auto_loop.py", line 469, in run_iteration
+    budget = get_budget()
+             ^^^^^^^^^^^^
+  File "/home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/../../elias/shared/utils.py", line 63, in get_budget
+    return call_api("GET", "/budget")
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/../../elias/shared/utils.py", line 39, in call_api
+    raise RuntimeError(f"API {e.code}: {error_body}") from e
+RuntimeError: API 429: Rate exceeded.
+2026-03-21 21:05:35,356 INFO Sleeping 1800s...
+2026-03-21 21:10:35,356 INFO   [heartbeat] 1500s remaining
+2026-03-21 21:15:35,357 INFO   [heartbeat] 1200s remaining
+2026-03-21 21:20:35,357 INFO   [heartbeat] 900s remaining
+2026-03-21 21:25:35,358 INFO   [heartbeat] 600s remaining
+2026-03-21 21:30:35,358 INFO   [heartbeat] 300s remaining
+2026-03-21 21:35:35,359 INFO Checking for active round...
+2026-03-21 21:35:36,601 INFO Active round: R18 (b0f9d1bf-4b71-4e6e-816c-19c718d29056)
+2026-03-21 21:35:36,601 INFO Fetching per-seed grids...
+2026-03-21 21:35:37,224 INFO Loaded 5 per-seed grids
+2026-03-21 21:35:37,313 INFO Querying seed 0 (9 viewports)...
+2026-03-21 21:36:16,196 INFO   Coverage: 1444/1600
+2026-03-21 21:36:16,196 INFO   Settlements: pop=0.98 food=0.66 factions=50
+2026-03-21 21:36:16,196 INFO Querying seed 1 (9 viewports)...
+2026-03-21 21:36:50,963 INFO   Coverage: 1444/1600
+2026-03-21 21:36:50,963 INFO   Settlements: pop=0.99 food=0.68 factions=41
+2026-03-21 21:36:50,963 INFO Querying seed 2 (9 viewports)...
+2026-03-21 21:37:29,930 INFO   Coverage: 1444/1600
+2026-03-21 21:37:29,930 INFO   Settlements: pop=0.98 food=0.67 factions=44
+2026-03-21 21:37:29,930 INFO Querying seed 3 (9 viewports)...
+2026-03-21 21:38:07,831 INFO   Coverage: 1444/1600
+2026-03-21 21:38:07,831 INFO   Settlements: pop=1.00 food=0.67 factions=29
+2026-03-21 21:38:07,831 INFO Querying seed 4 (9 viewports)...
+2026-03-21 21:38:44,262 INFO   Coverage: 1444/1600
+2026-03-21 21:38:44,263 INFO   Settlements: pop=0.98 food=0.65 factions=48
+2026-03-21 21:38:44,376 INFO Saved to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/round_data/round_18_submit.json
+2026-03-21 21:38:44,377 INFO Submitting predictions...
+2026-03-21 21:38:44,378 INFO   Estimated params from obs: ss=0.569 st=0.754 pa=0.167
+2026-03-21 21:38:46,289 INFO Seed 0: SUBMITTED — accepted
+2026-03-21 21:38:46,290 INFO   Estimated params from obs: ss=0.671 st=0.709 pa=0.094
+2026-03-21 21:38:47,880 INFO Seed 1: SUBMITTED — accepted
+2026-03-21 21:38:47,881 INFO   Estimated params from obs: ss=0.619 st=0.683 pa=0.000
+2026-03-21 21:38:50,956 INFO Seed 2: SUBMITTED — accepted
+2026-03-21 21:38:50,957 INFO   Estimated params from obs: ss=0.647 st=0.618 pa=0.000
+2026-03-21 21:38:53,449 INFO Seed 3: SUBMITTED — accepted
+2026-03-21 21:38:53,450 INFO   Estimated params from obs: ss=0.721 st=0.690 pa=0.000
+2026-03-21 21:38:57,375 INFO Seed 4: SUBMITTED — accepted
+2026-03-21 23:17:15,364 INFO Sleeping 1800s...
+2026-03-21 23:22:15,364 INFO   [heartbeat] 1500s remaining
+2026-03-21 23:27:15,365 INFO   [heartbeat] 1200s remaining
+2026-03-21 23:32:15,365 INFO   [heartbeat] 900s remaining
+2026-03-21 23:37:15,365 INFO   [heartbeat] 600s remaining
+2026-03-21 23:42:15,366 INFO   [heartbeat] 300s remaining
+2026-03-21 23:47:15,366 INFO Checking for active round...
+2026-03-21 23:47:15,562 INFO Active round: R18 (b0f9d1bf-4b71-4e6e-816c-19c718d29056)
+2026-03-21 23:47:15,562 INFO Already submitted R18. Checking for completed rounds...
+2026-03-21 23:47:15,562 INFO Fetching latest data to check if R17 completed...
+2026-03-21 23:47:44,905 INFO Fetched latest round data
+2026-03-21 23:47:44,934 INFO R17 completed! Score: 85.5895
+2026-03-21 23:47:44,935 INFO Holdout eval: excluding R17
+2026-03-21 23:47:46,569 INFO Loaded 80 samples from 16 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+2026-03-21 23:47:46,769 INFO Training: 80 samples, X=(128000, 35)
+2026-03-21 23:47:52,396 INFO   Class 0/6: 5.6s (total 6s)
+2026-03-21 23:47:57,980 INFO   Class 1/6: 5.6s (total 11s)
+2026-03-21 23:48:03,069 INFO   Class 2/6: 5.1s (total 16s)
+2026-03-21 23:48:09,656 INFO   Class 3/6: 6.6s (total 23s)
+2026-03-21 23:48:15,053 INFO   Class 4/6: 5.4s (total 28s)
+2026-03-21 23:48:20,746 INFO   Class 5/6: 5.7s (total 34s)
+2026-03-21 23:48:21,797 INFO Holdout R17: default=20.2, obs=20.2, actual=85.5895
+2026-03-21 23:48:21,798 INFO   seeds: [63.6 9.5 9.0 9.5 9.2]
+2026-03-21 23:48:21,798 INFO Eval log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/eval/holdout_R17_20260321_234744.txt
+2026-03-21 23:48:21,809 INFO Full retrain on all data...
+2026-03-21 23:48:23,429 INFO Loaded 85 samples from 17 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+2026-03-21 23:48:23,637 INFO Training: 85 samples, X=(136000, 35)
+2026-03-21 23:48:29,380 INFO   Class 0/6: 5.7s (total 6s)
+2026-03-21 23:48:35,070 INFO   Class 1/6: 5.7s (total 11s)
+2026-03-21 23:48:40,366 INFO   Class 2/6: 5.3s (total 17s)
+2026-03-21 23:48:46,092 INFO   Class 3/6: 5.7s (total 22s)
+2026-03-21 23:48:51,801 INFO   Class 4/6: 5.7s (total 28s)
+2026-03-21 23:48:57,194 INFO   Class 5/6: 5.4s (total 34s)
+2026-03-21 23:48:57,447 INFO Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints
+2026-03-21 23:48:59,123 INFO Loaded 85 samples from 17 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+2026-03-21 23:49:15,974 INFO Full retrain complete: 35.4s, 35 features
+2026-03-21 23:49:15,974 INFO Training log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/training/full_retrain_20260321_234821.txt
+2026-03-21 23:49:15,978 INFO Sleeping 1800s...
+2026-03-21 23:54:15,978 INFO   [heartbeat] 1500s remaining
+2026-03-21 23:59:15,978 INFO   [heartbeat] 1200s remaining
+2026-03-22 00:04:15,979 INFO   [heartbeat] 900s remaining
+2026-03-22 00:09:15,979 INFO   [heartbeat] 600s remaining
+2026-03-22 00:14:15,980 INFO   [heartbeat] 300s remaining
+2026-03-22 00:19:15,980 INFO Checking for active round...
+2026-03-22 00:19:16,040 INFO Active round: R19 (597e60cf-d1a1-4627-ac4d-2a61da68b6df)
+2026-03-22 00:19:16,041 INFO Fetching per-seed grids...
+2026-03-22 00:19:16,149 INFO Loaded 5 per-seed grids
+2026-03-22 00:19:16,211 INFO Querying seed 0 (9 viewports)...
+2026-03-22 00:19:30,960 INFO   Coverage: 1444/1600
+2026-03-22 00:19:30,960 INFO   Settlements: pop=1.19 food=0.73 factions=12
+2026-03-22 00:19:30,960 INFO Querying seed 1 (9 viewports)...
+2026-03-22 00:19:34,967 INFO   Coverage: 1444/1600
+2026-03-22 00:19:34,967 INFO   Settlements: pop=1.07 food=0.70 factions=7
+2026-03-22 00:19:34,968 INFO Querying seed 2 (9 viewports)...
+2026-03-22 00:19:37,803 INFO   Coverage: 1444/1600
+2026-03-22 00:19:37,803 INFO   Settlements: pop=1.29 food=0.83 factions=8
+2026-03-22 00:19:37,803 INFO Querying seed 3 (9 viewports)...
+2026-03-22 00:19:41,120 INFO   Coverage: 1444/1600
+2026-03-22 00:19:41,121 INFO   Settlements: pop=1.06 food=0.67 factions=6
+2026-03-22 00:19:41,121 INFO Querying seed 4 (9 viewports)...
+2026-03-22 00:19:50,747 INFO   Coverage: 1444/1600
+2026-03-22 00:19:50,748 INFO   Settlements: pop=1.27 food=0.71 factions=10
+2026-03-22 00:19:50,812 INFO Saved to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/round_data/round_19_submit.json
+2026-03-22 00:19:50,813 INFO Submitting predictions...
+2026-03-22 00:19:50,814 INFO   Estimated params from obs: ss=0.008 st=1.633 pa=0.000
+2026-03-22 00:19:56,293 INFO Seed 0: SUBMITTED — accepted
+2026-03-22 00:19:56,294 INFO   Estimated params from obs: ss=0.077 st=0.288 pa=0.000
+2026-03-22 00:20:00,003 INFO Seed 1: SUBMITTED — accepted
+2026-03-22 00:20:00,004 INFO   Estimated params from obs: ss=0.037 st=0.130 pa=0.000
+2026-03-22 00:20:00,400 INFO Seed 2: SUBMITTED — accepted
+2026-03-22 00:20:00,401 INFO   Estimated params from obs: ss=0.032 st=0.195 pa=0.000
+2026-03-22 00:20:03,550 INFO Seed 3: SUBMITTED — accepted
+2026-03-22 00:20:03,551 INFO   Estimated params from obs: ss=0.014 st=1.708 pa=0.004
+2026-03-22 00:20:03,996 INFO Seed 4: SUBMITTED — accepted
+2026-03-22 00:20:07,271 INFO Sleeping 1800s...
+2026-03-22 00:25:07,271 INFO   [heartbeat] 1500s remaining
+2026-03-22 00:30:07,272 INFO   [heartbeat] 1200s remaining
+2026-03-22 00:35:07,272 INFO   [heartbeat] 900s remaining
+2026-03-22 00:40:07,272 INFO   [heartbeat] 600s remaining
+2026-03-22 00:45:07,273 INFO   [heartbeat] 300s remaining
+2026-03-22 00:50:07,273 INFO Checking for active round...
+2026-03-22 00:50:07,337 INFO Active round: R19 (597e60cf-d1a1-4627-ac4d-2a61da68b6df)
+2026-03-22 00:50:07,337 INFO Already submitted R19. Checking for completed rounds...
+2026-03-22 00:50:07,337 INFO Fetching latest data to check if R18 completed...
+2026-03-22 00:50:33,221 INFO Fetched latest round data
+2026-03-22 00:50:33,253 INFO R18 completed! Score: 77.1742
+2026-03-22 00:50:33,254 INFO Holdout eval: excluding R18
+2026-03-22 00:50:34,951 INFO Loaded 85 samples from 17 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17]
+2026-03-22 00:50:35,164 INFO Training: 85 samples, X=(136000, 35)
+2026-03-22 00:50:41,036 INFO   Class 0/6: 5.9s (total 6s)
+2026-03-22 00:50:46,556 INFO   Class 1/6: 5.5s (total 11s)
+2026-03-22 00:50:51,708 INFO   Class 2/6: 5.2s (total 17s)
+2026-03-22 00:50:57,418 INFO   Class 3/6: 5.7s (total 22s)
+2026-03-22 00:51:02,732 INFO   Class 4/6: 5.3s (total 28s)
+2026-03-22 00:51:07,925 INFO   Class 5/6: 5.2s (total 33s)
+2026-03-22 00:51:08,951 INFO Holdout R18: default=11.2, obs=11.2, actual=77.1742
+2026-03-22 00:51:08,951 INFO   seeds: [34.2 5.1 5.5 6.1 5.1]
+2026-03-22 00:51:08,952 INFO Eval log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/eval/holdout_R18_20260322_005033.txt
+2026-03-22 00:51:08,962 INFO Full retrain on all data...
+2026-03-22 00:51:10,659 INFO Loaded 90 samples from 18 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+2026-03-22 00:51:10,881 INFO Training: 90 samples, X=(144000, 35)
+2026-03-22 00:51:16,414 INFO   Class 0/6: 5.5s (total 6s)
+2026-03-22 00:51:22,118 INFO   Class 1/6: 5.7s (total 11s)
+2026-03-22 00:51:27,362 INFO   Class 2/6: 5.2s (total 16s)
+2026-03-22 00:51:33,204 INFO   Class 3/6: 5.8s (total 22s)
+2026-03-22 00:51:38,567 INFO   Class 4/6: 5.4s (total 28s)
+2026-03-22 00:51:43,754 INFO   Class 5/6: 5.2s (total 33s)
+2026-03-22 00:51:44,035 INFO Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints
+2026-03-22 00:51:45,791 INFO Loaded 90 samples from 18 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+2026-03-22 00:52:03,014 INFO Full retrain complete: 34.8s, 35 features
+2026-03-22 00:52:03,014 INFO Training log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/training/full_retrain_20260322_005108.txt
+2026-03-22 00:52:03,018 INFO Sleeping 1800s...
+2026-03-22 00:57:03,019 INFO   [heartbeat] 1500s remaining
+2026-03-22 01:02:03,019 INFO   [heartbeat] 1200s remaining
+2026-03-22 01:07:03,019 INFO   [heartbeat] 900s remaining
+2026-03-22 01:12:03,020 INFO   [heartbeat] 600s remaining
+2026-03-22 01:17:03,020 INFO   [heartbeat] 300s remaining
+2026-03-22 01:22:03,021 INFO Checking for active round...
+2026-03-22 01:22:03,083 INFO Active round: R19 (597e60cf-d1a1-4627-ac4d-2a61da68b6df)
+2026-03-22 01:22:03,084 INFO Already submitted R19. Checking for completed rounds...
+2026-03-22 01:22:03,084 INFO Sleeping 1800s...
+2026-03-22 01:27:03,084 INFO   [heartbeat] 1500s remaining
+2026-03-22 01:32:03,084 INFO   [heartbeat] 1200s remaining
+2026-03-22 01:37:03,085 INFO   [heartbeat] 900s remaining
+2026-03-22 01:42:03,085 INFO   [heartbeat] 600s remaining
+2026-03-22 01:47:03,086 INFO   [heartbeat] 300s remaining
+2026-03-22 01:52:03,086 INFO Checking for active round...
+2026-03-22 01:52:03,822 INFO Active round: R19 (597e60cf-d1a1-4627-ac4d-2a61da68b6df)
+2026-03-22 01:52:03,822 INFO Already submitted R19. Checking for completed rounds...
+2026-03-22 01:52:03,822 INFO Sleeping 1800s...
+2026-03-22 01:57:03,822 INFO   [heartbeat] 1500s remaining
+2026-03-22 02:02:03,823 INFO   [heartbeat] 1200s remaining
+2026-03-22 02:07:03,823 INFO   [heartbeat] 900s remaining
+2026-03-22 02:12:03,823 INFO   [heartbeat] 600s remaining
+2026-03-22 02:17:03,824 INFO   [heartbeat] 300s remaining
+2026-03-22 02:22:03,824 INFO Checking for active round...
+2026-03-22 02:22:04,261 INFO Active round: R19 (597e60cf-d1a1-4627-ac4d-2a61da68b6df)
+2026-03-22 02:22:04,261 INFO Already submitted R19. Checking for completed rounds...
+2026-03-22 02:22:04,261 INFO Sleeping 1800s...
+2026-03-22 02:27:04,261 INFO   [heartbeat] 1500s remaining
+2026-03-22 02:32:04,261 INFO   [heartbeat] 1200s remaining
+2026-03-22 02:37:04,262 INFO   [heartbeat] 900s remaining
+2026-03-22 02:42:04,262 INFO   [heartbeat] 600s remaining
+2026-03-22 02:47:04,263 INFO   [heartbeat] 300s remaining
+2026-03-22 02:52:04,263 INFO Checking for active round...
+2026-03-22 02:52:04,406 INFO No active round. Waiting.
+2026-03-22 02:52:04,406 INFO Sleeping 1800s...
+2026-03-22 02:57:04,407 INFO   [heartbeat] 1500s remaining
+2026-03-22 03:02:04,407 INFO   [heartbeat] 1200s remaining
+2026-03-22 03:07:04,407 INFO   [heartbeat] 900s remaining
+2026-03-22 03:12:04,408 INFO   [heartbeat] 600s remaining
+2026-03-22 03:17:04,408 INFO   [heartbeat] 300s remaining
+2026-03-22 03:22:04,409 INFO Checking for active round...
+2026-03-22 03:22:04,989 INFO Active round: R20 (fd82f643-15e2-40e7-9866-8d8f5157081c)
+2026-03-22 03:22:04,989 INFO Fetching per-seed grids...
+2026-03-22 03:22:05,067 INFO Loaded 5 per-seed grids
+2026-03-22 03:22:05,198 INFO Querying seed 0 (9 viewports)...
+2026-03-22 03:22:08,103 INFO   Coverage: 1444/1600
+2026-03-22 03:22:08,103 INFO   Settlements: pop=1.07 food=0.72 factions=18
+2026-03-22 03:22:08,104 INFO Querying seed 1 (9 viewports)...
+2026-03-22 03:22:11,922 INFO   Coverage: 1444/1600
+2026-03-22 03:22:11,922 INFO   Settlements: pop=1.06 food=0.75 factions=18
+2026-03-22 03:22:11,922 INFO Querying seed 2 (9 viewports)...
+2026-03-22 03:22:17,696 INFO   Coverage: 1444/1600
+2026-03-22 03:22:17,696 INFO   Settlements: pop=1.01 food=0.73 factions=19
+2026-03-22 03:22:17,696 INFO Querying seed 3 (9 viewports)...
+2026-03-22 03:22:22,056 INFO   Coverage: 1444/1600
+2026-03-22 03:22:22,057 INFO   Settlements: pop=0.94 food=0.67 factions=18
+2026-03-22 03:22:22,057 INFO Querying seed 4 (9 viewports)...
+2026-03-22 03:22:26,314 INFO   Coverage: 1444/1600
+2026-03-22 03:22:26,314 INFO   Settlements: pop=1.00 food=0.74 factions=22
+2026-03-22 03:22:26,380 INFO Saved to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/round_data/round_20_submit.json
+2026-03-22 03:22:26,381 INFO Submitting predictions...
+2026-03-22 03:22:26,382 INFO   Estimated params from obs: ss=0.159 st=0.328 pa=0.000
+2026-03-22 03:22:28,728 INFO Seed 0: SUBMITTED — accepted
+2026-03-22 03:22:28,729 INFO   Estimated params from obs: ss=0.118 st=0.336 pa=0.000
+2026-03-22 03:22:29,148 INFO Seed 1: SUBMITTED — accepted
+2026-03-22 03:22:29,149 INFO   Estimated params from obs: ss=0.186 st=0.257 pa=0.000
+2026-03-22 03:22:29,575 INFO Seed 2: SUBMITTED — accepted
+2026-03-22 03:22:29,575 INFO   Estimated params from obs: ss=0.114 st=0.438 pa=0.000
+2026-03-22 03:22:30,088 INFO Seed 3: SUBMITTED — accepted
+2026-03-22 03:22:30,088 INFO   Estimated params from obs: ss=0.061 st=0.780 pa=0.000
+2026-03-22 03:22:30,548 INFO Seed 4: SUBMITTED — accepted
+2026-03-22 03:22:33,557 INFO Sleeping 1800s...
+2026-03-22 03:27:33,557 INFO   [heartbeat] 1500s remaining
+2026-03-22 03:32:33,557 INFO   [heartbeat] 1200s remaining
+2026-03-22 03:37:33,558 INFO   [heartbeat] 900s remaining
+2026-03-22 03:42:33,558 INFO   [heartbeat] 600s remaining
+2026-03-22 03:47:33,559 INFO   [heartbeat] 300s remaining
+2026-03-22 03:52:33,559 INFO Checking for active round...
+2026-03-22 03:52:33,627 INFO Active round: R20 (fd82f643-15e2-40e7-9866-8d8f5157081c)
+2026-03-22 03:52:33,627 INFO Already submitted R20. Checking for completed rounds...
+2026-03-22 03:52:33,627 INFO Fetching latest data to check if R19 completed...
+2026-03-22 03:52:56,366 INFO Fetched latest round data
+2026-03-22 03:52:56,395 INFO R19 completed! Score: 60.4683
+2026-03-22 03:52:56,395 INFO Holdout eval: excluding R19
+2026-03-22 03:52:58,095 INFO Loaded 90 samples from 18 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18]
+2026-03-22 03:52:58,315 INFO Training: 90 samples, X=(144000, 35)
+2026-03-22 03:53:03,742 INFO   Class 0/6: 5.4s (total 5s)
+2026-03-22 03:53:09,833 INFO   Class 1/6: 6.1s (total 12s)
+2026-03-22 03:53:14,848 INFO   Class 2/6: 5.0s (total 17s)
+2026-03-22 03:53:20,216 INFO   Class 3/6: 5.4s (total 22s)
+2026-03-22 03:53:25,354 INFO   Class 4/6: 5.1s (total 27s)
+2026-03-22 03:53:30,547 INFO   Class 5/6: 5.2s (total 32s)
+2026-03-22 03:53:31,539 INFO Holdout R19: default=15.1, obs=15.1, actual=60.4683
+2026-03-22 03:53:31,540 INFO   seeds: [59.7 4.4 3.7 4.1 3.8]
+2026-03-22 03:53:31,540 INFO Eval log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/eval/holdout_R19_20260322_035256.txt
+2026-03-22 03:53:31,551 INFO Full retrain on all data...
+2026-03-22 03:53:33,245 INFO Loaded 95 samples from 19 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+2026-03-22 03:53:33,475 INFO Training: 95 samples, X=(152000, 35)
+2026-03-22 03:53:38,894 INFO   Class 0/6: 5.4s (total 5s)
+2026-03-22 03:53:44,337 INFO   Class 1/6: 5.4s (total 11s)
+2026-03-22 03:53:49,673 INFO   Class 2/6: 5.3s (total 16s)
+2026-03-22 03:53:55,271 INFO   Class 3/6: 5.6s (total 22s)
+2026-03-22 03:54:00,536 INFO   Class 4/6: 5.3s (total 27s)
+2026-03-22 03:54:05,841 INFO   Class 5/6: 5.3s (total 32s)
+2026-03-22 03:54:06,138 INFO Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints
+2026-03-22 03:54:07,883 INFO Loaded 95 samples from 19 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+2026-03-22 03:54:25,611 INFO Full retrain complete: 34.3s, 35 features
+2026-03-22 03:54:25,611 INFO Training log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/training/full_retrain_20260322_035331.txt
+2026-03-22 03:54:25,615 INFO Sleeping 1800s...
+2026-03-22 03:59:25,616 INFO   [heartbeat] 1500s remaining
+2026-03-22 04:04:25,616 INFO   [heartbeat] 1200s remaining
+2026-03-22 04:09:25,616 INFO   [heartbeat] 900s remaining
+2026-03-22 04:14:25,617 INFO   [heartbeat] 600s remaining
+2026-03-22 04:19:25,617 INFO   [heartbeat] 300s remaining
+2026-03-22 04:24:25,617 INFO Checking for active round...
+2026-03-22 04:24:25,685 INFO Active round: R20 (fd82f643-15e2-40e7-9866-8d8f5157081c)
+2026-03-22 04:24:25,685 INFO Already submitted R20. Checking for completed rounds...
+2026-03-22 04:24:25,685 INFO Sleeping 1800s...
+2026-03-22 04:29:25,685 INFO   [heartbeat] 1500s remaining
+2026-03-22 04:34:25,686 INFO   [heartbeat] 1200s remaining
+2026-03-22 04:39:25,686 INFO   [heartbeat] 900s remaining
+2026-03-22 04:44:25,686 INFO   [heartbeat] 600s remaining
+2026-03-22 04:49:25,687 INFO   [heartbeat] 300s remaining
+2026-03-22 04:54:25,687 INFO Checking for active round...
+2026-03-22 04:54:26,025 INFO Active round: R20 (fd82f643-15e2-40e7-9866-8d8f5157081c)
+2026-03-22 04:54:26,026 INFO Already submitted R20. Checking for completed rounds...
+2026-03-22 04:54:26,026 INFO Sleeping 1800s...
+2026-03-22 04:59:26,026 INFO   [heartbeat] 1500s remaining
+2026-03-22 05:04:26,026 INFO   [heartbeat] 1200s remaining
+2026-03-22 05:09:26,027 INFO   [heartbeat] 900s remaining
+2026-03-22 05:14:26,027 INFO   [heartbeat] 600s remaining
+2026-03-22 05:19:26,027 INFO   [heartbeat] 300s remaining
+2026-03-22 05:24:26,028 INFO Checking for active round...
+2026-03-22 05:24:26,089 INFO Active round: R20 (fd82f643-15e2-40e7-9866-8d8f5157081c)
+2026-03-22 05:24:26,089 INFO Already submitted R20. Checking for completed rounds...
+2026-03-22 05:24:26,089 INFO Sleeping 1800s...
+2026-03-22 05:29:26,089 INFO   [heartbeat] 1500s remaining
+2026-03-22 05:34:26,090 INFO   [heartbeat] 1200s remaining
+2026-03-22 05:39:26,090 INFO   [heartbeat] 900s remaining
+2026-03-22 05:44:26,091 INFO   [heartbeat] 600s remaining
+2026-03-22 05:49:26,091 INFO   [heartbeat] 300s remaining
+2026-03-22 05:54:26,091 INFO Checking for active round...
+2026-03-22 05:54:26,159 INFO No active round. Waiting.
+2026-03-22 05:54:26,159 INFO Sleeping 1800s...
+2026-03-22 05:59:26,159 INFO   [heartbeat] 1500s remaining
+2026-03-22 06:04:26,159 INFO   [heartbeat] 1200s remaining
+2026-03-22 06:09:26,160 INFO   [heartbeat] 900s remaining
+2026-03-22 06:14:26,160 INFO   [heartbeat] 600s remaining
+2026-03-22 06:19:26,161 INFO   [heartbeat] 300s remaining
+2026-03-22 06:24:26,161 INFO Checking for active round...
+2026-03-22 06:24:26,231 INFO Active round: R21 (b3a0be6b-b48b-419d-916a-b7a77fa58c4d)
+2026-03-22 06:24:26,231 INFO Fetching per-seed grids...
+2026-03-22 06:24:26,720 INFO Loaded 5 per-seed grids
+2026-03-22 06:24:26,779 INFO Querying seed 0 (9 viewports)...
+2026-03-22 06:24:34,904 INFO   Coverage: 1444/1600
+2026-03-22 06:24:34,904 INFO   Settlements: pop=1.05 food=0.70 factions=17
+2026-03-22 06:24:34,904 INFO Querying seed 1 (9 viewports)...
+2026-03-22 06:24:38,862 INFO   Coverage: 1444/1600
+2026-03-22 06:24:38,862 INFO   Settlements: pop=0.99 food=0.76 factions=19
+2026-03-22 06:24:38,862 INFO Querying seed 2 (9 viewports)...
+2026-03-22 06:24:42,091 INFO   Coverage: 1444/1600
+2026-03-22 06:24:42,091 INFO   Settlements: pop=0.97 food=0.77 factions=19
+2026-03-22 06:24:42,091 INFO Querying seed 3 (9 viewports)...
+2026-03-22 06:24:48,451 INFO   Coverage: 1444/1600
+2026-03-22 06:24:48,451 INFO   Settlements: pop=1.06 food=0.81 factions=20
+2026-03-22 06:24:48,451 INFO Querying seed 4 (9 viewports)...
+2026-03-22 06:24:56,323 INFO   Coverage: 1444/1600
+2026-03-22 06:24:56,324 INFO   Settlements: pop=1.11 food=0.78 factions=21
+2026-03-22 06:24:56,392 INFO Saved to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/round_data/round_21_submit.json
+2026-03-22 06:24:56,394 INFO Submitting predictions...
+2026-03-22 06:24:56,394 INFO   Estimated params from obs: ss=0.152 st=0.542 pa=0.250
+2026-03-22 06:24:56,847 INFO Seed 0: SUBMITTED — accepted
+2026-03-22 06:24:56,848 INFO   Estimated params from obs: ss=0.295 st=0.203 pa=1.000
+2026-03-22 06:24:57,558 INFO Seed 1: SUBMITTED — accepted
+2026-03-22 06:24:57,559 INFO   Estimated params from obs: ss=0.250 st=0.503 pa=0.000
+2026-03-22 06:24:58,088 INFO Seed 2: SUBMITTED — accepted
+2026-03-22 06:24:58,089 INFO   Estimated params from obs: ss=0.298 st=0.322 pa=1.000
+2026-03-22 06:24:58,581 INFO Seed 3: SUBMITTED — accepted
+2026-03-22 06:24:58,581 INFO   Estimated params from obs: ss=0.176 st=0.387 pa=0.250
+2026-03-22 06:24:59,574 INFO Seed 4: SUBMITTED — accepted
+2026-03-22 06:25:02,467 INFO Sleeping 1800s...
+2026-03-22 06:30:02,467 INFO   [heartbeat] 1500s remaining
+2026-03-22 06:35:02,468 INFO   [heartbeat] 1200s remaining
+2026-03-22 06:40:02,468 INFO   [heartbeat] 900s remaining
+2026-03-22 06:45:02,468 INFO   [heartbeat] 600s remaining
+2026-03-22 06:50:02,469 INFO   [heartbeat] 300s remaining
+2026-03-22 06:55:02,469 INFO Checking for active round...
+2026-03-22 06:55:02,533 INFO Active round: R21 (b3a0be6b-b48b-419d-916a-b7a77fa58c4d)
+2026-03-22 06:55:02,533 INFO Already submitted R21. Checking for completed rounds...
+2026-03-22 06:55:02,533 INFO Fetching latest data to check if R20 completed...
+2026-03-22 06:55:26,853 INFO Fetched latest round data
+2026-03-22 06:55:26,882 INFO R20 completed! Score: 77.2858
+2026-03-22 06:55:26,882 INFO Holdout eval: excluding R20
+2026-03-22 06:55:28,616 INFO Loaded 95 samples from 19 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19]
+2026-03-22 06:55:28,848 INFO Training: 95 samples, X=(152000, 35)
+2026-03-22 06:55:34,570 INFO   Class 0/6: 5.7s (total 6s)
+2026-03-22 06:55:40,414 INFO   Class 1/6: 5.8s (total 12s)
+2026-03-22 06:55:45,795 INFO   Class 2/6: 5.4s (total 17s)
+2026-03-22 06:55:51,437 INFO   Class 3/6: 5.6s (total 23s)
+2026-03-22 06:55:56,662 INFO   Class 4/6: 5.2s (total 28s)
+2026-03-22 06:56:01,798 INFO   Class 5/6: 5.1s (total 33s)
+2026-03-22 06:56:02,726 INFO Holdout R20: default=19.4, obs=19.4, actual=77.2858
+2026-03-22 06:56:02,727 INFO   seeds: [74.6 5.8 5.5 6.1 5.2]
+2026-03-22 06:56:02,727 INFO Eval log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/eval/holdout_R20_20260322_065526.txt
+2026-03-22 06:56:02,737 INFO Full retrain on all data...
+2026-03-22 06:56:04,464 INFO Loaded 100 samples from 20 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+2026-03-22 06:56:04,707 INFO Training: 100 samples, X=(160000, 35)
+2026-03-22 06:56:10,241 INFO   Class 0/6: 5.5s (total 6s)
+2026-03-22 06:56:15,717 INFO   Class 1/6: 5.5s (total 11s)
+2026-03-22 06:56:21,142 INFO   Class 2/6: 5.4s (total 16s)
+2026-03-22 06:56:26,706 INFO   Class 3/6: 5.6s (total 22s)
+2026-03-22 06:56:31,886 INFO   Class 4/6: 5.2s (total 27s)
+2026-03-22 06:56:37,186 INFO   Class 5/6: 5.3s (total 32s)
+2026-03-22 06:56:37,433 INFO Saved 6 models to /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/checkpoints
+2026-03-22 06:56:39,157 INFO Loaded 100 samples from 20 rounds: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20]
+2026-03-22 06:56:57,496 INFO Full retrain complete: 34.4s, 35 features
+2026-03-22 06:56:57,497 INFO Training log: /home/hendrik/agentic-avengers-nm-ai/hendrik/challenge3/logs/training/full_retrain_20260322_065602.txt
+2026-03-22 06:56:57,501 INFO Sleeping 1800s...
+2026-03-22 07:01:57,501 INFO   [heartbeat] 1500s remaining
+2026-03-22 07:06:57,502 INFO   [heartbeat] 1200s remaining
+2026-03-22 07:11:57,502 INFO   [heartbeat] 900s remaining
+2026-03-22 07:16:57,503 INFO   [heartbeat] 600s remaining
+2026-03-22 07:21:57,503 INFO   [heartbeat] 300s remaining
+2026-03-22 07:26:57,503 INFO Checking for active round...
+2026-03-22 07:26:57,861 INFO Active round: R21 (b3a0be6b-b48b-419d-916a-b7a77fa58c4d)
+2026-03-22 07:26:57,861 INFO Already submitted R21. Checking for completed rounds...
+2026-03-22 07:26:57,861 INFO Sleeping 1800s...
+2026-03-22 07:31:57,862 INFO   [heartbeat] 1500s remaining
+2026-03-22 07:36:57,862 INFO   [heartbeat] 1200s remaining
+2026-03-22 07:41:57,862 INFO   [heartbeat] 900s remaining
+2026-03-22 07:46:57,863 INFO   [heartbeat] 600s remaining
+2026-03-22 07:51:57,863 INFO   [heartbeat] 300s remaining
+2026-03-22 07:56:57,864 INFO Checking for active round...
+2026-03-22 07:56:57,956 INFO Active round: R21 (b3a0be6b-b48b-419d-916a-b7a77fa58c4d)
+2026-03-22 07:56:57,956 INFO Already submitted R21. Checking for completed rounds...
+2026-03-22 07:56:57,956 INFO Sleeping 1800s...
+2026-03-22 08:01:57,956 INFO   [heartbeat] 1500s remaining
+2026-03-22 08:06:57,957 INFO   [heartbeat] 1200s remaining
+2026-03-22 08:11:57,957 INFO   [heartbeat] 900s remaining
+2026-03-22 08:16:57,957 INFO   [heartbeat] 600s remaining
+2026-03-22 08:21:57,958 INFO   [heartbeat] 300s remaining
+2026-03-22 08:26:57,958 INFO Checking for active round...
+2026-03-22 08:26:58,025 INFO Active round: R21 (b3a0be6b-b48b-419d-916a-b7a77fa58c4d)
+2026-03-22 08:26:58,025 INFO Already submitted R21. Checking for completed rounds...
+2026-03-22 08:26:58,025 INFO Sleeping 1800s...
+2026-03-22 08:31:58,025 INFO   [heartbeat] 1500s remaining
+2026-03-22 08:36:58,026 INFO   [heartbeat] 1200s remaining
+2026-03-22 08:41:58,026 INFO   [heartbeat] 900s remaining

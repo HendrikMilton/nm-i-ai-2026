@@ -1,0 +1,32 @@
+=== Full Retrain ===
+Timestamp: 2026-03-21T20:04:52.247558
+
+Training time: 24.3s
+Features: 35
+
+Class 0: spread_tendency=4184, settle_survive=3005, dist_to_settlement=2307, settle_density_r3=2107, port_activity=1644, forest_density_r5=1580, forest_density_r3=1495, settle_density_r7=1475
+Class 1: settle_survive=3657, spread_tendency=3513, dist_to_settlement=2387, port_activity=2273, settle_density_r3=2142, dist_to_ocean=1928, col_norm=1759, row_norm=1690
+Class 2: settle_survive=2943, spread_tendency=2880, dist_to_settlement=2418, port_activity=2052, settle_density_r3=2004, forest_density_r5=1678, settle_density_r7=1564, col_norm=1514
+Class 3: settle_survive=3428, spread_tendency=3316, settle_density_r3=2423, port_activity=2166, settle_density_r7=1892, dist_to_settlement=1878, forest_density_r5=1812, col_norm=1776
+Class 4: spread_tendency=4345, settle_survive=2509, settle_density_r3=2221, forest_density_r5=2124, dist_to_settlement=2069, forest_density_r3=1745, settle_density_r7=1657, port_activity=1624
+Class 5: spread_tendency=4397, forest_density_r3=2183, dist_to_ocean=2107, forest_density_r5=2043, settle_density_r7=1899, settle_density_r3=1791, settle_density_r5=1638, settle_survive=1558
+
+=== Train-on-all scores (sanity check) ===
+  R 1: 87.9  seeds=[87.8 87.9 87.1 88.3 88.6]
+  R 2: 89.6  seeds=[88.8 90.0 89.8 90.0 89.5]
+  R 3: 88.0  seeds=[87.6 88.3 88.0 88.5 87.5]
+  R 4: 90.4  seeds=[90.0 90.8 90.1 90.3 90.6]
+  R 5: 86.2  seeds=[85.7 86.4 86.2 86.1 86.6]
+  R 6: 89.0  seeds=[88.9 89.4 89.5 88.1 88.9]
+  R 7: 78.2  seeds=[78.5 78.4 76.4 78.4 79.2]
+  R 8: 90.4  seeds=[90.9 89.3 91.0 90.9 89.7]
+  R 9: 91.0  seeds=[90.8 91.2 91.2 91.1 90.9]
+  R10: 89.4  seeds=[88.7 89.5 89.5 89.5 89.9]
+  R11: 91.0  seeds=[90.6 90.9 91.2 91.1 91.1]
+  R12: 79.5  seeds=[79.9 80.3 77.7 79.3 80.2]
+  R13: 89.9  seeds=[89.9 89.7 89.6 90.0 90.1]
+  R14: 87.1  seeds=[86.6 87.4 87.3 86.5 87.6]
+  R15: 48.0  seeds=[90.5 36.1 38.2 36.6 38.5]
+  R16: 86.5  seeds=[85.0 87.1 86.6 85.4 88.4]
+
+  Train-on-all mean: 85.1

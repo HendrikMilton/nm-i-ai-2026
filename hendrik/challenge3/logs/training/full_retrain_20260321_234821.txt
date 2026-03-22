@@ -1,0 +1,33 @@
+=== Full Retrain ===
+Timestamp: 2026-03-21T23:48:21.809580
+
+Training time: 35.4s
+Features: 35
+
+Class 0: spread_tendency=4196, settle_survive=3159, dist_to_settlement=2249, settle_density_r3=2145, port_activity=1938, settle_density_r7=1583, terrain_code=1541, dist_to_port=1406
+Class 1: spread_tendency=3801, settle_survive=3734, port_activity=2445, dist_to_settlement=2434, settle_density_r3=2211, dist_to_ocean=1734, row_norm=1663, settle_density_r7=1622
+Class 2: spread_tendency=3266, settle_survive=2676, port_activity=2347, dist_to_settlement=2280, settle_density_r3=1878, settle_density_r7=1577, forest_density_r5=1512, dist_to_port=1504
+Class 3: spread_tendency=3354, settle_survive=3260, settle_density_r3=2355, port_activity=2267, forest_density_r5=1911, dist_to_settlement=1879, settle_density_r7=1827, col_norm=1694
+Class 4: spread_tendency=4142, settle_survive=2503, settle_density_r3=2425, dist_to_settlement=1966, port_activity=1821, settle_density_r7=1721, forest_density_r5=1665, forest_density_r3=1615
+Class 5: spread_tendency=3994, forest_density_r3=2197, settle_density_r5=2075, settle_density_r7=2058, forest_density_r5=1978, settle_density_r3=1945, dist_to_port=1679, port_activity=1625
+
+=== Train-on-all scores (sanity check) ===
+  R 1: 88.0  seeds=[87.7 87.9 87.2 88.3 88.7]
+  R 2: 89.7  seeds=[89.0 90.1 89.8 90.0 89.5]
+  R 3: 88.1  seeds=[87.8 88.4 88.1 88.8 87.5]
+  R 4: 90.4  seeds=[90.0 90.9 90.1 90.3 90.6]
+  R 5: 86.1  seeds=[85.6 86.4 86.1 85.9 86.5]
+  R 6: 88.8  seeds=[88.7 89.4 89.3 88.2 88.6]
+  R 7: 77.9  seeds=[78.4 77.9 76.2 78.0 78.9]
+  R 8: 90.4  seeds=[91.1 89.2 91.1 91.0 89.6]
+  R 9: 91.1  seeds=[90.8 91.3 91.3 91.2 91.0]
+  R10: 89.4  seeds=[88.7 89.4 89.5 89.5 89.7]
+  R11: 91.0  seeds=[90.6 91.0 91.1 91.1 91.1]
+  R12: 79.1  seeds=[79.6 80.2 77.3 78.7 80.0]
+  R13: 89.8  seeds=[89.9 89.6 89.6 89.9 90.0]
+  R14: 87.0  seeds=[86.6 87.4 87.1 86.3 87.4]
+  R15: 91.2  seeds=[90.9 91.4 91.1 91.1 91.5]
+  R16: 86.2  seeds=[84.6 86.8 86.6 85.2 88.0]
+  R17: 51.4  seeds=[91.0 40.4 43.7 41.4 40.8]
+
+  Train-on-all mean: 85.6

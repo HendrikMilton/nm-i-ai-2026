@@ -1,0 +1,14 @@
+=== Holdout Eval: R16 ===
+Timestamp: 2026-03-21T20:04:25.227470
+
+Actual round score: 78.823
+Actual seed scores: [77.7999, 78.7206, 78.2368, 77.6746, 81.6831]
+
+  Seed 0: default=81.3  obs=79.4  actual=77.7999
+  Seed 1: default=80.7  obs=80.7  actual=78.7206
+  Seed 2: default=82.8  obs=82.8  actual=78.2368
+  Seed 3: default=82.2  obs=82.5  actual=77.6746
+  Seed 4: default=82.9  obs=78.3  actual=81.6831
+
+Mean: default=82.0  obs=80.7  actual=78.823
+Delta vs actual: default=+3.2  obs=+1.9
