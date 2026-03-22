@@ -173,3 +173,117 @@ The agent seems to be calculating but not posting the correction properly.
 ### Task 24 — Check 3 variant
 Was getting 10/10, now 7.5/10. Check 3 fails on this variant. Probably a specific error type
 that the prompt doesn't handle well (missing VAT correction maybe — Elias added vatType 1 fix).
+
+### Round 9 (09:51-09:59) — Pre-fix baseline
+
+| 09:51 | T25 | 10/10 | 6p/0f | 52.3s | 0 | perfect, +0.30 to total (76.39->76.69) |
+| 09:53 | T12 | 0/8 | 0p/4f | 28.3s | 0 | **still 0/4.** See analysis below |
+| 09:55 | T23 | 2/10 | 1p/1f | 80.5s | 1 | Check 1 fails (reconciliation can't close). See T23 analysis |
+| 09:57 | T11 | 8/8 | 4p/0f | 28.4s | 0 | perfect |
+| 09:58 | T05 | 7/7 | 3p/0f | 30.5s | 0 | perfect |
+
+### Round 10 (09:59-10:19) — Last logs before fixes applied
+
+| 09:59 | T20 | 8/10 | 5p/1f | 39.6s | 0 | Check 5 fails. 2.4 normalized (no improvement) |
+| 10:05 | T30 | ?/? | no score | 66.1s | 0 | Year-end closing (French variant). No scoring in log |
+| 10:15 | T07 | 7/7 | 2p/0f | 46.5s | 0 | perfect |
+| 10:18 | T10 | 8/8 | 5p/0f | 30.2s | 0 | perfect |
+
+**Leaderboard at this point: 76.69** (no change from T25 improvement)
+
+---
+
+## Deep Analysis -- Newly Identified Issues
+
+### Task 12 (Payroll) -- 0/4, ALWAYS fails, best_score=0 across 21 attempts
+The agent does everything "right" per the prompt: accounts 5000/2600/2910, 50% tax, employee linked.
+Voucher posted successfully with correct structure. Yet ALL 4 checks fail, EVERY time.
+
+Possible root causes:
+1. The manual voucher approach itself might not satisfy the checker -- maybe it checks for salary-specific objects
+2. The voucherType is null -- maybe the checker expects a specific "Lonnsbilag" type
+3. Maybe the 50% tax rate is wrong for some variants -- the actual Norwegian tax table rate could differ
+4. Maybe the checker expects separate postings for base salary (5000) and bonus (5001/5010/other account)
+5. Maybe department is required on the postings
+
+**This task is worth investigating -- 21 attempts at 0 means the approach is fundamentally wrong.**
+
+### Task 23 (Bank reconciliation) -- confirmed TWO bugs in latest log
+
+**Bug 1: Supplier payments treated as adjustments instead of using /:addPayment**
+The agent did NOT call GET /supplierInvoice at all! It put Fischer, Muller, Wagner as reconciliation
+adjustments with paymentType Bankgebyr. The prompt says to use POST /supplierInvoice/{id}/:addPayment
+for supplier payments. Without actual supplier payments, the accounting balance won't match the bank.
+
+**Bug 2: Renteinntekter description trap (as predicted)**
+Line 80: "Renteinntekter 483.95 (Ut, negative) -> Renteinntekter" -- agent used paymentType
+Renteinntekter (id 39621419) for a line in the Ut column. Per our fix, Ut column = Bankgebyr ALWAYS.
+The reconciliation failed with 422 "avvik" because the paymentType sign was wrong.
+
+Both bugs confirmed in the 09:55 log. The system-prompt fix for paymentType is applied, but
+the missing supplierInvoice/:addPayment is a SEPARATE issue -- the agent just skipped that step entirely.
+
+### Task 20 (Supplier invoice from PDF) -- stuck at 2.4, Check 5 fails
+Latest run: 8/10, 5/6 checks, Check 5 always fails. Agent does everything correctly (supplier created,
+invoice posted, voucher sent to ledger). Check 5 could be:
+1. Missing attachment/document on the voucher
+2. Wrong description or invoice number format
+3. Missing field on supplier (phone, physical address)
+
+### Task 30 (Year-end closing) -- no scoring result in latest log
+The 10:05 run executed correctly (5 vouchers, 0 errors) but no SCORING block in the log.
+Possibly the scoring happened after the log was closed, or the submission wasn't picked up.
+Best score on leaderboard is 1.95.
+
+---
+
+## Updated Best Scores (from leaderboard JSON @ 10:05)
+
+| Task | Best | Max | Notes |
+|------|------|-----|-------|
+| T01 | 1.5 | 2 | |
+| T02 | 2.0 | 2 | perfect |
+| T03 | 2.0 | 2 | perfect |
+| T04 | 2.0 | 2 | perfect |
+| T05 | 1.33 | 2 | perfect on checks but low normalized? |
+| T06 | 1.5 | 2 | |
+| T07 | 2.0 | 2 | perfect |
+| T08 | 2.0 | 2 | perfect |
+| T09 | 3.0 | 3 | perfect |
+| T10 | 3.0 | 3 | perfect |
+| T11 | 4.0 | 4 | perfect |
+| T12 | 0.0 | 4 | **BROKEN -- 21 attempts, always 0** |
+| T13 | 2.5 | 4 | efficiency issue? |
+| T14 | 4.0 | 4 | perfect |
+| T15 | 3.0 | 3 | perfect |
+| T16 | 2.33 | 3 | |
+| T17 | 3.5 | 4 | |
+| T18 | 4.0 | 4 | perfect |
+| T19 | 2.73 | 4 | shiftDurationHours fix applied |
+| T20 | 2.4 | 4 | Check 5 failing |
+| T21 | 2.57 | 6 | shiftDurationHours fix applied |
+| T22 | 0.0 | 6 | travelExpense fix applied |
+| T23 | 0.6 | 6 | paymentType fix applied + missing supplierInvoice step |
+| T24 | 3.75 | 6 | |
+| T25 | 4.8 | 6 | near-perfect |
+| T26 | 4.0 | 6 | |
+| T27 | 6.0 | 6 | **PERFECT!** (was 2/10 in logs, but leaderboard says 6.0) |
+| T28 | 1.5 | 6 | all 3 fixes applied |
+| T29 | 2.73 | 6 | |
+| T30 | 1.95 | 6 | |
+| **Total** | **76.69** | **120** | |
+
+## Fixes Applied This Session (commit ca6844b)
+
+1. **Task 28**: account range 4000-7999, sequential project creation, PROJECT_SPECIFIC_ACTIVITY
+2. **Task 21/19**: removed shiftDurationHours from employment details
+3. **Task 23**: paymentType determined by CSV column, not description text
+
+## Remaining High-Value Targets
+
+1. **T12** (0->4): Fundamental approach broken. Needs investigation -- maybe salary API or different accounts.
+2. **T22** (0->6): travelExpense fix just applied, waiting for results.
+3. **T23** (0.6->6): paymentType fix applied, but also needs to use supplierInvoice/:addPayment for supplier payments.
+4. **T28** (1.5->6): All 3 fixes applied, waiting for results.
+5. **T30** (1.95->6): Tax calc or Check 5-6 issue. Needs more investigation.
+6. **T21** (2.57->6): shiftDurationHours fix applied, waiting for results.
