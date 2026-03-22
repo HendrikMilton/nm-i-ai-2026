@@ -2,6 +2,7 @@
 data/
 data_full/
 classifier_data/
+classifier_data_shelf/
 
 # Training runs, weights, submissions
 runs/
