@@ -86,6 +86,36 @@ mapping is wrong, or maybe we need to include the receipt PDF as attachment on t
 4. T21 — sometimes 0/14 due to slowness. Need to ensure employee created FIRST.
 5. T29 — stuck at 8/11. 2 checks always fail.
 
+### Round 5 (09:36)
+
+| 09:36 | T30 | 0/10 | 0p/6f | 77.8s | 0 | 1209 used correctly + remaining balance. STILL 0/6 |
+
+**Task 30 — deep mystery.** Everything looks correct now:
+- Created account 1209 ✅
+- All 3 depreciation vouchers credit 1209 ✅
+- Prepaid reversal uses remaining balance (5295.87, not 63550) ✅
+- Tax calculated after adjustments ✅
+- Separate vouchers ✅
+
+Yet still 0/6! Possibilities:
+1. Depreciation amounts wrong? 90200/7=12885.71, 484450/9=53827.78, 246550/5=49310 — seem correct
+2. Maybe checker expects expense account per asset (not generic 6010 for all)
+3. Maybe the prepaid expense account is wrong (used 6300? or something else?)
+4. Maybe the tax amount is wrong because prepaid balance calc is off
+5. Maybe 1209 needs to be a different account type or have specific properties
+
+This needs sandbox testing to figure out — we're doing everything the fix doc says but still scoring 0.
+
+### Leaderboard @ 09:40 UTC
+**Us: #23 with 76.24 points** (30/30 tasks touched)
+- #1: the-grind 104.26
+- Gap to top 10: ~7 points
+- Gap to #1: ~28 points
+
+We started at 66.75 yesterday. Up +9.5 points overall.
+Key gains: T11 (0→perfect), T19 (0→mostly perfect), T20 (2→7/10), T24 (new perfect scores).
+Still losing points on: T22 (0), T30 (0), T27 (2/10), slow T21 runs (0).
+
 ### Task 27 — currency/disagio
 This is a currency exchange loss task. Agent finds invoice, calculates disagio, but 3 checks fail.
 Likely needs a specific voucher for the exchange difference on account 8160 (Disagio).
