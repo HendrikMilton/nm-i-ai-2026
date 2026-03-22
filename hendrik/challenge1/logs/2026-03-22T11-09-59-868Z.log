@@ -1,0 +1,7 @@
+[2026-03-22T11:09:59.868Z] [AGENT] model=claude-opus-4-6 prompt="Processe o salário de Rafael Silva (rafael.silva@example.org) para este mês. O salário base é de 41150 NOK. Adicione um bónus único de 8500 NOK além do salário base."
+[2026-03-22T11:10:13.357Z] [API] GET /ledger/account?number=2930&fields=id → 200
+[2026-03-22T11:10:13.358Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":378804702}]}
+[2026-03-22T11:10:14.063Z] [API] GET /employee?email=rafael.silva%40example.org&fields=id%2CfirstName%2ClastName → 200
+[2026-03-22T11:10:14.063Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"Checksum not yet supported for this endpoint","values":[{"id":18789974,"firstName":"Rafael","lastName":"Silva"}]}
+[2026-03-22T11:10:14.163Z] [API] GET /ledger/account?number=5000&fields=id → 200
+[2026-03-22T11:10:14.163Z] [API] ← {"fullResultSize":1,"from":0,"count":1,"versionDigest":"'If-None-Match' header not specified","values":[{"id":378804789}]}
