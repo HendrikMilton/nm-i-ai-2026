@@ -191,10 +191,7 @@ def entropy_weighted_kl_loss(pred_logits, gt):
 
     weighted_kl = (entropy * kl).sum() / total_entropy
 
-    # Also add unweighted mean KL as auxiliary to help on low-entropy cells
-    mean_kl = kl.mean()
-
-    return 0.7 * weighted_kl + 0.3 * mean_kl
+    return weighted_kl
 
 
 # ============================================================
@@ -210,16 +207,10 @@ def train_and_predict(train_samples, test_samples):
     fold_start = _time.time()
     in_channels = 30  # 8 + 7 + 4 + 6 + 3 + 2 (coord)
 
-    # Split train into train/val by round (hold out 2 rounds for validation)
-    rounds_in_train = sorted(set(s["round"] for s in train_samples))
-    val_rounds = set(rounds_in_train[-2:])  # hold out last 2 rounds
-    actual_train = [s for s in train_samples if s["round"] not in val_rounds]
-    val_samples = [s for s in train_samples if s["round"] in val_rounds]
-
-    # Prepare training data with D4 augmentation
+    # Use all training data (no val split) — rely on dropout + weight decay for regularization
     train_x_list = []
     train_y_list = []
-    for s in actual_train:
+    for s in train_samples:
         x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
         gt = s["gt"]
         for xa, ga in d4_augment(x, gt):
@@ -229,27 +220,13 @@ def train_and_predict(train_samples, test_samples):
     train_x = torch.tensor(np.stack(train_x_list), dtype=torch.float32)
     train_y = torch.tensor(np.stack(train_y_list), dtype=torch.float32)
 
-    # Prepare val data (no augmentation)
-    val_x_list = []
-    val_y_list = []
-    for s in val_samples:
-        x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
-        val_x_list.append(x)
-        val_y_list.append(s["gt"].transpose(2, 0, 1))
-    val_x = torch.tensor(np.stack(val_x_list), dtype=torch.float32).to(DEVICE)
-    val_y = torch.tensor(np.stack(val_y_list), dtype=torch.float32).to(DEVICE)
-
     # Model
     model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    n_epochs = 80
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
 
     batch_size = min(32, len(train_x))
-    n_epochs = 200
-    best_val_loss = float('inf')
-    patience = 30
-    no_improve = 0
-    best_state = None
 
     dataset = torch.utils.data.TensorDataset(train_x, train_y)
     loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
@@ -267,32 +244,12 @@ def train_and_predict(train_samples, test_samples):
             optimizer.step()
         scheduler.step()
 
-        # Validate
-        model.eval()
-        with torch.no_grad():
-            val_logits = model(val_x)
-            val_loss = entropy_weighted_kl_loss(val_logits, val_y).item()
-
-        if val_loss < best_val_loss - 1e-5:
-            best_val_loss = val_loss
-            no_improve = 0
-            best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
-        else:
-            no_improve += 1
-            if no_improve >= patience:
-                print(f"    Early stop at epoch {epoch+1}, best val_loss={best_val_loss:.4f}")
-                break
-
     fold_elapsed = _time.time() - fold_start
     _fold_times.append(fold_elapsed)
     avg_fold = np.mean(_fold_times)
-    remaining = 21 - len(_fold_times)  # approx folds
+    remaining = 21 - len(_fold_times)
     print(f"    Fold done in {fold_elapsed:.0f}s (avg {avg_fold:.0f}s), ~{remaining} folds left, ETA ~{avg_fold*remaining:.0f}s")
 
-    # Restore best model
-    if best_state is not None:
-        model.load_state_dict(best_state)
-    model.to(DEVICE)
     model.eval()
 
     # Predict test samples with TTA (D4 augmentation at test time)
