@@ -16,7 +16,7 @@ const ACCESS_TOKEN = process.env.ACCESS_TOKEN!;
 const ENDPOINT_URL = process.env.ENDPOINT_URL ?? "https://challenge1.hycapital.io/solve";
 const SUBMIT_URL = "https://api.ainm.no/tasks/cccccccc-cccc-cccc-cccc-cccccccccccc/submissions";
 const SUBMISSIONS_URL = "https://api.ainm.no/tripletex/my/submissions";
-const MAX_CONCURRENT = 3;
+const MAX_CONCURRENT = 1;
 
 if (!ACCESS_TOKEN) {
   console.error("ERROR: ACCESS_TOKEN env var required");
