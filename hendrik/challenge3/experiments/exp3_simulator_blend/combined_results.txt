@@ -1,0 +1,40 @@
+======================================================================
+  Combined Approach Validation on R22
+======================================================================
+  Actual live: 80.64  seeds=[80.2266, 78.4341, 81.6399, 81.3289, 81.5912]
+
+--- Method 1: V3 GBM baseline ---
+  Mean: 80.69  seeds=[80.3 78.5 81.7 81.4 81.6]
+
+--- Method 2: V3 + Bayesian Dirichlet obs update ---
+  equiv=  5: 77.52  delta=-3.17  seeds=[78.0 74.5 78.1 78.7 78.3]
+  equiv= 10: 80.37  delta=-0.32  seeds=[80.5 77.8 81.0 81.3 81.2]
+  equiv= 15: 80.98  delta=+0.29  seeds=[81.0 78.5 81.7 81.8 81.9]
+  equiv= 20: 81.16  delta=+0.46  seeds=[81.1 78.8 81.9 81.9 82.1]
+  equiv= 30: 81.21  delta=+0.52  seeds=[81.1 78.9 82.0 81.9 82.1]
+  equiv= 50: 81.13  delta=+0.44  seeds=[80.9 78.9 82.0 81.8 82.1]
+  equiv= 75: 81.03  delta=+0.34  seeds=[80.7 78.8 82.0 81.7 82.0]
+  equiv=100: 80.97  delta=+0.28  seeds=[80.7 78.7 81.9 81.6 81.9]
+
+--- Method 3: V3 + MC sim (default params) + Bayesian obs ---
+  Running 30 MC sims per seed...
+    Seed 0: MC done (1s)
+    Seed 1: MC done (2s)
+    Seed 2: MC done (3s)
+    Seed 3: MC done (6s)
+    Seed 4: MC done (8s)
+  mc=0.0 equiv=15: 80.98  delta=+0.29  seeds=[81.0 78.5 81.7 81.8 81.9]
+  mc=0.0 equiv=20: 81.16  delta=+0.46  seeds=[81.1 78.8 81.9 81.9 82.1]
+  mc=0.0 equiv=30: 81.21  delta=+0.52  seeds=[81.1 78.9 82.0 81.9 82.1]
+  mc=0.1 equiv=15: 79.37  delta=-1.32  seeds=[80.7 78.1 80.6 78.3 79.2]
+  mc=0.1 equiv=20: 79.45  delta=-1.24  seeds=[80.7 78.3 80.7 78.3 79.3]
+  mc=0.1 equiv=30: 79.40  delta=-1.29  seeds=[80.5 78.3 80.7 78.2 79.2]
+  mc=0.2 equiv=15: 75.66  delta=-5.03  seeds=[78.0 75.6 77.5 72.6 74.6]
+  mc=0.2 equiv=20: 75.60  delta=-5.09  seeds=[77.9 75.6 77.6 72.5 74.5]
+  mc=0.2 equiv=30: 75.41  delta=-5.29  seeds=[77.6 75.5 77.5 72.2 74.3]
+  mc=0.3 equiv=15: 70.66  delta=-10.03  seeds=[74.0 71.6 73.3 65.7 68.7]
+  mc=0.3 equiv=20: 70.44  delta=-10.25  seeds=[73.7 71.5 73.2 65.4 68.4]
+  mc=0.3 equiv=30: 70.08  delta=-10.62  seeds=[73.3 71.2 72.9 64.9 68.0]
+
+  V3 baseline: 80.69
+  Actual live: 80.64
