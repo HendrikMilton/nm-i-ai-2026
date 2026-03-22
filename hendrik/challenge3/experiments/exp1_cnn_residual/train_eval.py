@@ -211,41 +211,84 @@ class ResidualBlock(nn.Module):
 
 
 class ResidualCNN(nn.Module):
-    """CNN with residual blocks, multi-scale context, and dropout."""
+    """U-Net style CNN that predicts logit corrections to GBM.
+
+    The first 6 input channels are GBM logits. The CNN outputs additive
+    corrections, so GBM predictions are the starting point.
+    """
 
     def __init__(self, in_channels):
         super().__init__()
-        self.stem = nn.Sequential(
+        # Encoder
+        self.enc1 = nn.Sequential(
             nn.Conv2d(in_channels, 48, 3, padding=1),
             nn.BatchNorm2d(48),
             nn.ReLU(),
         )
-        self.res1 = ResidualBlock(48)
-        self.res2 = ResidualBlock(48)
-        # Dilated conv for wider receptive field
-        self.dilated = nn.Sequential(
-            nn.Conv2d(48, 48, 3, padding=2, dilation=2),
+        self.enc2 = nn.Sequential(
+            nn.Conv2d(48, 64, 3, padding=1),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+        )
+        self.res1 = ResidualBlock(64)
+        # Multi-scale context
+        self.dilated1 = nn.Sequential(
+            nn.Conv2d(64, 64, 3, padding=2, dilation=2),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+        )
+        self.dilated2 = nn.Sequential(
+            nn.Conv2d(64, 64, 3, padding=4, dilation=4),
+            nn.BatchNorm2d(64),
+            nn.ReLU(),
+        )
+        # Decoder with skip connection from enc1
+        self.dec1 = nn.Sequential(
+            nn.Conv2d(64 + 48, 48, 3, padding=1),  # skip from enc1
             nn.BatchNorm2d(48),
             nn.ReLU(),
         )
-        self.dropout = nn.Dropout2d(0.15)
+        self.res2 = ResidualBlock(48)
+        self.dropout = nn.Dropout2d(0.1)
+        # Output: correction to GBM logits (6 channels)
         self.head = nn.Conv2d(48, N_CLASSES, 1)
+        # Initialize head near zero so initial output ≈ GBM
+        nn.init.zeros_(self.head.weight)
+        nn.init.zeros_(self.head.bias)
 
     def forward(self, x):
-        h = self.stem(x)
-        h = self.res1(h)
+        # x[:, :6] are GBM logits
+        gbm_logits = x[:, :6]
+
+        e1 = self.enc1(x)
+        e2 = self.enc2(e1)
+        e2 = self.res1(e2)
+        # Multi-scale fusion
+        d1 = self.dilated1(e2)
+        d2 = self.dilated2(e2)
+        e2 = e2 + d1 + d2
+        # Decode with skip
+        h = torch.cat([e2, e1], dim=1)
+        h = self.dec1(h)
         h = self.res2(h)
-        h = h + self.dilated(h)  # multi-scale fusion
         h = self.dropout(h)
-        out = self.head(h)
-        return out
+        correction = self.head(h)
+        # Add correction to GBM logits (residual learning)
+        return gbm_logits + correction
 
 
 def build_cnn_input_single(sample, gbm_models):
-    """Build CNN input for one sample. Returns (C, H, W) input and (6, H, W) target."""
+    """Build CNN input for one sample. Returns (C, H, W) input and (6, H, W) target.
+
+    First 6 channels are GBM logits (log-probabilities), so the CNN can learn
+    additive corrections in logit space.
+    """
     grid = sample["grid"]
     flat_feats, spatial_feats = extract_features(grid, sample["ss"], sample["st"], sample["pa"])
     gbm_pred = predict_gbm(gbm_models, flat_feats, grid)  # (40, 40, 6)
+
+    # Convert GBM predictions to logits for residual learning
+    gbm_logits = np.log(np.clip(gbm_pred, 1e-6, None)).transpose(2, 0, 1).astype(np.float32)
 
     # Terrain one-hot: 8 classes
     terrain_oh = np.zeros((8, GRID_SIZE, GRID_SIZE), dtype=np.float32)
@@ -259,17 +302,12 @@ def build_cnn_input_single(sample, gbm_models):
         np.full((GRID_SIZE, GRID_SIZE), sample["pa"], dtype=np.float32),
     ], axis=0)
 
-    # GBM prediction as channels (40, 40, 6) -> (6, 40, 40)
-    gbm_ch = gbm_pred.transpose(2, 0, 1).astype(np.float32)
+    # ALL spatial features from extract_features (skip terrain_code at idx 0)
+    # spatial_feats shape: (N_feat, H, W) — indices 1..27
+    spatial_all = spatial_feats[1:]  # all except raw terrain code
 
-    # Spatial features from extract_features (already computed)
-    # spatial_feats shape: (N_feat, H, W) — use key distance/density channels
-    # Indices: 11=dist_settle, 12=dist_ocean, 13=dist_port, 14=dist_forest,
-    #          15=settle_d3, 16=settle_d5, 8=is_coastal, 9=has_settle_nbr
-    spatial_sel = spatial_feats[[8, 9, 11, 12, 13, 14, 15, 16]]  # 8 channels
-
-    # Concat: GBM(6) + terrain(8) + hidden(3) + spatial(8) = 25 channels
-    inp = np.concatenate([gbm_ch, terrain_oh, hp, spatial_sel], axis=0)
+    # Concat: GBM_logits(6) + terrain(8) + hidden(3) + spatial(27) = 44 channels
+    inp = np.concatenate([gbm_logits, terrain_oh, hp, spatial_all], axis=0)
     target = sample["gt"].transpose(2, 0, 1).astype(np.float32)
     return inp, target
 
@@ -398,12 +436,14 @@ def train_cnn(inputs, targets, n_epochs=200, lr=5e-4):
     return model
 
 
-def predict_with_cnn(cnn_model, gbm_models, sample, blend_weight=0.3):
-    """Full prediction: blend GBM and CNN with test-time augmentation."""
+def predict_with_cnn(cnn_model, gbm_models, sample):
+    """Full prediction with test-time augmentation.
+
+    CNN outputs corrected logits (GBM_logits + learned correction).
+    We average softmax predictions over augmentations.
+    """
     grid = sample["grid"]
     inp, _ = build_cnn_input_single(sample, gbm_models)
-    flat_feats, _ = extract_features(grid, sample["ss"], sample["st"], sample["pa"])
-    gbm_pred = predict_gbm(gbm_models, flat_feats, grid)
 
     # Test-time augmentation: average predictions over rotations/flips
     cnn_model.eval()
@@ -435,10 +475,7 @@ def predict_with_cnn(cnn_model, gbm_models, sample, blend_weight=0.3):
             p = inv_tfm(p).copy()
             preds.append(p)
 
-    cnn_pred = np.mean(preds, axis=0).transpose(1, 2, 0)  # (40, 40, 6)
-
-    # Blend: CNN weighted with GBM
-    pred = (1 - blend_weight) * cnn_pred + blend_weight * gbm_pred
+    pred = np.mean(preds, axis=0).transpose(1, 2, 0)  # (40, 40, 6)
 
     # Static overrides
     ocean_mask = grid == 10
