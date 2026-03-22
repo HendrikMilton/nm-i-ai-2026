@@ -145,9 +145,11 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
    If no match, try shorter/broader terms. Do NOT spend more than 2 GET calls on this.
    If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
+   CRITICAL: Extract the employee's home address from the contract (addressLine1, postalCode, city). This is often near the personal details section. The address check WILL FAIL without it.
 4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
-5. POST /employee/employment with {employee:{id}, startDate, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
-   Do NOT set endDate for permanent positions ("Fast stilling") — the checker expects endDate to be null.
+5. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver",
+     employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}]}
+   NEVER set endDate — the checker expects endDate to be null for permanent positions. Do NOT include endDate in the request body at all.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
@@ -155,7 +157,9 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 1. In parallel: GET /department?fields=id,name&count=100, GET /employee/employment/occupationCode?nameNO=<job_title>, GET /division?fields=id,name&count=1
 2. Create department if needed. If no division, GET /municipality?count=1 then POST /division.
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth, email:"<firstname.lastname@example.org>" (generate from name, lowercase, replace special chars: ø→o, å→a, æ→ae, ü→u, ö→o, ä→a, é→e, á→a, ñ→n, í→i, ó→o, ú→u)}
-4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, shiftDurationHours:7.5, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
+4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, shiftDurationHours:<hours_from_offer>, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
+   CRITICAL: shiftDurationHours MUST match the working hours from the offer letter (e.g. 6.0, 7.5), NOT always 7.5.
+   NEVER set endDate for permanent positions.
 5. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:<hours_from_offer>} — REQUIRED when offer mentions "arbeidstid" / working hours
 
 ## Workflow: Travel expense
@@ -169,13 +173,14 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 5. After all costs added: PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
 
 ## Workflow: Timesheet + project invoice (Task 16)
-1. Find employee, customer, project, activity (GET all in parallel). Also GET /project/hourlyRates?projectId=X to get rate config.
-2. If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:"2026-01-01", hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
-   CRITICAL: startDate MUST be "2026-01-01" (not today) — the rate only applies to timesheet entries ON or AFTER startDate. Using today's date causes entries on earlier dates to get hourlyRate=0.
-4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
-5. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
-   Do NOT check or update bank account 1920 — invoices work without it.
+1. In parallel: GET employee, GET customer, GET project, GET activity, GET /ledger/account?number=1920&fields=id,bankAccountNumber,version
+   If bank account 1920 has empty bankAccountNumber: PUT to set bankAccountNumber="12345678901".
+   If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+2. POST /timesheet/entry with ALL hours in ONE entry: {employee:{id}, project:{id}, activity:{id}, date:<today>, hours:<total_hours>}
+   CRITICAL: Put ALL hours in a SINGLE entry on ONE date. Do NOT split across multiple days or multiple entries.
+3. POST /order with {customer:{id}, orderDate:<today>, deliveryDate:<today>, project:{id}, invoiceOnAccountVatHigh:true}
+4. POST /order/orderline with {order:{id}, count:<total_hours>, unitPriceExcludingVatCurrency:<hourly_rate>, vatType:{id:3}}
+5. POST /invoice?sendToCustomer=true with {orders:[{id}]}
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
@@ -257,13 +262,12 @@ Do NOT overthink. Read originals, then post corrections in ONE step.
    Row 2: correct_account, amountGross=+<original_gross>, vatType:{id:<ORIGINAL>}
 3. Duplicate voucher: PUT /ledger/voucher/{voucher_id}/:reverse?date=<today>
    This is 1 write call, auto-reverses everything. Find the duplicate voucher id from step 1.
-4. Missing VAT: use calculate tool. Original treated amount_excl as gross (wrong).
-   correct_net = amount_excl, correct_VAT = amount_excl * 0.25
-   current_net = original posting amount field, current_VAT = original 2710 posting amount
-   POST /ledger/voucher with 3 postings:
-   Row 1: expense_account, amountGross=+(correct_net - current_net), vatType:{id:0}
-   Row 2: 2710, amountGross=+(correct_VAT - current_VAT), vatType:{id:0}
-   Row 3: 2400, amountGross=-(sum of row 1+2), vatType:{id:0}, supplier:{id:<from_original>}
+4. Missing VAT: the original booked amount_excl as if it were incl VAT (gross). The correction must add the missing VAT.
+   Use calculate tool: missing_gross = amount_excl * 0.25 (the missing 25% that should have been added).
+   POST /ledger/voucher with 2 postings:
+   Row 1: expense_account, amountGross=+<missing_gross>, vatType:{id:1} — Tripletex auto-splits into net + VAT on 2710
+   Row 2: 2400 (leverandørgjeld), amountGross=-<missing_gross>, vatType:{id:0}, supplier:{id:<from_original>}
+   Do NOT manually post to 2710 — let vatType:{id:1} handle VAT automatically.
 5. Wrong amount: diff = wrong - correct. POST /ledger/voucher with 2 postings. Use SAME vatType as original.
    Row 1: expense_account, amountGross=-diff, vatType:{id:<ORIGINAL>}
    Row 2: contra_account, amountGross=+diff, vatType:{id:0}, supplier:{id} if 2400
@@ -281,37 +285,33 @@ Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new 
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
 ONLY use GET /ledger/posting for data. Do NOT call /ledger/openPostings (404), /resultbudget (400), or /ledger/account with numberFrom/numberTo ranges.
-1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000)
-   Use fields=id,account(id,number,name),amount
+CRITICAL: Create each project and activity EXACTLY ONCE. Duplicate projects cause ALL checks to fail.
+1. In parallel: GET /ledger/posting for month 1 and month 2, filtered by expense accounts (accountNumberFrom=6000&accountNumberTo=7999, count=1000),
+   fields=id,account(id,number,name),amount. Also GET /employee?fields=id&count=1 (for project manager).
 2. Use calculate tool to aggregate amounts by account for each month, find top 3 increases.
-3. GET /employee?fields=id&count=1 (for project manager)
-4. POST /project × 3 in parallel: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
-5. POST /activity × 3 in parallel: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
-   Use ONLY these 3 fields. Do NOT include isProjectActivity, isGeneral, or other fields.
-6. CRITICAL — DO NOT SKIP: Link each activity to its project ONE AT A TIME sequentially:
+3. Create all projects and activities in ONE step — POST /project × 3 and POST /activity × 3 in parallel:
+   Project: {name:<account_name>, projectManager:{id}, startDate:today, isInternal:true}
+   Activity: {name:<account_name>, activityType:"PROJECT_GENERAL_ACTIVITY", isChargeable:false}
+   Do NOT create projects or activities in any other step. Do NOT call POST /project or POST /activity more than once per name.
+4. CRITICAL — DO NOT SKIP: Link each activity to its project ONE AT A TIME sequentially:
    POST /project/projectActivity with {project:{id}, activity:{id}, startDate:today}
    Without this step, 3 checks FAIL and the task scores near 0.
 
 ## Workflow: Bank reconciliation from CSV (Task 23)
-CRITICAL: The CSV file content is provided as text. Read it carefully line by line.
+NEVER create manual ledger vouchers (POST /ledger/voucher) for ANY CSV line — not for suppliers, not for Skattetrekk, not for anything.
+Only TWO types of write operations: (1) PUT /invoice/:payment for customer payments, (2) bank reconciliation + adjustments for everything else.
 1. In parallel: GET /invoice (open, fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding),
-   GET /invoice/paymentType, GET /supplierInvoice?invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31&fields=id,invoiceNumber,supplier(id,name),amount (do NOT use amountOutstanding field),
-   GET /ledger/accountingPeriod?fields=id,name,start,end,number (do NOT request year field — causes 400),
-   GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id,
-   GET /ledger/account?number=2400&fields=id, GET /ledger/account?number=7770&fields=id
-2. Parse CSV carefully. Uses semicolons (;) as separator: Dato;Forklaring;Inn;Ut;Saldo
-   Two categories only:
-   - "Innbetaling" in description → customer payment (PUT /invoice/:payment)
-   - EVERYTHING ELSE → reconciliation adjustment:
-     * If INN column filled → Renteinntekter adjustment type (money IN to account)
-     * If UT column filled → Bankgebyr adjustment type (money OUT of account)
-   This covers: supplier payments (Leverandør/Fornecedor/Fournisseur/Lieferant), Bankgebyr, Renteinntekter, Skattetrekk, and any other line types.
-   CRITICAL: Accounting period = period containing the LAST transaction date in the CSV (often February, not January).
-   Closing balance = the LAST Saldo value in the CSV.
+   GET /invoice/paymentType, GET /ledger/accountingPeriod?fields=id,name,start,end,number (do NOT request year field — causes 400),
+   GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id
+2. Parse CSV (semicolons separator: Dato;Forklaring;Inn;Ut;Saldo). Two categories ONLY:
+   - "Innbetaling" in description → customer payment (step 3)
+   - EVERYTHING ELSE (supplier payments, Bankgebyr, Renteinntekter, Skattetrekk, ANY other type) → reconciliation adjustment (step 5)
+   Closing balance = LAST Saldo value. Accounting period = period containing the LAST transaction date (often February).
 3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<Inn_amount>
    Match by invoice number from CSV description (e.g. "Faktura 1001" → invoiceNumber 1). Use date FROM CSV, NOT today.
 4. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_LAST_CSV_date>},
    bankAccountClosingBalanceCurrency:<LAST_SALDO_FROM_CSV>, isClosed:false, type:"MANUAL"}
+   Do this IMMEDIATELY after customer payments — do NOT create any vouchers first.
 5. Add ALL non-Innbetaling lines as adjustments in ONE call:
    PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
    Amount MUST be positive (negative causes 422). paymentType: Bankgebyr for UT items, Renteinntekter for INN items.
