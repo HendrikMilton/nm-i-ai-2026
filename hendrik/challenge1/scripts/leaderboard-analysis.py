@@ -34,7 +34,14 @@ def main():
         out.append(line)
 
     # 1. Get full leaderboard
-    leaderboard = fetch_json(f"{BASE}/leaderboard")
+    lb_response = fetch_json(f"{BASE}/leaderboard")
+    if isinstance(lb_response, dict):
+        if lb_response.get("closed_for_review"):
+            print("Leaderboard is closed for review. No data available.")
+            sys.exit(0)
+        leaderboard = lb_response["data"]
+    else:
+        leaderboard = lb_response
     top5 = leaderboard[:5]
 
     now = datetime.now(timezone.utc).strftime("%Y-%m-%d %H:%M UTC")
@@ -49,7 +56,23 @@ def main():
     for t in top5:
         w(f"| #{t['rank']} | {t['total_score']:.2f} | {t['tasks_touched']} | {t['team_name']} |")
 
-    # 2. Fetch per-task scores for each top-20 team (parallel)
+    # Load our scores from local JSON snapshot
+    our_scores_file = Path(__file__).resolve().parent.parent / "leaderboard_jsons" / "2026-03-22T10-47-15-334Z-after.json"
+    our_tasks_map: dict[str, float] = {}
+    if our_scores_file.exists():
+        our_data = json.loads(our_scores_file.read_text())
+        our_tasks_map = {t["tx_task_id"]: t["best_score"] for t in our_data}
+        our_total = sum(t["best_score"] for t in our_data)
+        our_touched = sum(1 for t in our_data if t["best_score"] > 0)
+        w()
+        w(f"**Our team (Agentic Avengers):** Score {our_total:.2f}, {our_touched}/30 tasks scored")
+
+    # Find our team on leaderboard for rank info
+    our_team = next((t for t in leaderboard if t["team_slug"] == "agentic-avengers"), None)
+    if our_team:
+        w(f" — Rank #{our_team['rank']}")
+
+    # 2. Fetch per-task scores for top 5 (parallel)
     print(f"\nFetching per-task scores for {len(top5)} teams...")
 
     def fetch_team_tasks(team):
@@ -71,20 +94,26 @@ def main():
     w()
     w("## Average Score Per Task (Top 5 Teams)")
     w()
-    w("| Task | Avg | Max | Min | Teams w/ score |")
-    w("|------|----:|----:|----:|:--------------:|")
+    w("| Task | Avg | Max | Min | Us | Gap |")
+    w("|------|----:|----:|----:|---:|----:|")
 
     total_avg = 0
+    total_us = 0
     for tid in sorted_task_ids:
         scores = task_scores[tid]
-        non_zero = [s for s in scores if s > 0]
         avg = sum(scores) / len(scores)
         mx = max(scores)
         mn = min(scores)
         total_avg += avg
-        w(f"| {tid} | {avg:.2f} | {mx:.2f} | {mn:.2f} | {len(non_zero)}/{len(scores)} |")
+        us = our_tasks_map.get(tid, 0)
+        total_us += us
+        gap = us - avg
+        us_str = f"{us:.2f}" if us > 0 else "-"
+        gap_str = f"{gap:+.2f}" if us > 0 else f"{-avg:+.2f}"
+        w(f"| {tid} | {avg:.2f} | {mx:.2f} | {mn:.2f} | {us_str} | {gap_str} |")
 
-    w(f"| **Total** | **{total_avg:.2f}** | | | |")
+    total_gap = total_us - total_avg
+    w(f"| **Total** | **{total_avg:.2f}** | | | **{total_us:.2f}** | **{total_gap:+.2f}** |")
 
     # 4. Score matrix: top 20 × tasks
     w()
@@ -102,6 +131,14 @@ def main():
             score = task_map.get(tid, 0)
             cells.append(f" {score:.1f} " if score > 0 else " - ")
         w(f"| {team['team_name'][:28]} |" + "|".join(cells) + "|")
+
+    # Add our team row
+    if our_tasks_map:
+        cells = []
+        for tid in sorted_task_ids:
+            score = our_tasks_map.get(tid, 0)
+            cells.append(f" {score:.1f} " if score > 0 else " - ")
+        w(f"| **Agentic Avengers (us)** |" + "|".join(cells) + "|")
 
     # Write to markdown file
     script_dir = Path(__file__).resolve().parent
