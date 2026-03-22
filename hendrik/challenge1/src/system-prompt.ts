@@ -83,9 +83,7 @@ Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
 
 ## Workflow: Receipt/expense registration (Task 22)
 Triggered by: "kvittering" / "receipt" / "recibo" / "Quittung" + item name + department name.
-MANDATORY: Use the travelExpense API. NEVER use POST /ledger/voucher. NEVER use POST /supplierInvoice.
-These alternatives have been tested 15+ times and ALWAYS score 0. Only travelExpense works.
-DO NOT use PUT /travelExpense/:convert — it clears the title and corrupts the type.
+IMPORTANT: Only use the endpoints specified below, don't call anything else not specified
 1. In parallel: GET /employee?fields=id,firstName,lastName&count=1,
    GET /department?name=<dept>&fields=id,name,
    GET /travelExpense/costCategory?fields=id,description,account(id,number),vatType(id)&count=100,
@@ -119,8 +117,7 @@ EFFICIENCY TARGET: exactly 6 API calls (2 GET + 4 write). Do NOT add extra calls
 Total: 4 write calls, 2 GET calls = 6 API calls. Do NOT exceed this.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-Use the salary transaction API — NOT manual ledger vouchers. The checker queries GET /salary/transaction, not ledger postings.
-Manual voucher approaches have been tested 14+ times and ALWAYS score 0/4.
+IMPORTANT: Don't use any api calls not specified here. Only use follow calls:
 1. In parallel: GET /employee?email=X&fields=id,firstName,lastName,bankAccountNumber,dateOfBirth,version,
    GET /salary/type?number=2000&fields=id,number,name (Fastlønn),
    GET /salary/type?number=2002&fields=id,number,name (Bonus),
