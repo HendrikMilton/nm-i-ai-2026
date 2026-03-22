@@ -257,6 +257,19 @@ def train_and_predict(train_samples, test_samples):
 
     model.eval()
 
+    # Compute terrain-type prior from training data
+    terrain_prior = {}
+    for code in TERRAIN_CODES:
+        accum = np.zeros(N_CLASSES, dtype=np.float64)
+        count = 0
+        for s in train_samples:
+            mask = s["grid"] == code
+            if mask.any():
+                accum += s["gt"][mask].sum(axis=0)
+                count += mask.sum()
+        if count > 0:
+            terrain_prior[code] = (accum / count).astype(np.float32)
+
     # Predict test samples with TTA (D4 augmentation at test time)
     predictions = []
     with torch.no_grad():
@@ -281,8 +294,14 @@ def train_and_predict(train_samples, test_samples):
                     avg_pred += p
             pred = avg_pred / 8.0
 
-            # Static overrides
+            # Blend with terrain prior (10% prior, 90% CNN)
             grid = s["grid"]
+            for code, prior in terrain_prior.items():
+                mask = grid == code
+                if mask.any():
+                    pred[mask] = 0.9 * pred[mask] + 0.1 * prior
+
+            # Static overrides
             ocean_mask = grid == 10
             mountain_mask = grid == 5
             if ocean_mask.any():
