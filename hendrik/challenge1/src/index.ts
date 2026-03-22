@@ -100,11 +100,11 @@ app.post('/solve', async (req, res) => {
     const ts = new Date().toISOString().replace(/[:.]/g, '-');
     console.log(`[SOLVE] received prompt: ${req.body.prompt?.slice(0, 100)}...`);
 
-    // Fetch leaderboard state before solving
-    const before = await fetchLeaderboard();
-    if (before.length > 0) {
-        writeFileSync(join(LB_DIR, `${ts}-before.json`), JSON.stringify(before, null, 2));
-    }
+    // Leaderboard polling disabled for speed
+    // const before = await fetchLeaderboard();
+    // if (before.length > 0) {
+    //     writeFileSync(join(LB_DIR, `${ts}-before.json`), JSON.stringify(before, null, 2));
+    // }
 
     try {
         await solve(req.body);
@@ -117,10 +117,10 @@ app.post('/solve', async (req, res) => {
         res.json({ status: 'completed' });
     }
 
-    // Start background polling (non-blocking)
-    if (before.length > 0) {
-        pollForChange(before, ts).catch(() => {});
-    }
+    // Leaderboard polling disabled for speed
+    // if (before.length > 0) {
+    //     pollForChange(before, ts).catch(() => {});
+    // }
 });
 
 const port = Number(process.env.PORT ?? 4001);
