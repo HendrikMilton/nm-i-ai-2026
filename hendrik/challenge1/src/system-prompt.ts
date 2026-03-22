@@ -109,22 +109,21 @@ EFFICIENCY TARGET: exactly 6 API calls (2 GET + 4 write). Do NOT add extra calls
 Total: 4 write calls, 2 GET calls = 6 API calls. Do NOT exceed this.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
-Register payroll as a manual ledger voucher matching the real Lønnsbilag structure.
-Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/* API — it cannot be finalized.
+Register payroll as a manual ledger voucher. Do NOT use the /salary/* API — it cannot be finalized.
+CRITICAL: Create SEPARATE postings for base salary and bonus — do NOT combine them into one amount.
 1. In parallel: GET /employee?email=X&fields=id,firstName,lastName (or use firstName/lastName),
-   GET /ledger/account?number=5000&fields=id, GET /ledger/account?number=2910&fields=id,
-   GET /ledger/account?number=2600&fields=id
-2. Calculate using the calculate tool: gross = base_salary + bonus, tax = gross * 0.5, net = gross - tax
+   GET /ledger/account?number=5000&fields=id, GET /ledger/account?number=2930&fields=id
+2. Calculate using the calculate tool: gross = base_salary + bonus
 3. POST /ledger/voucher with {date:<today>, description:"Lønn mars 2026 - <employee_name>",
      postings: [
-       {date:<today>, description:"Fastlønn + Bonus", account:{id:<5000>}, employee:{id},
-        amountGross:<gross>, amountGrossCurrency:<gross>, vatType:{id:0}, row:1},
-       {date:<today>, description:"Forskuddstrekk", account:{id:<2600>}, employee:{id},
-        amountGross:-<tax>, amountGrossCurrency:-<tax>, vatType:{id:0}, row:2},
-       {date:<today>, description:"Gjeld til ansatte", account:{id:<2910>}, employee:{id},
-        amountGross:-<net>, amountGrossCurrency:-<net>, vatType:{id:0}, row:3}
+       {date:<today>, description:"Fastlønn", account:{id:<5000>}, employee:{id},
+        amountGross:<base_salary>, amountGrossCurrency:<base_salary>, vatType:{id:0}, row:1},
+       {date:<today>, description:"Bonus", account:{id:<5000>}, employee:{id},
+        amountGross:<bonus>, amountGrossCurrency:<bonus>, vatType:{id:0}, row:2},
+       {date:<today>, description:"Skyldig lønn", account:{id:<2930>}, employee:{id},
+        amountGross:-<gross>, amountGrossCurrency:-<gross>, vatType:{id:0}, row:3}
      ]}
-   Accounts: 5000=Lønn til ansatte (debit gross), 2600=Forskuddstrekk (credit tax 50%), 2910=Gjeld til ansatte (credit net).
+   Do NOT split by tax (no 2600/2910). Do NOT combine base+bonus into one posting.
    Total: 1 write call.
 
 ## Workflow: Employee creation from contract (Task 19)

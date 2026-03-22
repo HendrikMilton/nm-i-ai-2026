@@ -86,6 +86,11 @@ def extract_input_channels(grid, ss, st, pa):
     channels.append(np.full((h, w), st, dtype=np.float32))
     channels.append(np.full((h, w), pa, dtype=np.float32))
 
+    # 6. Coordinate channels (2 channels) - normalized x, y position
+    yy, xx = np.meshgrid(np.linspace(0, 1, h), np.linspace(0, 1, w), indexing='ij')
+    channels.append(yy.astype(np.float32))
+    channels.append(xx.astype(np.float32))
+
     return np.stack(channels, axis=0)  # (C, 40, 40)
 
 
@@ -112,36 +117,38 @@ def d4_augment(x, gt):
 # U-Net architecture
 # ============================================================
 class ConvBlock(nn.Module):
-    def __init__(self, in_ch, out_ch):
+    def __init__(self, in_ch, out_ch, dropout=0.0):
         super().__init__()
         self.conv = nn.Sequential(
             nn.Conv2d(in_ch, out_ch, 3, padding=1, bias=False),
             nn.GroupNorm(min(8, out_ch), out_ch),
             nn.SiLU(inplace=True),
+            nn.Dropout2d(dropout),
             nn.Conv2d(out_ch, out_ch, 3, padding=1, bias=False),
             nn.GroupNorm(min(8, out_ch), out_ch),
             nn.SiLU(inplace=True),
         )
+        self.skip = nn.Conv2d(in_ch, out_ch, 1) if in_ch != out_ch else nn.Identity()
 
     def forward(self, x):
-        return self.conv(x)
+        return self.conv(x) + self.skip(x)
 
 
 class SmallUNet(nn.Module):
-    def __init__(self, in_channels, out_channels=6):
+    def __init__(self, in_channels, out_channels=6, dropout=0.1):
         super().__init__()
         # Encoder
-        self.enc1 = ConvBlock(in_channels, 32)
-        self.enc2 = ConvBlock(32, 64)
-        self.enc3 = ConvBlock(64, 128)
+        self.enc1 = ConvBlock(in_channels, 32, dropout)
+        self.enc2 = ConvBlock(32, 64, dropout)
+        self.enc3 = ConvBlock(64, 128, dropout)
 
         self.pool = nn.MaxPool2d(2)
 
         # Decoder
         self.up2 = nn.ConvTranspose2d(128, 64, 2, stride=2)
-        self.dec2 = ConvBlock(128, 64)
+        self.dec2 = ConvBlock(128, 64, dropout)
         self.up1 = nn.ConvTranspose2d(64, 32, 2, stride=2)
-        self.dec1 = ConvBlock(64, 32)
+        self.dec1 = ConvBlock(64, 32, dropout)
 
         self.final = nn.Conv2d(32, out_channels, 1)
 
@@ -183,6 +190,7 @@ def entropy_weighted_kl_loss(pred_logits, gt):
         return torch.tensor(0.0, device=pred_logits.device)
 
     weighted_kl = (entropy * kl).sum() / total_entropy
+
     return weighted_kl
 
 
@@ -197,18 +205,12 @@ def train_and_predict(train_samples, test_samples):
     """
     import time as _time
     fold_start = _time.time()
-    in_channels = 28  # 8 + 7 + 4 + 6 + 3
+    in_channels = 30  # 8 + 7 + 4 + 6 + 3 + 2 (coord)
 
-    # Split train into train/val by round (hold out 1 round for validation)
-    rounds_in_train = sorted(set(s["round"] for s in train_samples))
-    val_round = rounds_in_train[-1]  # hold out last round
-    actual_train = [s for s in train_samples if s["round"] != val_round]
-    val_samples = [s for s in train_samples if s["round"] == val_round]
-
-    # Prepare training data with D4 augmentation
+    # Use all training data (no val split) — rely on dropout + weight decay for regularization
     train_x_list = []
     train_y_list = []
-    for s in actual_train:
+    for s in train_samples:
         x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
         gt = s["gt"]
         for xa, ga in d4_augment(x, gt):
@@ -218,27 +220,13 @@ def train_and_predict(train_samples, test_samples):
     train_x = torch.tensor(np.stack(train_x_list), dtype=torch.float32)
     train_y = torch.tensor(np.stack(train_y_list), dtype=torch.float32)
 
-    # Prepare val data (no augmentation)
-    val_x_list = []
-    val_y_list = []
-    for s in val_samples:
-        x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
-        val_x_list.append(x)
-        val_y_list.append(s["gt"].transpose(2, 0, 1))
-    val_x = torch.tensor(np.stack(val_x_list), dtype=torch.float32).to(DEVICE)
-    val_y = torch.tensor(np.stack(val_y_list), dtype=torch.float32).to(DEVICE)
-
     # Model
     model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
+    n_epochs = 120
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
-    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
 
     batch_size = min(32, len(train_x))
-    n_epochs = 200
-    best_val_loss = float('inf')
-    patience = 20
-    no_improve = 0
-    best_state = None
 
     dataset = torch.utils.data.TensorDataset(train_x, train_y)
     loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
@@ -248,53 +236,72 @@ def train_and_predict(train_samples, test_samples):
         model.train()
         for bx, by in loader:
             bx, by = bx.to(DEVICE), by.to(DEVICE)
+            # Mixup augmentation
+            lam = np.random.beta(0.4, 0.4)
+            idx = torch.randperm(bx.size(0), device=DEVICE)
+            bx_mix = lam * bx + (1 - lam) * bx[idx]
+            by_mix = lam * by + (1 - lam) * by[idx]
             optimizer.zero_grad()
-            logits = model(bx)
-            loss = entropy_weighted_kl_loss(logits, by)
+            logits = model(bx_mix)
+            loss = entropy_weighted_kl_loss(logits, by_mix)
             loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
         scheduler.step()
-
-        # Validate
-        model.eval()
-        with torch.no_grad():
-            val_logits = model(val_x)
-            val_loss = entropy_weighted_kl_loss(val_logits, val_y).item()
-
-        if val_loss < best_val_loss - 1e-5:
-            best_val_loss = val_loss
-            no_improve = 0
-            best_state = {k: v.cpu().clone() for k, v in model.state_dict().items()}
-        else:
-            no_improve += 1
-            if no_improve >= patience:
-                print(f"    Early stop at epoch {epoch+1}, best val_loss={best_val_loss:.4f}")
-                break
 
     fold_elapsed = _time.time() - fold_start
     _fold_times.append(fold_elapsed)
     avg_fold = np.mean(_fold_times)
-    remaining = 21 - len(_fold_times)  # approx folds
+    remaining = 21 - len(_fold_times)
     print(f"    Fold done in {fold_elapsed:.0f}s (avg {avg_fold:.0f}s), ~{remaining} folds left, ETA ~{avg_fold*remaining:.0f}s")
 
-    # Restore best model
-    if best_state is not None:
-        model.load_state_dict(best_state)
-    model.to(DEVICE)
     model.eval()
 
-    # Predict test samples
+    # Compute terrain-type prior from training data
+    terrain_prior = {}
+    for code in TERRAIN_CODES:
+        accum = np.zeros(N_CLASSES, dtype=np.float64)
+        count = 0
+        for s in train_samples:
+            mask = s["grid"] == code
+            if mask.any():
+                accum += s["gt"][mask].sum(axis=0)
+                count += mask.sum()
+        if count > 0:
+            terrain_prior[code] = (accum / count).astype(np.float32)
+
+    # Predict test samples with TTA (D4 augmentation at test time)
     predictions = []
     with torch.no_grad():
         for s in test_samples:
             x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
-            xt = torch.tensor(x[None], dtype=torch.float32).to(DEVICE)
-            logits = model(xt)
-            probs = F.softmax(logits, dim=1)[0].cpu().numpy()  # (6, H, W)
-            pred = probs.transpose(1, 2, 0)  # (H, W, 6)
+            # TTA: average predictions over all 8 D4 transforms
+            avg_pred = np.zeros((GRID_SIZE, GRID_SIZE, N_CLASSES), dtype=np.float32)
+            for k in range(4):
+                for flip in [False, True]:
+                    xa = np.rot90(x, k, axes=(1, 2)).copy()
+                    if flip:
+                        xa = np.flip(xa, axis=2).copy()
+                    xt = torch.tensor(xa[None], dtype=torch.float32).to(DEVICE)
+                    logits = model(xt)
+                    probs = F.softmax(logits, dim=1)[0].cpu().numpy()  # (6, H, W)
+                    p = probs.transpose(1, 2, 0)  # (H, W, 6)
+                    # Undo flip
+                    if flip:
+                        p = np.flip(p, axis=1).copy()
+                    # Undo rotation
+                    p = np.rot90(p, -k, axes=(0, 1)).copy()
+                    avg_pred += p
+            pred = avg_pred / 8.0
+
+            # Blend with terrain prior (10% prior, 90% CNN)
+            grid = s["grid"]
+            for code, prior in terrain_prior.items():
+                mask = grid == code
+                if mask.any():
+                    pred[mask] = 0.9 * pred[mask] + 0.1 * prior
 
             # Static overrides
-            grid = s["grid"]
             ocean_mask = grid == 10
             mountain_mask = grid == 5
             if ocean_mask.any():
