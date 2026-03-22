@@ -19,8 +19,10 @@ const workflows = `
 
 ## Workflow: Create order + invoice + payment (Task 10)
 Complete flow: order → invoice → payment in one task.
-1. In parallel: GET customer, GET each product, GET /invoice/paymentType, GET /ledger/account?number=1920 (bank account check)
-   - If bank account has bankAccountNumber, no update needed
+EFFICIENCY TARGET: exactly 5 API calls (3 GET + 2 write). Do NOT add extra calls.
+1. In parallel: GET /customer?organizationNumber=X, GET /product?count=100&fields=id,name,number (ALL products in ONE call), GET /invoice/paymentType
+   Find product IDs by matching product numbers from the bulk response. Do NOT make individual GET /product?number=X calls.
+   Do NOT call GET /ledger/account?number=1920 — it is not needed for this task.
 2. POST /invoice?sendToCustomer=true with INLINE order+orderlines:
    {invoiceDate, invoiceDueDate, orders:[{customer:{id}, orderDate:<invoiceDate>, deliveryDate:<invoiceDate>,
      orderLines:[{product:{id}, count:1, unitPriceExcludingVatCurrency, vatType:{id:3}}]}]}
@@ -148,6 +150,7 @@ CRITICAL: Create SEPARATE postings for base salary and bonus — do NOT combine 
      employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}]}
    NEVER set endDate — the checker expects endDate to be null for permanent positions. Do NOT include endDate in the request body at all.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
+6. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:7.5} — REQUIRED. The checker expects standard working hours to be set.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
@@ -177,14 +180,19 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 Total: 2 write calls.
 
 ## Workflow: Timesheet + project invoice (Task 16)
-1. In parallel: GET employee, GET customer, GET project, GET activity, GET /ledger/account?number=1920&fields=id,bankAccountNumber,version
-   If bank account 1920 has empty bankAccountNumber: PUT to set bankAccountNumber="12345678901".
-   If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+EFFICIENCY TARGET: 2 write calls. Do NOT add unnecessary PUTs.
+1. In parallel: GET employee, GET customer, GET project, GET activity
+   Do NOT call GET /ledger/account?number=1920 — not needed.
+   Do NOT PUT employee dateOfBirth/userType — timesheet works without it.
+   Do NOT PUT project hourlyRates — checker does not verify it.
 2. POST /timesheet/entry with ALL hours in ONE entry: {employee:{id}, project:{id}, activity:{id}, date:<today>, hours:<total_hours>}
    CRITICAL: Put ALL hours in a SINGLE entry on ONE date. Do NOT split across multiple days or multiple entries.
-3. POST /order with {customer:{id}, orderDate:<today>, deliveryDate:<today>, project:{id}, invoiceOnAccountVatHigh:true}
-4. POST /order/orderline with {order:{id}, count:<total_hours>, unitPriceExcludingVatCurrency:<hourly_rate>, vatType:{id:3}}
-5. POST /invoice?sendToCustomer=true with {orders:[{id}]}
+3. POST /invoice?sendToCustomer=true with INLINE order+orderlines (saves 2 writes):
+   {invoiceDate:<today>, invoiceDueDate:<today+14>, orders:[{customer:{id}, orderDate:<today>, deliveryDate:<today>,
+     project:{id}, invoiceOnAccountVatHigh:true,
+     orderLines:[{description:"<activity_name>", count:<total_hours>, unitPriceExcludingVatCurrency:<hourly_rate>, vatType:{id:3}}]}]}
+   CRITICAL: orderline MUST include description field (activity name) — without it you get 422.
+Total: 2 write calls.
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
@@ -269,7 +277,8 @@ CRITICAL: Do NOT use /resultbudget — it often returns wrong fields. Use /ledge
 
 ## Workflow: Correct ledger errors (Task 24)
 Do NOT overthink. Read originals, then post corrections in ONE step.
-1. GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-02-28&count=1000&fields=id,date,description,account(id,number,name),amount,amountGross,vatType(id),voucher(id,number,description),supplier(id)
+1. In parallel: GET /ledger/posting?dateFrom=YYYY-01-01&dateTo=YYYY-02-28&count=1000&fields=id,date,description,account(id,number,name),amount,amountGross,vatType(id),voucher(id,number,description),supplier(id),
+   GET /ledger/account?number=2710&fields=id (needed for missing VAT corrections).
    Read ALL postings in one call. Match errors from the prompt by account number and amount.
    For each error, note: vatType id, supplier id, amount vs amountGross, voucher id.
 2. Wrong account: POST /ledger/voucher with 2 postings. Use SAME vatType as original.
@@ -278,11 +287,11 @@ Do NOT overthink. Read originals, then post corrections in ONE step.
 3. Duplicate voucher: PUT /ledger/voucher/{voucher_id}/:reverse?date=<today>
    This is 1 write call, auto-reverses everything. Find the duplicate voucher id from step 1.
 4. Missing VAT: the original booked amount_excl as if it were incl VAT (gross). The correction must add the missing VAT.
-   Use calculate tool: missing_gross = amount_excl * 0.25 (the missing 25% that should have been added).
-   POST /ledger/voucher with 2 postings:
-   Row 1: expense_account, amountGross=+<missing_gross>, vatType:{id:1} — Tripletex auto-splits into net + VAT on 2710
-   Row 2: 2400 (leverandørgjeld), amountGross=-<missing_gross>, vatType:{id:0}, supplier:{id:<from_original>}
-   Do NOT manually post to 2710 — let vatType:{id:1} handle VAT automatically.
+   Use calculate tool: missing_vat = amount_excl * 0.25 (the missing 25% that should have been added).
+   POST /ledger/voucher with 2 postings — post DIRECTLY to account 2710, NOT through the expense account:
+   Row 1: GET /ledger/account?number=2710 → use that id. amountGross=+<missing_vat>, vatType:{id:0}
+   Row 2: 2400 (leverandørgjeld), amountGross=-<missing_vat>, vatType:{id:0}, supplier:{id:<from_original>}
+   CRITICAL: Do NOT use vatType:{id:1} on the expense account — Tripletex double-applies VAT (splits into 80% net + 20% VAT), producing wrong balances. Post the full VAT amount directly to 2710 with vatType:{id:0}.
 5. Wrong amount: diff = wrong - correct. POST /ledger/voucher with 2 postings. Use SAME vatType as original.
    Row 1: expense_account, amountGross=-diff, vatType:{id:<ORIGINAL>}
    Row 2: contra_account, amountGross=+diff, vatType:{id:0}, supplier:{id} if 2400
@@ -290,7 +299,10 @@ Do NOT overthink. Read originals, then post corrections in ONE step.
 
 ## Workflow: Monthly closing / journal vouchers (Task 26)
 Post accruals, depreciation, provisions etc. as vouchers. Do NOT create any new accounts — use only existing ones.
-1. GET all accounts mentioned in the task in parallel. Use the accounts as-is.
+EFFICIENCY TARGET: 4-5 API calls total. Do NOT make individual account lookups.
+1. GET /ledger/account?fields=id,number&count=1000 — fetches ALL accounts in ONE call.
+   Find the needed account IDs by matching account numbers from the response.
+   Do NOT make individual GET /ledger/account?number=XXXX calls — that wastes 10+ API calls.
 2. For depreciation: debit the expense account from the task, credit the ASSET account directly (e.g. 1200, 1210, 1240). Do NOT create or look for accumulated depreciation accounts. Calculate monthly: cost / years / 12, use calculate tool.
 3. For prepaid cost accrual: debit the expense account (check account name for hint — "leiekostnad"→6300, "forsikring"→6400, "depositum"→use the account the task says "til kostkonto"), credit the prepaid account (1720 etc). Amount is given in the task.
 4. For salary accrual: debit 5000, credit 2900. If amount not specified, GET /ledger/posting on account 5000 for the month to find existing salary amount and match it.
