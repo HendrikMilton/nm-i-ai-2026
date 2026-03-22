@@ -173,13 +173,14 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 5. After all costs added: PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
 
 ## Workflow: Timesheet + project invoice (Task 16)
-1. Find employee, customer, project, activity (GET all in parallel). Also GET /project/hourlyRates?projectId=X to get rate config.
-2. If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
-3. If task specifies an hourly rate: PUT /project/hourlyRates/{id} with {id, version, project:{id}, startDate:"2026-01-01", hourlyRateModel:"TYPE_FIXED_HOURLY_RATE", fixedRate:<hourly_rate>, showInProjectOrder:true}
-   CRITICAL: startDate MUST be "2026-01-01" (not today) — the rate only applies to timesheet entries ON or AFTER startDate. Using today's date causes entries on earlier dates to get hourlyRate=0.
-4. POST /timesheet/entry ONE AT A TIME sequentially (parallel causes 409) with {employee:{id}, project:{id}, activity:{id}, date, hours}
-5. POST /order → POST /order/orderline (count=<hours>, unitPriceExcludingVatCurrency=<hourly_rate>) → POST /invoice?sendToCustomer=true
-   Do NOT check or update bank account 1920 — invoices work without it.
+1. In parallel: GET employee, GET customer, GET project, GET activity, GET /ledger/account?number=1920&fields=id,bankAccountNumber,version
+   If bank account 1920 has empty bankAccountNumber: PUT to set bankAccountNumber="12345678901".
+   If employee userType is not STANDARD or dateOfBirth is null: GET /employee/{id}?fields=* then PUT with userType:"STANDARD", dateOfBirth:"1990-01-01"
+2. POST /timesheet/entry with ALL hours in ONE entry: {employee:{id}, project:{id}, activity:{id}, date:<today>, hours:<total_hours>}
+   CRITICAL: Put ALL hours in a SINGLE entry on ONE date. Do NOT split across multiple days or multiple entries.
+3. POST /order with {customer:{id}, orderDate:<today>, deliveryDate:<today>, project:{id}, invoiceOnAccountVatHigh:true}
+4. POST /order/orderline with {order:{id}, count:<total_hours>, unitPriceExcludingVatCurrency:<hourly_rate>, vatType:{id:3}}
+5. POST /invoice?sendToCustomer=true with {orders:[{id}]}
 
 ## Workflow: Complete project lifecycle (Task 29)
 Combines: timesheet logging, supplier cost, and project invoice in one task.
