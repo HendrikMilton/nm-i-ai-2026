@@ -277,8 +277,19 @@ def holdout_eval(holdout_round):
         gt = s.get("ground_truth")
         if gt is None: continue
         gt = np.array(gt, dtype=np.float32)
-        ig = np.array(s.get("initial_grid", rd.get("initial_grid")), dtype=np.int32)
         sid = s.get("seed_index", "?")
+
+        # Get per-seed grid from submit file if available
+        submit_path = ROUND_DATA_DIR / f"round_{holdout_round:02d}_submit.json"
+        sub_seed = {}
+        if submit_path.exists():
+            try:
+                with open(submit_path) as sf:
+                    sub_data = json.load(sf)
+                sub_seed = sub_data.get("seeds", {}).get(str(sid), {})
+            except: pass
+        ig_raw = sub_seed.get("initial_grid") or s.get("initial_grid") or rd.get("initial_grid")
+        ig = np.array(ig_raw, dtype=np.int32)
 
         # Approach A: default params
         pred_default = solve.predict_grid(models, ig)

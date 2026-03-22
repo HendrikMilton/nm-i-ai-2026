@@ -312,7 +312,9 @@ def load_v2_data(exclude_rounds=None):
                 "round": rnum, "seed": int(sid),
             })
 
-    # Remaining rounds from round_data (with per-seed grids)
+    # Remaining rounds from round_data + submit files
+    # Submit files have per-seed grids + settlement stats
+    # Round files have GT
     for f in sorted(ROUND_DATA_DIR.glob("round_*.json")):
         if "_submit" in f.name:
             continue
@@ -327,6 +329,18 @@ def load_v2_data(exclude_rounds=None):
         has_gt = any(s.get("ground_truth") is not None for s in seeds if isinstance(s, dict))
         if not has_gt:
             continue
+
+        # Load submit file for per-seed grids + settlement stats
+        submit_path = ROUND_DATA_DIR / f"round_{rnum:02d}_submit.json"
+        submit_data = {}
+        if submit_path.exists():
+            try:
+                with open(submit_path) as fh:
+                    submit_data = json.load(fh)
+            except Exception:
+                pass
+        submit_seeds = submit_data.get("seeds", {})
+
         seen_rounds.add(rnum)
         for s in seeds:
             if not isinstance(s, dict):
@@ -335,15 +349,25 @@ def load_v2_data(exclude_rounds=None):
             if gt is None:
                 continue
             gt = np.array(gt, dtype=np.float32)
-            ig_raw = s.get("initial_grid") or d.get("initial_grid")
+            sid = s.get("seed_index", 0)
+
+            # Per-seed grid: prefer submit file > seed data > round-level
+            sub_seed = submit_seeds.get(str(sid), {})
+            ig_raw = sub_seed.get("initial_grid") or s.get("initial_grid") or d.get("initial_grid")
             ig = np.array(ig_raw, dtype=np.int32)
             if ig.shape != (GRID_SIZE, GRID_SIZE) or gt.shape != (GRID_SIZE, GRID_SIZE, N_CLASSES):
                 continue
+
             ss, st, pa = compute_hidden_params(ig, gt)
+
+            # Settlement stats from submit file
+            sett_stats = sub_seed.get("settlement_stats")
+
             samples.append({
                 "grid": ig, "gt": gt,
                 "ss": ss, "st": st, "pa": pa,
-                "round": rnum, "seed": s.get("seed_index", 0),
+                "settlement_stats": sett_stats,
+                "round": rnum, "seed": sid,
             })
 
     log.info(f"Loaded {len(samples)} samples from {len(seen_rounds)} rounds: {sorted(seen_rounds)}")
