@@ -139,14 +139,15 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
    DO NOT search by ?code=STYRK or ?id=STYRK — these return WRONG results.
    Instead, use the STYRK-to-name mapping below and search by name:
    Common STYRK codes: 1211→"Finansdirektør", 1221→"Salgsdirektør", 1223→"Forskningsdirektør",
-   2411→"Revisor", 2412→"Rådgiver", 3120→"Dataoperatør", 3512→"IKT-brukerstøtte",
+   1235→"Logistikksjef", 2130→"IT-konsulent", 2411→"Revisor", 2412→"Rådgiver",
+   3120→"Dataoperatør", 3323→"Innkjøpsassistent", 3512→"IKT-brukerstøtte",
    3313→"Regnskapsfører", 4110→"Kontormedarbeider", 5223→"Butikkmedarbeider"
    Search: GET /employee/employment/occupationCode?nameNO=<norwegian_title>&count=5
    IMPORTANT: Match the SPECIFIC level from the STYRK description. If STYRK title ends in:
    "-assistenter" → search for "assistent", "-direktører" → "direktør", "-konsulenter" → "konsulent", "-ledere" → "leder"
    Do NOT just pick the first/generic result — pick the one matching the correct level (e.g. INNKJØPSASSISTENT not INNKJØPER for 3323).
-   If no match, try shorter/broader terms. Do NOT spend more than 2 GET calls on this.
-   If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
+   HARD LIMIT: Maximum 2 GET calls for occupation code. After 2 failed searches, immediately use "KONTORMEDARBEIDER" as fallback.
+   Do NOT spend more time searching — creating the employee is more important than finding the perfect code.
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
    CRITICAL: Extract the employee's home address from the contract (addressLine1, postalCode, city). This is often near the personal details section. The address check WILL FAIL without it.
 4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
@@ -159,7 +160,9 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
 Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key difference: must configure standard working hours.
 1. In parallel: GET /department?fields=id,name&count=100, GET /employee/employment/occupationCode?nameNO=<job_title>, GET /division?fields=id,name&count=1
 2. Create department if needed. If no division, GET /municipality?count=1 then POST /division.
-3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth, email:"<firstname.lastname@example.org>" (generate from name, lowercase, replace special chars: ø→o, å→a, æ→ae, ü→u, ö→o, ä→a, é→e, á→a, ñ→n, í→i, ó→o, ú→u)}
+3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", dateOfBirth, email:"<firstname.lastname@example.org>" (generate from name, lowercase, replace special chars: ø→o, å→a, æ→ae, ü→u, ö→o, ä→a, é→e, á→a, ñ→n, í→i, ó→o, ú→u), nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}}
+   CRITICAL: Extract ALL personal details from the offer letter — nationalIdentityNumber (fødselsnummer), bankAccountNumber, and address are often present and WILL be checked.
+   HARD LIMIT on occupation code search: Maximum 2 GET calls. After 2 failed searches, use "KONTORMEDARBEIDER" as fallback. Creating the employee is more important than the perfect code.
 4. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver", employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct>, shiftDurationHours:<hours_from_offer>, occupationCode:{id:<from_step1>}, annualSalary:<salary>}]}
    CRITICAL: shiftDurationHours MUST match the working hours from the offer letter (e.g. 6.0, 7.5), NOT always 7.5.
    NEVER set endDate for permanent positions.
