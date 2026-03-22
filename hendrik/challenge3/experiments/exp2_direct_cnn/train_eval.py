@@ -222,7 +222,7 @@ def train_and_predict(train_samples, test_samples):
 
     # Model
     model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
-    n_epochs = 80
+    n_epochs = 120
     optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
 
@@ -236,9 +236,14 @@ def train_and_predict(train_samples, test_samples):
         model.train()
         for bx, by in loader:
             bx, by = bx.to(DEVICE), by.to(DEVICE)
+            # Mixup augmentation
+            lam = np.random.beta(0.4, 0.4)
+            idx = torch.randperm(bx.size(0), device=DEVICE)
+            bx_mix = lam * bx + (1 - lam) * bx[idx]
+            by_mix = lam * by + (1 - lam) * by[idx]
             optimizer.zero_grad()
-            logits = model(bx)
-            loss = entropy_weighted_kl_loss(logits, by)
+            logits = model(bx_mix)
+            loss = entropy_weighted_kl_loss(logits, by_mix)
             loss.backward()
             torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
             optimizer.step()
