@@ -222,12 +222,13 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
    POST /timesheet/entry with {employee:{id}, project:{id}, activity:{id} (use "Fakturerbart arbeid"), date, hours}
    Use DIFFERENT dates for each employee (e.g. first employee on 2026-03-17, second on 2026-03-18).
 4. Register supplier cost via POST /supplierInvoice (NOT POST /ledger/voucher — manual vouchers are invisible to GET /supplierInvoice which the checker uses).
-   The supplier cost amount in the task is EXCL VAT. Use calculate tool: grossAmount = supplierCost * 1.25
+   Use the supplier cost amount from the task DIRECTLY as amountGross — do NOT multiply by 1.25.
+   Use vatType:{id:0} on BOTH postings — the task amount is the project cost, not a VAT invoice.
    POST /supplierInvoice with {invoiceDate:<today>, invoiceDueDate:<today+30>, supplier:{id}, invoiceNumber:"SUP-001",
-     amountCurrency:-<grossAmount>,
+     amountCurrency:-<supplierCost>,
      voucher:{date:<today>, description:"<supplier_name> - leverandørkostnad", postings:[
-       {date:<today>, description:"Leverandørkostnad", account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<grossAmount>, amountGrossCurrency:<grossAmount>, vatType:{id:1}, invoiceNumber:"SUP-001", row:1},
-       {date:<today>, description:"Leverandørgjeld", account:{id:2400}, supplier:{id}, amountGross:<-grossAmount>, amountGrossCurrency:<-grossAmount>, vatType:{id:0}, row:2}
+       {date:<today>, description:"Leverandørkostnad", account:{id:expense_4300}, supplier:{id}, project:{id}, amountGross:<supplierCost>, amountGrossCurrency:<supplierCost>, vatType:{id:0}, invoiceNumber:"SUP-001", row:1},
+       {date:<today>, description:"Leverandørgjeld", account:{id:2400}, supplier:{id}, amountGross:<-supplierCost>, amountGrossCurrency:<-supplierCost>, vatType:{id:0}, row:2}
      ]}}
    CRITICAL: debit posting MUST include project:{id} — without it the cost is NOT linked to the project.
    Then: PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {} (use voucher.id from response).
