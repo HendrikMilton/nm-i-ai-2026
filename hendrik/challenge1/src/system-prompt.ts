@@ -35,34 +35,30 @@ IMPORTANT: Only use the endpoints specified below, don't call anything else not 
 
 ## Workflow: Bank reconciliation from CSV (Task 23)
 NEVER create manual ledger vouchers (POST /ledger/voucher) for ANY CSV line.
-THREE types of write operations: (1) PUT /invoice/:payment for customer payments, (2) POST /supplierInvoice/{id}/:addPayment for supplier payments, (3) bank reconciliation + adjustments for fees/interest/tax.
+TWO types of operations: (1) PUT /invoice/:payment for customer payments, (2) reconciliation adjustments for EVERYTHING ELSE.
+Do NOT try to match supplier invoices — use adjustments for all non-customer lines.
 1. In parallel: GET /invoice (open, fields=id,invoiceNumber,customer(id,name),amount,amountOutstanding),
-   GET /supplierInvoice?fields=id,invoiceNumber,supplier(id,name),amount,amountOutstanding (open supplier invoices),
    GET /invoice/paymentType, GET /ledger/accountingPeriod?fields=id,name,start,end,number (do NOT request year field — causes 400),
    GET /bank/reconciliation/paymentType?fields=id,description, GET /ledger/account?number=1920&fields=id
-2. Parse CSV (semicolons separator: Dato;Forklaring;Inn;Ut;Saldo). THREE categories:
-   - "Innbetaling" / "Faktura" in Inn column → customer payment (step 3)
-   - "Lieferant" / "Leverandør" / supplier name in Ut column → supplier invoice payment (step 4)
-   - EVERYTHING ELSE (Bankgebyr, Renteinntekter, Skattetrekk, etc.) → reconciliation adjustment (step 6)
-   Closing balance = LAST Saldo value. Accounting period = period containing the LAST transaction date.
+2. Parse CSV (semicolons separator: Dato;Forklaring;Inn;Ut;Saldo). TWO categories only:
+   - "Innbetaling" or "Faktura" in description with Inn column filled → customer payment (step 3)
+   - EVERYTHING ELSE → reconciliation adjustment (step 5)
+   This covers: supplier payments (Fournisseur/Fornecedor/Leverandør/Lieferant), Bankgebyr, Renteinntekter, Skattetrekk, and any other line types.
+   Closing balance = LAST Saldo value. Accounting period = period containing the LAST transaction date in CSV.
 3. Register customer payments ONE AT A TIME: PUT /invoice/{id}/:payment with paymentDate=<DATE_FROM_CSV>, paymentTypeId ("Betalt til bank"), paidAmount=<Inn_amount>
    Match by invoice number from CSV description (e.g. "Faktura 1001" → invoiceNumber 1). Use date FROM CSV, NOT today.
-4. Register supplier payments ONE AT A TIME: POST /supplierInvoice/{invoiceId}/:addPayment?paymentType=0&amount=<Ut_amount>&paymentDate=<DATE_FROM_CSV>
-   Match supplier by name from CSV description to supplier invoices from step 1.
-   If the CSV amount is less than the invoice amount, add &partialPayment=true.
-   CRITICAL: paymentType=0 auto-selects the correct payment type. All params are QUERY PARAMS, not body.
-5. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_LAST_CSV_date>},
+4. POST /bank/reconciliation with {account:{id:<1920>}, accountingPeriod:{id:<period_matching_LAST_CSV_date>},
    bankAccountClosingBalanceCurrency:<LAST_SALDO_FROM_CSV>, isClosed:false, type:"MANUAL"}
-   Do this IMMEDIATELY after invoice payments — do NOT create any vouchers first.
-6. Add ALL remaining non-invoice lines as adjustments in ONE call:
+   Do this IMMEDIATELY after customer payments.
+5. Add ALL non-customer-payment lines as adjustments in ONE call:
    PUT /bank/reconciliation/{id}/:adjustment with [{postingDate:<date>, description:<type>, amount:<POSITIVE_number>, paymentType:{id:<matching_type>}}]
    Amount MUST be positive (negative causes 422).
    CRITICAL: paymentType is determined ONLY by which CSV column has the amount, NEVER by description text:
    - Amount in Ut column → paymentType "Bankgebyr" (money going OUT, always)
    - Amount in Inn column → paymentType "Renteinntekter" (money coming IN, always)
    WARNING: Descriptions are TRAPS — e.g. "Renteinntekter" can appear in the Ut column, "Bankgebyr" in Inn. IGNORE the description when choosing paymentType.
-7. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
-8. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step6>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
+6. GET /bank/reconciliation/{id}?fields=id,version to get current version (adjustment increments it)
+7. Close: PUT /bank/reconciliation/{id} with {id, version:<from_step5>, account:{id}, accountingPeriod:{id}, bankAccountClosingBalanceCurrency:<same>, isClosed:true}
    Only succeeds when avvik = 0 (accounting balance = bank statement closing balance).
 
 ## Workflow: Analyze ledger + create projects and activities (Task 28)
