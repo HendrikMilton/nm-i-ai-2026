@@ -196,59 +196,123 @@ def predict_gbm(models, X, grid):
 # ============================================================
 # CNN model
 # ============================================================
-class ResidualCNN(nn.Module):
-    """Tiny CNN: refines GBM predictions using spatial context."""
-
-    def __init__(self, in_channels):
+class ResidualBlock(nn.Module):
+    def __init__(self, channels):
         super().__init__()
-        # 3 conv layers with residual connections
-        self.conv1 = nn.Conv2d(in_channels, 32, 3, padding=1)
-        self.bn1 = nn.BatchNorm2d(32)
-        self.conv2 = nn.Conv2d(32, 64, 3, padding=1)
-        self.bn2 = nn.BatchNorm2d(64)
-        self.conv3 = nn.Conv2d(64, 32, 3, padding=1)
-        self.bn3 = nn.BatchNorm2d(32)
-        self.head = nn.Conv2d(32, N_CLASSES, 1)
+        self.conv1 = nn.Conv2d(channels, channels, 3, padding=1)
+        self.bn1 = nn.BatchNorm2d(channels)
+        self.conv2 = nn.Conv2d(channels, channels, 3, padding=1)
+        self.bn2 = nn.BatchNorm2d(channels)
 
     def forward(self, x):
         h = F.relu(self.bn1(self.conv1(x)))
-        h = F.relu(self.bn2(self.conv2(h)))
-        h = F.relu(self.bn3(self.conv3(h)))
-        out = self.head(h)  # (B, 6, 40, 40)
+        h = self.bn2(self.conv2(h))
+        return F.relu(h + x)
+
+
+class ResidualCNN(nn.Module):
+    """CNN with residual blocks, multi-scale context, and dropout."""
+
+    def __init__(self, in_channels):
+        super().__init__()
+        self.stem = nn.Sequential(
+            nn.Conv2d(in_channels, 48, 3, padding=1),
+            nn.BatchNorm2d(48),
+            nn.ReLU(),
+        )
+        self.res1 = ResidualBlock(48)
+        self.res2 = ResidualBlock(48)
+        # Dilated conv for wider receptive field
+        self.dilated = nn.Sequential(
+            nn.Conv2d(48, 48, 3, padding=2, dilation=2),
+            nn.BatchNorm2d(48),
+            nn.ReLU(),
+        )
+        self.dropout = nn.Dropout2d(0.15)
+        self.head = nn.Conv2d(48, N_CLASSES, 1)
+
+    def forward(self, x):
+        h = self.stem(x)
+        h = self.res1(h)
+        h = self.res2(h)
+        h = h + self.dilated(h)  # multi-scale fusion
+        h = self.dropout(h)
+        out = self.head(h)
         return out
 
 
+def build_cnn_input_single(sample, gbm_models):
+    """Build CNN input for one sample. Returns (C, H, W) input and (6, H, W) target."""
+    grid = sample["grid"]
+    flat_feats, spatial_feats = extract_features(grid, sample["ss"], sample["st"], sample["pa"])
+    gbm_pred = predict_gbm(gbm_models, flat_feats, grid)  # (40, 40, 6)
+
+    # Terrain one-hot: 8 classes
+    terrain_oh = np.zeros((8, GRID_SIZE, GRID_SIZE), dtype=np.float32)
+    for i, code in enumerate([0, 1, 2, 3, 4, 5, 10, 11]):
+        terrain_oh[i] = (grid == code).astype(np.float32)
+
+    # Hidden params as channels
+    hp = np.stack([
+        np.full((GRID_SIZE, GRID_SIZE), sample["ss"], dtype=np.float32),
+        np.full((GRID_SIZE, GRID_SIZE), sample["st"], dtype=np.float32),
+        np.full((GRID_SIZE, GRID_SIZE), sample["pa"], dtype=np.float32),
+    ], axis=0)
+
+    # GBM prediction as channels (40, 40, 6) -> (6, 40, 40)
+    gbm_ch = gbm_pred.transpose(2, 0, 1).astype(np.float32)
+
+    # Spatial features from extract_features (already computed)
+    # spatial_feats shape: (N_feat, H, W) — use key distance/density channels
+    # Indices: 11=dist_settle, 12=dist_ocean, 13=dist_port, 14=dist_forest,
+    #          15=settle_d3, 16=settle_d5, 8=is_coastal, 9=has_settle_nbr
+    spatial_sel = spatial_feats[[8, 9, 11, 12, 13, 14, 15, 16]]  # 8 channels
+
+    # Concat: GBM(6) + terrain(8) + hidden(3) + spatial(8) = 25 channels
+    inp = np.concatenate([gbm_ch, terrain_oh, hp, spatial_sel], axis=0)
+    target = sample["gt"].transpose(2, 0, 1).astype(np.float32)
+    return inp, target
+
+
+def augment_batch(inputs, targets):
+    """Apply random rotations and flips for data augmentation. Returns augmented arrays."""
+    aug_inputs = []
+    aug_targets = []
+    for inp, tgt in zip(inputs, targets):
+        # Original
+        aug_inputs.append(inp)
+        aug_targets.append(tgt)
+        # 3 rotations
+        for k in [1, 2, 3]:
+            aug_inputs.append(np.rot90(inp, k, axes=(1, 2)).copy())
+            aug_targets.append(np.rot90(tgt, k, axes=(1, 2)).copy())
+        # Horizontal flip
+        aug_inputs.append(inp[:, :, ::-1].copy())
+        aug_targets.append(tgt[:, :, ::-1].copy())
+        # Vertical flip
+        aug_inputs.append(inp[:, ::-1, :].copy())
+        aug_targets.append(tgt[:, ::-1, :].copy())
+        # Diagonal flips
+        aug_inputs.append(np.rot90(inp[:, :, ::-1], 1, axes=(1, 2)).copy())
+        aug_targets.append(np.rot90(tgt[:, :, ::-1], 1, axes=(1, 2)).copy())
+        aug_inputs.append(np.rot90(inp[:, ::-1, :], 1, axes=(1, 2)).copy())
+        aug_targets.append(np.rot90(tgt[:, ::-1, :], 1, axes=(1, 2)).copy())
+    return np.stack(aug_inputs), np.stack(aug_targets)
+
+
 def build_cnn_inputs(samples, gbm_models):
-    """Build CNN training data: GBM preds (6ch) + terrain one-hot (8ch) + hidden params (3ch) = 17ch."""
+    """Build CNN training data with augmentation."""
     inputs = []
     targets = []
-
     for s in samples:
-        grid = s["grid"]
-        flat_feats, spatial_feats = extract_features(grid, s["ss"], s["st"], s["pa"])
-        gbm_pred = predict_gbm(gbm_models, flat_feats, grid)  # (40, 40, 6)
-
-        # Terrain one-hot: 8 classes
-        terrain_oh = np.zeros((8, GRID_SIZE, GRID_SIZE), dtype=np.float32)
-        for i, code in enumerate([0, 1, 2, 3, 4, 5, 10, 11]):
-            terrain_oh[i] = (grid == code).astype(np.float32)
-
-        # Hidden params as channels
-        hp = np.stack([
-            np.full((GRID_SIZE, GRID_SIZE), s["ss"], dtype=np.float32),
-            np.full((GRID_SIZE, GRID_SIZE), s["st"], dtype=np.float32),
-            np.full((GRID_SIZE, GRID_SIZE), s["pa"], dtype=np.float32),
-        ], axis=0)
-
-        # GBM prediction as channels (40, 40, 6) -> (6, 40, 40)
-        gbm_ch = gbm_pred.transpose(2, 0, 1).astype(np.float32)
-
-        # Concat: GBM(6) + terrain(8) + hidden(3) = 17 channels
-        inp = np.concatenate([gbm_ch, terrain_oh, hp], axis=0)
+        inp, tgt = build_cnn_input_single(s, gbm_models)
         inputs.append(inp)
-        targets.append(s["gt"].transpose(2, 0, 1).astype(np.float32))
-
-    return np.stack(inputs), np.stack(targets)
+        targets.append(tgt)
+    inputs = np.stack(inputs)
+    targets = np.stack(targets)
+    # Augment: 8x more data (original + 3 rotations + 2 flips + 2 diagonal flips)
+    inputs, targets = augment_batch(inputs, targets)
+    return inputs, targets
 
 
 def entropy_weighted_kl_loss(pred_logits, target):
@@ -271,11 +335,11 @@ def entropy_weighted_kl_loss(pred_logits, target):
     return loss
 
 
-def train_cnn(inputs, targets, n_epochs=150, lr=1e-3):
-    """Train the CNN on full dataset (small enough to fit in memory)."""
+def train_cnn(inputs, targets, n_epochs=200, lr=5e-4):
+    """Train the CNN on augmented dataset."""
     in_channels = inputs.shape[1]
     model = ResidualCNN(in_channels).to(DEVICE)
-    optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=lr, weight_decay=1e-4)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
 
     X = torch.from_numpy(inputs).to(DEVICE)
@@ -285,19 +349,14 @@ def train_cnn(inputs, targets, n_epochs=150, lr=1e-3):
     print(f"  CNN: {n_params} params, {in_channels} input channels, {len(inputs)} samples")
 
     best_loss = float("inf")
-    patience = 20
+    patience = 30
     no_improve = 0
     best_state = None
+    batch_size = 32
 
     for epoch in range(n_epochs):
         model.train()
-        # Mini-batch if dataset is large enough, otherwise full batch
-        if len(inputs) > 16:
-            indices = torch.randperm(len(inputs))
-            batch_size = 16
-        else:
-            indices = torch.arange(len(inputs))
-            batch_size = len(inputs)
+        indices = torch.randperm(len(inputs))
 
         epoch_loss = 0
         n_batches = 0
@@ -339,32 +398,47 @@ def train_cnn(inputs, targets, n_epochs=150, lr=1e-3):
     return model
 
 
-def predict_with_cnn(cnn_model, gbm_models, sample):
-    """Full prediction: GBM -> CNN refinement."""
+def predict_with_cnn(cnn_model, gbm_models, sample, blend_weight=0.3):
+    """Full prediction: blend GBM and CNN with test-time augmentation."""
     grid = sample["grid"]
+    inp, _ = build_cnn_input_single(sample, gbm_models)
     flat_feats, _ = extract_features(grid, sample["ss"], sample["st"], sample["pa"])
     gbm_pred = predict_gbm(gbm_models, flat_feats, grid)
 
-    # Build CNN input
-    terrain_oh = np.zeros((8, GRID_SIZE, GRID_SIZE), dtype=np.float32)
-    for i, code in enumerate([0, 1, 2, 3, 4, 5, 10, 11]):
-        terrain_oh[i] = (grid == code).astype(np.float32)
-
-    hp = np.stack([
-        np.full((GRID_SIZE, GRID_SIZE), sample["ss"], dtype=np.float32),
-        np.full((GRID_SIZE, GRID_SIZE), sample["st"], dtype=np.float32),
-        np.full((GRID_SIZE, GRID_SIZE), sample["pa"], dtype=np.float32),
-    ], axis=0)
-
-    gbm_ch = gbm_pred.transpose(2, 0, 1).astype(np.float32)
-    inp = np.concatenate([gbm_ch, terrain_oh, hp], axis=0)
-    inp_t = torch.from_numpy(inp[None]).to(DEVICE)
+    # Test-time augmentation: average predictions over rotations/flips
+    cnn_model.eval()
+    preds = []
+    inp_np = inp  # (C, H, W)
+    transforms = [
+        lambda x: x,
+        lambda x: np.rot90(x, 1, axes=(1, 2)),
+        lambda x: np.rot90(x, 2, axes=(1, 2)),
+        lambda x: np.rot90(x, 3, axes=(1, 2)),
+        lambda x: x[:, :, ::-1],
+        lambda x: x[:, ::-1, :],
+    ]
+    inverse_transforms = [
+        lambda x: x,
+        lambda x: np.rot90(x, -1, axes=(1, 2)),
+        lambda x: np.rot90(x, -2, axes=(1, 2)),
+        lambda x: np.rot90(x, -3, axes=(1, 2)),
+        lambda x: x[:, :, ::-1],
+        lambda x: x[:, ::-1, :],
+    ]
 
     with torch.no_grad():
-        logits = cnn_model(inp_t)
-        pred = F.softmax(logits, dim=1)[0].cpu().numpy()  # (6, 40, 40)
+        for tfm, inv_tfm in zip(transforms, inverse_transforms):
+            aug_inp = tfm(inp_np).copy()
+            inp_t = torch.from_numpy(aug_inp[None]).to(DEVICE)
+            logits = cnn_model(inp_t)
+            p = F.softmax(logits, dim=1)[0].cpu().numpy()
+            p = inv_tfm(p).copy()
+            preds.append(p)
 
-    pred = pred.transpose(1, 2, 0)  # (40, 40, 6)
+    cnn_pred = np.mean(preds, axis=0).transpose(1, 2, 0)  # (40, 40, 6)
+
+    # Blend: CNN weighted with GBM
+    pred = (1 - blend_weight) * cnn_pred + blend_weight * gbm_pred
 
     # Static overrides
     ocean_mask = grid == 10
@@ -410,7 +484,7 @@ def train_and_predict(train_samples, test_samples):
 
     # Step 3: Train CNN
     print(f"    Step 3/4: Training CNN...", flush=True)
-    cnn_model = train_cnn(cnn_inputs, cnn_targets, n_epochs=150, lr=1e-3)
+    cnn_model = train_cnn(cnn_inputs, cnn_targets)
 
     # Step 4: Predict test samples
     print(f"    Step 4/4: Predicting {len(test_samples)} test samples...", flush=True)
