@@ -190,7 +190,11 @@ def entropy_weighted_kl_loss(pred_logits, gt):
         return torch.tensor(0.0, device=pred_logits.device)
 
     weighted_kl = (entropy * kl).sum() / total_entropy
-    return weighted_kl
+
+    # Also add unweighted mean KL as auxiliary to help on low-entropy cells
+    mean_kl = kl.mean()
+
+    return 0.7 * weighted_kl + 0.3 * mean_kl
 
 
 # ============================================================
@@ -237,7 +241,7 @@ def train_and_predict(train_samples, test_samples):
 
     # Model
     model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
+    optimizer = torch.optim.AdamW(model.parameters(), lr=5e-4, weight_decay=1e-2)
     scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=200)
 
     batch_size = min(32, len(train_x))
