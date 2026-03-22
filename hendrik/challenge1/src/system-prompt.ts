@@ -98,14 +98,15 @@ DO NOT use PUT /travelExpense/:convert — it clears the title and corrupts the 
    Total: 3 write calls (travelExpense + cost + deliver + approve are 4 calls).
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
-1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
-   The project response includes projectManager with their id — no need for a separate employee GET.
+EFFICIENCY TARGET: exactly 6 API calls (2 GET + 4 write). Do NOT add extra calls.
+1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager(id))
+   The project response includes projectManager with their id — do NOT call GET /employee.
+   Do NOT call GET /ledger/account?number=1920 — it is not needed for this task.
 2. PUT /project to set isFixedPrice=true, fixedprice=<amount>, projectManager:{id} (from step 1)
-   Do NOT check or update bank account 1920 — invoices work without it.
 3. POST /order with {customer:{id}, orderDate, deliveryDate, project:{id}, invoiceOnAccountVatHigh:true}
 4. POST /order/orderline with {order:{id}, description:"Milestone payment - X%", count:1, unitPriceExcludingVatCurrency:<milestone_amount>, vatType:{id:3}}
 5. POST /invoice?sendToCustomer=false with {invoiceDate, invoiceDueDate, orders:[{id}]}
-Total: 4 write calls.
+Total: 4 write calls, 2 GET calls = 6 API calls. Do NOT exceed this.
 
 ## Workflow: Payroll (salary transaction) (Task 12)
 Register payroll as a manual ledger voucher matching the real Lønnsbilag structure.
@@ -210,15 +211,18 @@ Combines: timesheet logging, supplier cost, and project invoice in one task.
    POST /invoice?sendToCustomer=true with {invoiceDate, invoiceDueDate, orders:[{id}]}
 
 ## Workflow: Reminder fee + partial payment (Task 25)
-1. GET /invoice with invoiceDateFrom & invoiceDateTo to find the overdue invoice. Also GET /ledger/account for 3400, GET /invoice/paymentType — all in parallel.
-2. POST /product with account:{id:<3400_id>} — this makes the invoice credit 3400 automatically, no manual voucher needed.
+EFFICIENCY TARGET: exactly 6 API calls (3 GET + 3 write). Do NOT add extra calls.
+1. In parallel: GET /invoice (invoiceDateFrom & invoiceDateTo), GET /ledger/account?number=3400, GET /invoice/paymentType.
+   Do NOT call GET /ledger/account?number=1920 — it is not needed for this task.
+2. POST /product with account:{id:<3400_id>}:
    {name:"Purregebyr", number:9999, priceExcludingVatCurrency:<fee>, vatType:{id:0}, account:{id:<3400_id>}}
    CRITICAL: Purregebyr is EXEMPT from VAT — always use vatType:{id:0}. Using vatType 3 (25%) gives wrong amount and fails checks.
-3. POST /order with customer, then POST /order/orderline with product — sequential.
-4. POST /invoice?sendToCustomer=true with the order.
-5. PUT /invoice/{overdueInvoiceId}/:payment with paymentDate, paymentTypeId ("Betalt til bank"), paidAmount.
+3. POST /invoice?sendToCustomer=true with INLINE order+orderlines (saves 2 calls vs separate POST /order + POST /order/orderline):
+   {invoiceDate, invoiceDueDate, orders:[{customer:{id:<from_overdue_invoice>}, orderDate, deliveryDate,
+     orderLines:[{product:{id:<purregebyr>}, count:1, unitPriceExcludingVatCurrency:<fee>, vatType:{id:0}}]}]}
+4. PUT /invoice/{overdueInvoiceId}/:payment with paymentDate, paymentTypeId ("Betalt til bank"), paidAmount.
 Do NOT post a manual voucher for 1500/3400 — the invoice handles this automatically via the product account.
-Total: 5 write calls, 0 errors.
+Total: 3 write calls, 3 GET calls = 6 API calls. Do NOT exceed this.
 
 ## Workflow: Credit note
 1. GET /customer to find customer, GET /invoice?customerId=X&invoiceDateFrom=2020-01-01&invoiceDateTo=2026-12-31 to find invoice
