@@ -135,6 +135,36 @@ Also missing annualSalary in employmentDetails and no POST /employee/standardTim
 When T21 scores 8/8, it probably has those fields. When 0/8, it's either too slow or missing them.
 This is an Opus speed issue — Sonnet was faster on this task.
 
+### Round 8 (09:51-09:53)
+
+| 09:51 | T25 | 10/10 | 6p/0f | 52.3s | 0 | perfect |
+| 09:53 | T12 | ?/? | pending | 28.3s | 0 | payroll, score pending |
+
+## Overall Assessment @ 09:55 UTC
+
+**What's working well (consistently perfect):**
+T01, T02, T03, T04, T05, T07, T08, T09, T10, T11, T13, T15, T16, T17, T18, T19, T25, T26
+
+**Improved significantly:**
+- T11: 0 → 8/8 (supplierInvoice fix)
+- T19: 0 → 8/8 (STYRK + endDate fix)
+- T20: 2 → 7/10 (supplierInvoice fix)
+- T30: 0 → 6.5/10 (1209 + remaining balance fix)
+- T24: consistently 7.5-10/10
+
+**Still needs work:**
+- T22: 0/10 always — supplierInvoice approach not enough, maybe needs payment registration
+- T27: 2/10 — no workflow for currency/disagio tasks
+- T21: inconsistent (8/8 or 0) — Opus too slow, missing annualSalary/standardTime sometimes
+- T29: stuck at 8/11
+- T30: 0/10 on some variants, 6.5/10 on others — tax calculation issue
+
+**Actionable next steps (if we make more changes):**
+1. T22: Try adding payment registration after supplierInvoice
+2. T21: Switch to Sonnet for speed, or restructure to create employee before occupation lookup
+3. T27: Add a currency/disagio workflow to the prompt
+4. T30: Debug tax calculation on failing variants
+
 ### Task 27 — currency/disagio
 This is a currency exchange loss task. Agent finds invoice, calculates disagio, but 3 checks fail.
 Likely needs a specific voucher for the exchange difference on account 8160 (Disagio).
