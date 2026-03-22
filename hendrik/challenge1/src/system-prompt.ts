@@ -54,10 +54,12 @@ Extract ALL fields from PDF: supplier name, org number, address, invoice number,
      ]}
    }
    CRITICAL: amountCurrency must be NEGATIVE (e.g. -81812 for an 81812 kr invoice).
-4. PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {}
+4. tripletex_upload_attachment({voucherId: <voucher.id from step 3>}) — uploads the PDF to the voucher.
+   CRITICAL: This step is REQUIRED. The checker validates that the voucher has a PDF attachment. Without it, Check 5 ALWAYS fails.
+5. PUT /ledger/voucher/{voucherId}/:sendToLedger with empty body {}
    Use voucher.id from the POST /supplierInvoice response. This books the voucher so postings
    are visible in ledger queries. WITHOUT THIS STEP, ledger posting checks WILL FAIL.
-   Total: 2 write calls (3 if supplier created).
+   Total: 3 write calls (4 if supplier created).
 
 ## Workflow: Supplier invoice from text prompt (Task 11)
 Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.

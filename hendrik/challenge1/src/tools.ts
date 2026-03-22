@@ -2,7 +2,7 @@ import { tool } from 'ai';
 import { z } from 'zod';
 import { TripletexClient } from './tripletex';
 
-export const createTools = (client: TripletexClient) => ({
+export const createTools = (client: TripletexClient, files?: { filename: string; content_base64: string; mime_type: string }[]) => ({
     tripletex_get: tool({
         description: 'Make a GET request to the Tripletex API. Use params for query parameters like fields, count, from, name, etc.',
         parameters: z.object({
@@ -38,6 +38,19 @@ export const createTools = (client: TripletexClient) => ({
             path: z.string().describe('API path with ID, e.g. /travelExpense/456'),
         }),
         execute: async ({ path }) => client.delete(path),
+    }),
+
+    tripletex_upload_attachment: tool({
+        description: 'Upload a PDF file attachment to a voucher. Uses the first file from the request.',
+        parameters: z.object({
+            voucherId: z.number().describe('Voucher ID to attach the file to'),
+        }),
+        execute: async ({ voucherId }) => {
+            if (!files?.length) return { error: 'No files available to upload' };
+            const file = files[0];
+            const buffer = Buffer.from(file.content_base64, 'base64');
+            return client.uploadFile(`/ledger/voucher/${voucherId}/attachment`, buffer, file.filename);
+        },
     }),
 
     calculate: tool({

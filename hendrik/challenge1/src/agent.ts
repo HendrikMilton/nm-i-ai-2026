@@ -48,7 +48,7 @@ export const solve = async (body: SolveRequest) => {
     const { prompt, files, tripletex_credentials } = body;
     const client = new TripletexClient(tripletex_credentials.base_url, tripletex_credentials.session_token);
     client.onLog = (msg) => log(msg);
-    const tools = createTools(client);
+    const tools = createTools(client, files);
 
     const today = new Date().toISOString().split('T')[0];
 

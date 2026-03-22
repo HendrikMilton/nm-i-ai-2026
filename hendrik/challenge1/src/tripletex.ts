@@ -66,4 +66,32 @@ export class TripletexClient {
     delete(path: string) {
         return this.request('DELETE', path);
     }
+
+    async uploadFile(path: string, fileBuffer: Buffer, fileName: string) {
+        const url = `${this.baseUrl}${path}`;
+        const formData = new FormData();
+        formData.append('file', new Blob([fileBuffer]), fileName);
+
+        const res = await fetch(url, {
+            method: 'POST',
+            headers: { Authorization: this.auth },
+            body: formData,
+        });
+
+        const status = res.status;
+        this.callLog.push({ method: 'POST', path, status });
+        const logLine = `[API] POST ${path} (file upload: ${fileName}) → ${status}`;
+        console.log(logLine);
+        this.onLog?.(logLine);
+
+        const text = await res.text();
+        try {
+            const json = JSON.parse(text);
+            this.onLog?.(`[API] ← ${text.slice(0, 500)}`);
+            return json;
+        } catch {
+            this.onLog?.(`[API] ← ${text.slice(0, 500)}`);
+            return { status, body: text };
+        }
+    }
 }
