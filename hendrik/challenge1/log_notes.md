@@ -194,8 +194,15 @@ that the prompt doesn't handle well (missing VAT correction maybe — Elias adde
 | 10:20 | T20 | 8/10 | 5p/1f | 37.9s | 0 | Check 5 fails again. Consistent pattern. |
 | 10:24 | T03 | 7/7 | 5p/0f | 28.5s | 0 | perfect |
 
+### Round 12 (10:27) -- Post-fix commit but probably not yet rebuilt
+
+| 10:27 | T29 | 8/10 | 5p/2f | 80.0s | 1 | Checks 5,6 fail. normalized=2.18. No improvement |
+
+T29 Check 5+6 consistently failing. 1 error (hourlyRates field name wrong → 400).
+Still haven't hit any of the fixed tasks (T28, T21, T19, T22, T23).
+
 **Leaderboard at this point: 76.69** (no change from T25 improvement)
-No post-fix logs yet -- waiting for autoloop to pick up the new system-prompt.ts.
+Waiting for autoloop to hit T28/T21/T22/T23.
 
 ---
 
