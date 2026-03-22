@@ -162,14 +162,19 @@ Same as Task 19 but from an offer letter (tilbudsbrev/carta de oferta). Key diff
 5. POST /employee/standardTime with {employee:{id}, fromDate:<startDate>, hoursPerDay:<hours_from_offer>} — REQUIRED when offer mentions "arbeidstid" / working hours
 
 ## Workflow: Travel expense
-1. GET /employee?firstName=X&lastName=Y
-2. POST /travelExpense with {employee:{id}, title, date, travelDetails:{isForeignTravel:false, isDayTrip:false, isCompensationFromRates:true, departureDate:"YYYY-MM-DD", returnDate:"YYYY-MM-DD", departureFrom:"<city>", destination:"<city>", departureTime:"08:00", returnTime:"18:00", purpose:"<title>"}}
+1. In parallel: GET /employee?firstName=X&lastName=Y, GET /travelExpense/costCategory?fields=id,description, GET /travelExpense/paymentType?fields=id,description
+2. POST /travelExpense with INLINE costs array (creates expense + all costs in ONE call):
+   {employee:{id}, title, date, travelDetails:{isForeignTravel:false, isDayTrip:false, isCompensationFromRates:true, departureDate:"YYYY-MM-DD", returnDate:"YYYY-MM-DD", departureFrom:"<city>", destination:"<city>", departureTime:"08:00", returnTime:"18:00", purpose:"<title>"},
+    costs:[
+      {costCategory:{id:<fly>}, paymentType:{id}, date:<departureDate>, amountCurrencyIncVat:<amount>, comments:"Flybillett"},
+      {costCategory:{id:<taxi>}, paymentType:{id}, date:<returnDate>, amountCurrencyIncVat:<amount>, comments:"Taxi"},
+      {costCategory:{id:<mat>}, paymentType:{id}, date:<returnDate>, amountCurrencyIncVat:<total_diett>, comments:"Diett <N> dager x <rate> NOK"}
+    ]}
    - Calculate departureDate from returnDate minus travel duration (e.g. 3 days → returnDate minus 2)
    - Use the travel expense title as purpose
-3. GET /travelExpense/costCategory?fields=id,description and GET /travelExpense/paymentType?fields=id,description — parallel
-4. For each regular cost (flight, taxi, hotel etc) ONE AT A TIME: POST /travelExpense/cost with {travelExpense:{id}, costCategory:{id}, paymentType:{id}, date, amountCurrencyIncVat, comments}
-   Per diem/daily allowance: use costCategory "Mat", set rate=<daily_rate>, amountCurrencyIncVat=<total>, comments="Diett <N> dager x <rate> NOK"
-5. After all costs added: PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
+   - CRITICAL: Do NOT send "rate" field on costs — it's the currency exchange rate, not daily rate. Put rate info in comments only.
+3. PUT /travelExpense/:deliver with query param id=<travelExpenseId> to submit the expense
+Total: 2 write calls.
 
 ## Workflow: Timesheet + project invoice (Task 16)
 1. In parallel: GET employee, GET customer, GET project, GET activity, GET /ledger/account?number=1920&fields=id,bankAccountNumber,version
@@ -244,10 +249,14 @@ Post depreciation, prepaid reversal, and tax provision as separate vouchers.
    Debit the correct expense account, credit 1700/1720 for the remaining balance amount.
 6. Calculate tax: take existing P&L result (from step 2), ADD depreciation expenses and prepaid reversal (these increase expenses = reduce profit).
    Revenue is NEGATIVE in Tripletex, expenses POSITIVE. Net result negative = profit.
-   CRITICAL: When summing P&L postings, do NOT list all individual values — there can be 60-100 entries and you WILL drop some.
-   Instead, identify repeating patterns and use multiplication. Example: if you see 12 months of 5 expense types + 11 accruals + 4 revenue entries:
-   calculate("11*3012.5 + 4*(-976280) + 12*(27301.67 + 27301.67 + 21841.34 + 27301.67 + 21841.34)")
-   Group by unique (account, amount) pairs, count occurrences, multiply. Verify the total count matches fullResultSize from the API response.
+   CRITICAL — P&L SUM METHOD (this is the #1 cause of Task 30 failures):
+   NEVER build a large array of individual posting amounts — the calculate tool is unreliable with 75+ element arrays.
+   Instead, you MUST group postings by (account number, amount) pairs and use multiplication:
+   Step A: For each unique account number, list the distinct amounts and count how many times each appears.
+   Step B: WATCH OUT — one account can have TWO different amounts (e.g. account 6300 may have 11×3012.50 prepaid reversals AND 12×27301.67 regular expenses). Count them separately.
+   Step C: Verify your total count of grouped entries equals fullResultSize from the API response. If not, you missed an account group — go back and recheck.
+   Step D: Build a SHORT multiplication expression: calculate("11*3012.5 + 4*(-735280) + 12*27301.67 + 12*27301.67 + 12*36477.34")
+   This is MORE RELIABLE than listing 75 individual values.
    taxableProfit = -(existingResult + totalDepreciation + prepaidAmount)
    If taxableProfit > 0: tax = round(taxableProfit * 0.22, 2). If <= 0: no tax voucher needed.
    POST tax voucher: debit 8700 (skattekostnad), credit 2920 (or account specified in task).
