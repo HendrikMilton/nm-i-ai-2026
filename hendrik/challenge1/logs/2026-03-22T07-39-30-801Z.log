@@ -66,3 +66,26 @@ Let me gather the necessary information first.
     ]
   }
 }
+
+[SCORING] {
+  "id": "829eaabf-8922-4672-86a3-e3feef91b66e",
+  "status": "completed",
+  "queued_at": "2026-03-22T07:40:22.176828+00:00",
+  "completed_at": "2026-03-22T07:40:28.586831+00:00",
+  "score_raw": 0,
+  "score_max": 8,
+  "normalized_score": 0,
+  "duration_ms": 6165,
+  "feedback": {
+    "comment": "7/7 checks failed.",
+    "checks": [
+      "Check 1: failed",
+      "Check 2: failed",
+      "Check 3: failed",
+      "Check 4: failed",
+      "Check 5: failed",
+      "Check 6: failed",
+      "Check 7: failed"
+    ]
+  }
+}
