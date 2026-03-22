@@ -147,6 +147,7 @@ def estimate_config(initial_grid, obs_probs, n_obs):
 def main():
     dry_run = "--dry-run" in sys.argv
     no_query = "--no-query" in sys.argv
+    queries_only = "--queries-only" in sys.argv
 
     print("=" * 60)
     print("ASTAR ISLAND — SUBMIT PIPELINE")
@@ -275,6 +276,10 @@ def main():
     # Step 3.5: Final save (already saved incrementally, but do one more with settlement_stats)
     _save_progress(seed_obs)
     print(f"\n[3.5] Saved to {save_path}")
+
+    if queries_only:
+        print("\n[DONE] --queries-only: saved query results, skipping prediction and submission.")
+        return
 
     # Step 4: Predict and submit
     print(f"\n[4] Predicting and submitting...")
