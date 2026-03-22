@@ -46,3 +46,46 @@
     ]
   }
 }
+[2026-03-22T09:25:12.503Z] [API] GET /customer?organizationNumber=869972401 → 403
+[2026-03-22T09:25:12.503Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:15.075Z] [API] GET /customer → 403
+[2026-03-22T09:25:15.075Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+
+[LEADERBOARD] Task 14 scored
+[LEADERBOARD] Total: 76.24 → 76.24 (0.00)
+[2026-03-22T09:25:21.684Z] [STEP 1] calls: tripletex_get({"path":"/customer","params":{"organizationNumber":"869972401","fields":"id,name,organizationNumber"}}), tripletex_get({"path":"/product","params":{"number":"7733","fields":"id,name,number"}}), tripletex_get({"path":"/product","params":{"number":"6106","fields":"id,name,number"}}), tripletex_get({"path":"/product","params":{"number":"1351","fields":"id,name,number"}}), tripletex_get({"path":"/ledger/account","params":{"number":"1920","fields":"id,bankAccountNumber,version"}}), tripletex_get({"path":"/ledger/vatType","params":{"fields":"id,number,name,percentage","count":"100"}})
+[2026-03-22T09:25:21.684Z] [STEP 1] results: tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:21.684Z] [STEP 1] text: 
+
+Following workflow: **Create invoice**
+
+Let me start by gathering all necessary data in parallel.
+[2026-03-22T09:25:21.684Z] [STEP 2] calls: tripletex_get({"path":"/customer","params":{"organizationNumber":"869972401","fields":"id,name,organizationNumber"}}), tripletex_get({"path":"/product","params":{"number":"7733","fields":"id,name,number"}}), tripletex_get({"path":"/product","params":{"number":"6106","fields":"id,name,number"}}), tripletex_get({"path":"/product","params":{"number":"1351","fields":"id,name,number"}}), tripletex_get({"path":"/ledger/account","params":{"number":"1920","fields":"id,bankAccountNumber,version"}}), tripletex_get({"path":"/ledger/vatType","params":{"fields":"id,number,name,percentage","count":"100"}})
+[2026-03-22T09:25:21.684Z] [STEP 2] results: tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}, tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:21.684Z] [STEP 2] text: Let me retry the calls.
+[2026-03-22T09:25:21.684Z] [STEP 3] calls: tripletex_get({"path":"/customer","params":{"organizationNumber":"869972401","fields":"id,name"}})
+[2026-03-22T09:25:21.684Z] [STEP 3] results: tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:21.684Z] [STEP 4] calls: tripletex_get({"path":"/customer","params":{"organizationNumber":"869972401"}})
+[2026-03-22T09:25:21.684Z] [STEP 4] results: tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:21.684Z] [STEP 5] calls: tripletex_get({"path":"/customer"})
+[2026-03-22T09:25:21.684Z] [STEP 5] results: tripletex_get→{"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T09:25:21.684Z] [STEP 5] text: I'm experiencing persistent authentication errors. Let me try once more with a simple call.
+[2026-03-22T09:25:21.684Z] [STEP 6] text: I'm unable to proceed as the API proxy token appears to be invalid or expired. All API calls are returning authentication errors. This would need a fresh token/session to complete the task. 
+
+To summarize what I would do once access is restored:
+1. Find/create customer "Montanha Lda" (org 869972401)
+2. Find/create products: 7733 (Sessão de formação), 6106 (Licença de software), 1351 (Manutenção)
+3. Check bank account 1920
+4. Identify VAT types: id=3 (25%), id=5 (15% food), id=6 (0% exempt)
+5. POST /invoice with inline order and 3 order lines in one call
+[2026-03-22T09:25:21.684Z] [AGENT] DONE elapsed=27.3s steps=6 apiCalls=15 errors=15
+[2026-03-22T09:25:21.684Z] [AGENT] apiLog: [{"method":"GET","path":"/product","status":403},{"method":"GET","path":"/product","status":403},{"method":"GET","path":"/product","status":403},{"method":"GET","path":"/customer","status":403},{"method":"GET","path":"/ledger/vatType","status":403},{"method":"GET","path":"/ledger/account","status":403},{"method":"GET","path":"/product","status":403},{"method":"GET","path":"/product","status":403},{"method":"GET","path":"/product","status":403},{"method":"GET","path":"/ledger/vatType","status":403},{"method":"GET","path":"/customer","status":403},{"method":"GET","path":"/ledger/account","status":403},{"method":"GET","path":"/customer","status":403},{"method":"GET","path":"/customer","status":403},{"method":"GET","path":"/customer","status":403}]
+[2026-03-22T09:25:21.684Z] [AGENT] response: I'm unable to proceed as the API proxy token appears to be invalid or expired. All API calls are returning authentication errors. This would need a fresh token/session to complete the task. 
+
+To summarize what I would do once access is restored:
+1. Find/create customer "Montanha Lda" (org 869972401)
+2. Find/create products: 7733 (Sessão de formação), 6106 (Licença de software), 1351 (Manutenção)
+3. Check bank account 1920
+4. Identify VAT types: id=3 (25%), id=5 (15% food), id=6 (0% exempt)
+5. POST /invoice with inline order and 3 order lines in one call
+[2026-03-22T09:25:21.684Z] ---
