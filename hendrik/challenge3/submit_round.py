@@ -204,6 +204,37 @@ def main():
     print(f"  Phase 2: {phase2_total} remaining queries (spread across seeds)")
     print(f"  Tiling: {tiling}")
 
+    save_path = Path(f"round_data/round_{round_number:02d}_submit.json")
+    save_path.parent.mkdir(parents=True, exist_ok=True)
+
+    def _save_progress(seed_obs_dict):
+        """Save query results after each seed — crash-safe."""
+        existing = {}
+        if save_path.exists():
+            try:
+                with open(save_path) as f:
+                    existing = json.load(f)
+            except Exception:
+                pass
+        data = {
+            "round_id": round_id,
+            "round_number": round_number,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "seeds": existing.get("seeds", {}),
+        }
+        for sid in range(N_SEEDS):
+            if str(sid) not in data["seeds"]:
+                data["seeds"][str(sid)] = {}
+            data["seeds"][str(sid)]["initial_grid"] = seed_grids[sid].tolist()
+            if sid in seed_obs_dict:
+                obs_probs, n_obs, query_grids = seed_obs_dict[sid]
+                if obs_probs is not None and query_grids:
+                    data["seeds"][str(sid)]["query_grids"] = query_grids
+                    data["seeds"][str(sid)]["observed_probs"] = obs_probs.tolist()
+                    data["seeds"][str(sid)]["n_observations"] = n_obs.tolist()
+        with open(save_path, "w") as f:
+            json.dump(data, f)
+
     seed_obs = {}
     if no_query:
         print("  SKIPPING queries (--no-query)")
@@ -217,20 +248,19 @@ def main():
             else:
                 obs_probs, n_obs, query_grids = run_queries(round_id, seed_idx, tiling)
                 seed_obs[seed_idx] = (obs_probs, n_obs, query_grids)
+                _save_progress(seed_obs)
+                print(f"    Saved progress after seed {seed_idx}")
 
         # Phase 2: spread remaining queries across seeds (round-robin)
         if phase2_total > 0 and not dry_run:
             print(f"\n  --- Phase 2: {phase2_total} extra queries ---")
-            # Re-query the center viewport for each seed (most dynamic area)
-            center_vp = tiling[len(tiling) // 2]  # center tile
+            center_vp = tiling[len(tiling) // 2]
             for i in range(phase2_total):
                 seed_idx = i % N_SEEDS
                 print(f"    Extra query: seed={seed_idx} vp={center_vp}")
                 extra_probs, extra_nobs, extra_grids = run_queries(round_id, seed_idx, [center_vp])
-                # Merge into existing observations
                 obs_probs, n_obs, query_grids = seed_obs[seed_idx]
                 if obs_probs is not None:
-                    mask = extra_nobs > 0
                     total = n_obs + extra_nobs
                     new_probs = np.zeros_like(obs_probs)
                     has_data = total > 0
@@ -239,45 +269,12 @@ def main():
                         extra_probs[has_data] * extra_nobs[has_data, None]
                     ) / total[has_data, None]
                     seed_obs[seed_idx] = (new_probs, total, query_grids + extra_grids)
+            _save_progress(seed_obs)
+            print(f"    Saved progress after phase 2")
 
-    # Step 3.5: Save query results + per-seed grids (merge with existing, never lose data)
-    save_path = Path(f"round_data/round_{round_number:02d}_submit.json")
-    existing_save = {}
-    if save_path.exists():
-        try:
-            with open(save_path) as f:
-                existing_save = json.load(f)
-        except Exception:
-            pass
-
-    save_data = {
-        "round_id": round_id,
-        "round_number": round_number,
-        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
-        "seeds": {},
-    }
-    for seed_idx in range(N_SEEDS):
-        # Start with existing data to preserve obs
-        existing_seed = existing_save.get("seeds", {}).get(str(seed_idx), {})
-        seed_save = dict(existing_seed)  # preserve all existing fields
-
-        # Always update grid
-        seed_save["initial_grid"] = seed_grids[seed_idx].tolist()
-
-        # Only overwrite obs data if we actually have NEW obs data
-        if seed_idx in seed_obs:
-            obs_probs, n_obs, query_grids = seed_obs[seed_idx]
-            if obs_probs is not None and query_grids:
-                seed_save["query_grids"] = query_grids
-                seed_save["observed_probs"] = obs_probs.tolist()
-                seed_save["n_observations"] = n_obs.tolist()
-
-        save_data["seeds"][str(seed_idx)] = seed_save
-
-    save_path.parent.mkdir(parents=True, exist_ok=True)
-    with open(save_path, "w") as f:
-        json.dump(save_data, f)
-    print(f"\n[3.5] Saved to {save_path} (merged with existing, obs data preserved)")
+    # Step 3.5: Final save (already saved incrementally, but do one more with settlement_stats)
+    _save_progress(seed_obs)
+    print(f"\n[3.5] Saved to {save_path}")
 
     # Step 4: Predict and submit
     print(f"\n[4] Predicting and submitting...")
@@ -310,9 +307,15 @@ def main():
                         }
                         print(f"  Seed {seed_idx}: settlement_stats extracted (n_sett={settlement_stats['n_settlements']})")
 
-        # Also save settlement_stats to submit file
+        # Save settlement_stats to submit file
         if settlement_stats:
-            save_data["seeds"][str(seed_idx)]["settlement_stats"] = settlement_stats
+            try:
+                existing = json.load(open(save_path))
+                existing["seeds"][str(seed_idx)]["settlement_stats"] = settlement_stats
+                with open(save_path, "w") as f:
+                    json.dump(existing, f)
+            except Exception:
+                pass
 
         pred = solve.predict_grid(solve._models, grid, settlement_stats=settlement_stats)
         print(f"  Seed {seed_idx}: pred shape={pred.shape}, sum check={pred.sum(axis=-1).mean():.4f}")
