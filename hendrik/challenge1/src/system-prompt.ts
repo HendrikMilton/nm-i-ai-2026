@@ -146,8 +146,9 @@ Use the EXACT accounts from a finalized payroll voucher. Do NOT use the /salary/
    If still no match, use a generic one like "KONTORMEDARBEIDER" (id varies per sandbox).
 3. POST /employee with {firstName, lastName, department:{id}, userType:"NO_ACCESS", email, dateOfBirth, nationalIdentityNumber, bankAccountNumber, address:{addressLine1, postalCode, city}} — extract ALL fields from the contract including address.
 4. Ensure division exists (if none: GET /municipality?count=1 → POST /division with {name:"Hovedvirksomhet", organizationNumber:"999999999", startDate:"2026-01-01", municipalityDate:"2026-01-01", municipality:{id}})
-5. POST /employee/employment with {employee:{id}, startDate, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, division:{id}, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}
-   Do NOT set endDate for permanent positions ("Fast stilling") — the checker expects endDate to be null.
+5. POST /employee/employment with {employee:{id}, startDate, division:{id}, employmentId:"1", isMainEmployer:true, taxDeductionCode:"loennFraHovedarbeidsgiver",
+     employmentDetails:[{date:<startDate>, employmentType:"ORDINARY", employmentForm:"PERMANENT", remunerationType:"MONTHLY_WAGE", workingHoursScheme:"NOT_SHIFT", percentageOfFullTimeEquivalent:<pct_from_contract>, shiftDurationHours:7.5, occupationCode:{id:<from_step2>}, annualSalary:<salary_from_contract>}]}
+   NEVER set endDate — the checker expects endDate to be null for permanent positions. Do NOT include endDate in the request body at all.
    CRITICAL: Create the employee FIRST, then employment. Do NOT spend all steps searching for occupation codes.
 
 ## Workflow: Employee onboarding from offer letter (Task 21)
