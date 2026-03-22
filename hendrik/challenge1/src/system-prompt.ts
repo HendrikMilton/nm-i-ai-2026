@@ -78,28 +78,31 @@ Register via POST /supplierInvoice — NEVER use POST /ledger/voucher.
    Total: 2 write calls.
 
 ## Workflow: Receipt/expense registration (Task 22)
-Register receipt expenses via POST /ledger/voucher — NOT via travelExpense flow.
-1. In parallel: GET /employee?fields=id&count=1, GET /department?name=<dept>&fields=id,name,
+Register receipt expenses as supplier invoices — NOT manual vouchers or travelExpense.
+1. In parallel: GET /department?name=<dept>&fields=id,name,
    GET /travelExpense/costCategory?fields=id,description,account(id,number),vatType(id),
-   GET /ledger/account?number=2910&fields=id
-2. Match the expense type from the receipt to the correct costCategory.
-   Use the account and vatType from that category:
-   - Data/kontorrekvisita/telefon → vatType 1 (25% MVA)
-   - Transport (tog/fly/taxi/buss/hotell) → vatType 12 (12% MVA)
-   - Representasjon/møte → vatType 0 (0% MVA)
-3. POST /ledger/voucher with {
-     date:<receipt_date>, description:"<expense_type> - <store_name>",
-     postings: [
-       {date:<receipt_date>, description:"<desc>", account:{id:<from_category>}, employee:{id},
-        department:{id}, amountGross:<receipt_total_incl_vat>, amountGrossCurrency:<receipt_total_incl_vat>,
-        vatType:{id:<from_category>}, row:1},
-       {date:<receipt_date>, description:"<desc>", account:{id:<2910>}, employee:{id},
-        amountGross:-<receipt_total_incl_vat>, amountGrossCurrency:-<receipt_total_incl_vat>,
-        vatType:{id:0}, row:2}
+   GET /ledger/account?number=2400&fields=id
+   Use costCategory ONLY for expense account mapping — do NOT use travelExpense API.
+2. Create supplier from receipt: POST /supplier with {name:<store_name>, organizationNumber:<org_nr_from_receipt>,
+   email:"${dummyEmail}", invoiceEmail:"${dummyEmail}"}
+3. POST /supplierInvoice with {
+     invoiceDate:<receipt_date>, invoiceDueDate:<receipt_date + 14 days>,
+     supplier:{id}, invoiceNumber:"<receipt_date>",
+     amountCurrency: -<receipt_total_incl_vat>,
+     voucher: {date:<receipt_date>, description:"<item> - <store_name>", postings: [
+       {date:<receipt_date>, description:"<item>", account:{id:<expense_account_from_category>},
+        supplier:{id}, department:{id}, amountGross:<receipt_total_incl_vat>,
+        amountGrossCurrency:<receipt_total_incl_vat>, vatType:{id:1}, invoiceNumber:"<receipt_date>", row:1},
+       {date:<receipt_date>, description:"<item>", account:{id:<2400>},
+        supplier:{id}, amountGross:-<receipt_total_incl_vat>,
+        amountGrossCurrency:-<receipt_total_incl_vat>, vatType:{id:0}, row:2}
      ]}
-   Credit account is ALWAYS 2910 (Gjeld til ansatte og eiere).
-   The system auto-generates the MVA posting on 2710.
-   Total: 1 write call.
+   }
+   CRITICAL: amountCurrency must be NEGATIVE.
+   CRITICAL: Always use vatType:{id:1} (25% MVA) — receipts state "herav MVA 25%".
+   Do NOT use the costCategory vatType — use costCategory ONLY for expense account number.
+   THEN IMMEDIATELY: PUT /ledger/voucher/{voucher.id}/:sendToLedger with empty body {}
+   Total: 2 write calls (3 with supplier creation).
 
 ## Workflow: Fixed-price project with milestone invoice (Task 15)
 1. In parallel: GET /customer, GET /project (with fields=id,name,version,isFixedPrice,fixedprice,projectManager)
