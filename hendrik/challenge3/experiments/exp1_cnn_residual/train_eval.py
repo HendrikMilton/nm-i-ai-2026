@@ -166,10 +166,12 @@ LGB_PARAMS = {
 
 def train_gbm(X, Y):
     models = []
+    t0 = time.time()
     for k in range(N_CLASSES):
         model = lgb.LGBMRegressor(**LGB_PARAMS)
         model.fit(X, Y[:, k], categorical_feature=[0])
         models.append(model)
+    print(f"    GBM trained {N_CLASSES} models in {time.time()-t0:.1f}s", flush=True)
     return models
 
 
@@ -384,7 +386,10 @@ def predict_with_cnn(cnn_model, gbm_models, sample):
 # ============================================================
 def train_and_predict(train_samples, test_samples):
     """Train GBM on train, then CNN on GBM outputs, predict test."""
+    fold_t0 = time.time()
+
     # Step 1: Train GBM
+    print(f"    Step 1/4: Training GBM on {len(train_samples)} samples...", flush=True)
     n_cells = GRID_SIZE * GRID_SIZE
     n_feat = len(FEATURE_NAMES)
     X_train = np.zeros((len(train_samples) * n_cells, n_feat), dtype=np.float32)
@@ -398,22 +403,30 @@ def train_and_predict(train_samples, test_samples):
     gbm_models = train_gbm(X_train, Y_train)
 
     # Step 2: Build CNN training data from GBM predictions on train set
+    t1 = time.time()
+    print(f"    Step 2/4: Building CNN inputs...", flush=True)
     cnn_inputs, cnn_targets = build_cnn_inputs(train_samples, gbm_models)
+    print(f"    CNN inputs built in {time.time()-t1:.1f}s, shape={cnn_inputs.shape}", flush=True)
 
     # Step 3: Train CNN
+    print(f"    Step 3/4: Training CNN...", flush=True)
     cnn_model = train_cnn(cnn_inputs, cnn_targets, n_epochs=150, lr=1e-3)
 
     # Step 4: Predict test samples
+    print(f"    Step 4/4: Predicting {len(test_samples)} test samples...", flush=True)
     predictions = []
     for s in test_samples:
         pred = predict_with_cnn(cnn_model, gbm_models, s)
         predictions.append(pred)
 
+    print(f"    Fold done in {time.time()-fold_t0:.1f}s", flush=True)
     return predictions
 
 
 # Also run GBM-only baseline for comparison
 def train_and_predict_gbm_only(train_samples, test_samples):
+    fold_t0 = time.time()
+    print(f"    Training GBM on {len(train_samples)} samples...", flush=True)
     n_cells = GRID_SIZE * GRID_SIZE
     n_feat = len(FEATURE_NAMES)
     X_train = np.zeros((len(train_samples) * n_cells, n_feat), dtype=np.float32)
@@ -432,6 +445,7 @@ def train_and_predict_gbm_only(train_samples, test_samples):
         pred = predict_gbm(gbm_models, flat_feats, s["grid"])
         predictions.append(pred)
 
+    print(f"    Fold done in {time.time()-fold_t0:.1f}s", flush=True)
     return predictions
 
 
