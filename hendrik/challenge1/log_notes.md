@@ -204,6 +204,16 @@ Still haven't hit any of the fixed tasks (T28, T21, T19, T22, T23).
 **Leaderboard at this point: 76.69** (no change from T25 improvement)
 Waiting for autoloop to hit T28/T21/T22/T23.
 
+### Round 13 (10:33) -- FIRST POST-FIX RESULT
+
+| 10:33 | T19 | 18/22 | 13p/2f | 39.4s | 0 | shiftDurationHours REMOVED. Checks 10,13 fail |
+
+**T19 shiftDurationHours fix confirmed working** -- no shiftDurationHours in employment POST.
+13/15 checks pass (was 8/8 on simpler variant = 2.73 best). Normalized 2.45 (no improvement on best).
+Checks 10+13 failing: agent did NOT include address in POST /employee body (no addressLine1/postalCode/city).
+The address extraction from PDF is inconsistent -- prompt says "extract ALL fields" but agent skipped it.
+This is a 15-check variant; the 8-check variant that gave us 2.73 probably doesn't check address.
+
 ---
 
 ## Deep Analysis -- Newly Identified Issues
