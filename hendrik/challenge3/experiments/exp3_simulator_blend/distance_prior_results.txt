@@ -1,0 +1,33 @@
+======================================================================
+  Experiment: Distance Prior Features + Blend
+======================================================================
+Loaded 105 samples, 21 rounds
+
+    Base GBM trained in 36s
+    Aug features built in 0s
+    Aug GBM trained in 37s
+  R 1: GBM=84.1  Prior=69.7  GBM+feat=84.3  (76s, 20 left, ETA 1523s)
+    Base GBM trained in 37s
+    Aug features built in 0s
+    Aug GBM trained in 29s
+  R 2: GBM=84.9  Prior=73.4  GBM+feat=86.3  (68s, 19 left, ETA 1294s)
+    Base GBM trained in 28s
+    Aug features built in 0s
+    Aug GBM trained in 28s
+  R 3: GBM=84.3  Prior=75.7  GBM+feat=84.9  (58s, 18 left, ETA 1049s)
+    Base GBM trained in 27s
+    Aug features built in 0s
+    Aug GBM trained in 28s
+  R 4: GBM=89.0  Prior=80.2  GBM+feat=89.0  (58s, 17 left, ETA 982s)
+    Base GBM trained in 27s
+    Aug features built in 0s
+    Aug GBM trained in 28s
+  R 5: GBM=80.6  Prior=69.6  GBM+feat=83.0  (58s, 16 left, ETA 925s)
+    Base GBM trained in 27s
+    Aug features built in 0s
+    Aug GBM trained in 28s
+  R 6: GBM=81.4  Prior=71.7  GBM+feat=82.2  (58s, 15 left, ETA 871s)
+    Base GBM trained in 28s
+    Aug features built in 0s
+    Aug GBM trained in 28s
+  R 7: GBM=66.4  Prior=58.2  GBM+feat=68.7  (58s, 14 left, ETA 817s)

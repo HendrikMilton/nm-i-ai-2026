@@ -1,0 +1,15 @@
+======================================================================
+  Optuna LightGBM Tuning | 3-fold fast CV | 20 trials
+======================================================================
+Folds: R7, R12, R15
+
+BASELINE: 75.89 (87s)
+  Current: depth=7 lr=0.03 trees=1000 leaves=127 mcs=30
+
+    T 0: 75.79  (126s)  lr=0.0300 depth=7 trees=1000 leaves=63 mcs=30 sub=0.80 col=0.80 a=0.050 l=0.500
+    T 1: 75.69  (166s)  lr=0.0174 depth=9 trees=1300 leaves=55 mcs=55 sub=0.86 col=0.70 a=0.351 l=0.082
+    T 2: 75.37  (204s)  lr=0.0457 depth=6 trees=1900 leaves=73 mcs=21 sub=0.64 col=0.98 a=0.264 l=0.735
+>>> T 3: 75.92  (144s)  lr=0.0315 depth=5 trees=1800 leaves=68 mcs=25 sub=0.81 col=0.67 a=0.043 l=0.594
+    T 4: 75.67  (87s)  lr=0.0165 depth=9 trees=600 leaves=61 mcs=20 sub=0.99 col=0.77 a=0.036 l=0.375
+>>> T 5: 76.05  (215s)  lr=0.0343 depth=8 trees=1700 leaves=86 mcs=19 sub=0.67 col=0.87 a=0.441 l=2.497
+    T 6: 75.76  (146s)  lr=0.0285 depth=6 trees=1400 leaves=97 mcs=40 sub=0.99 col=0.91 a=0.450 l=0.429
