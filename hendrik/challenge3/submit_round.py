@@ -285,34 +285,52 @@ def main():
     print(f"\n[4] Predicting and submitting...")
     solve._ensure_models()
 
+    # Load saved data from submit file (for --no-query fallback)
+    saved_submit = {}
+    if save_path.exists():
+        try:
+            saved_submit = json.load(open(save_path))
+        except Exception:
+            pass
+
     for seed_idx in range(N_SEEDS):
         grid = seed_grids[seed_idx]
 
-        # Extract settlement_stats from query responses
+        # Extract settlement_stats from query responses (live or saved)
         settlement_stats = None
+        query_grids = []
         if seed_idx in seed_obs:
             _, _, query_grids = seed_obs[seed_idx]
-            if query_grids:
-                # Aggregate settlement stats from all query responses
-                all_settlements = []
-                for qg in query_grids:
-                    all_settlements.extend(qg.get("settlements", []))
-                if all_settlements:
-                    alive = [s for s in all_settlements if s.get("alive", True)]
-                    if alive:
-                        settlement_stats = {
-                            "mean_population": np.mean([s["population"] for s in alive]),
-                            "mean_food": np.mean([s["food"] for s in alive]),
-                            "mean_wealth": np.mean([s["wealth"] for s in alive]),
-                            "mean_defense": np.mean([s["defense"] for s in alive]),
-                            "n_factions": len(set(s.get("owner_id", 0) for s in alive)),
-                            "port_ratio": np.mean([1 if s.get("has_port") else 0 for s in alive]),
-                            "alive_ratio": len(alive) / max(len(all_settlements), 1),
-                            "n_settlements": len(all_settlements),
-                        }
-                        print(f"  Seed {seed_idx}: settlement_stats extracted (n_sett={settlement_stats['n_settlements']})")
+        elif saved_submit:
+            # Fall back to saved query_grids from submit file
+            query_grids = saved_submit.get("seeds", {}).get(str(seed_idx), {}).get("query_grids", [])
 
-        # Save settlement_stats to submit file
+        if query_grids:
+            all_settlements = []
+            for qg in query_grids:
+                all_settlements.extend(qg.get("settlements", []))
+            if all_settlements:
+                alive = [s for s in all_settlements if s.get("alive", True)]
+                if alive:
+                    settlement_stats = {
+                        "mean_population": np.mean([s["population"] for s in alive]),
+                        "mean_food": np.mean([s["food"] for s in alive]),
+                        "mean_wealth": np.mean([s["wealth"] for s in alive]),
+                        "mean_defense": np.mean([s["defense"] for s in alive]),
+                        "n_factions": len(set(s.get("owner_id", 0) for s in alive)),
+                        "port_ratio": np.mean([1 if s.get("has_port") else 0 for s in alive]),
+                        "alive_ratio": len(alive) / max(len(all_settlements), 1),
+                        "n_settlements": len(all_settlements),
+                    }
+                    print(f"  Seed {seed_idx}: settlement_stats (n_sett={settlement_stats['n_settlements']})")
+
+        # Fall back to saved settlement_stats
+        if not settlement_stats:
+            settlement_stats = saved_submit.get("seeds", {}).get(str(seed_idx), {}).get("settlement_stats")
+            if settlement_stats:
+                print(f"  Seed {seed_idx}: using saved settlement_stats (n_sett={settlement_stats.get('n_settlements', '?')})")
+
+        # Save settlement_stats
         if settlement_stats:
             try:
                 existing = json.load(open(save_path))
@@ -322,10 +340,16 @@ def main():
             except Exception:
                 pass
 
-        # Get observation data for Bayesian update
+        # Get observation data for Bayesian update (live or saved)
         obs_probs_arr, n_obs_arr = None, None
         if seed_idx in seed_obs:
             obs_probs_arr, n_obs_arr, _ = seed_obs[seed_idx]
+        else:
+            saved_seed = saved_submit.get("seeds", {}).get(str(seed_idx), {})
+            if saved_seed.get("observed_probs") and saved_seed.get("n_observations"):
+                obs_probs_arr = np.array(saved_seed["observed_probs"], dtype=np.float32)
+                n_obs_arr = np.array(saved_seed["n_observations"], dtype=np.float32)
+                print(f"  Seed {seed_idx}: using saved observations ({(n_obs_arr > 0).sum()} cells)")
 
         pred = solve.predict_grid(solve._models, grid, settlement_stats=settlement_stats,
                                    obs_probs=obs_probs_arr, n_obs=n_obs_arr)
