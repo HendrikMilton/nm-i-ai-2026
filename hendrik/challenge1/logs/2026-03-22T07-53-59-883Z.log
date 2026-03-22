@@ -1,0 +1,5 @@
+[2026-03-22T07:53:59.883Z] [AGENT] model=claude-opus-4-6 prompt="The payment from Blueshore Ltd (org no. 987904135) for the invoice "System Development" (13100 NOK excl. VAT) was returned by the bank. Reverse the payment so the invoice shows the outstanding amount again."
+[2026-03-22T07:54:04.694Z] [API] GET /customer?organizationNumber=987904135&fields=id%2Cname → 403
+[2026-03-22T07:54:04.694Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
+[2026-03-22T07:54:04.711Z] [API] GET /invoice/paymentType?fields=id%2Cdescription → 403
+[2026-03-22T07:54:04.711Z] [API] ← {"error":"Invalid or expired proxy token. Each submission receives a unique token - do not reuse tokens from previous submissions.","source":"nmiai-proxy"}
