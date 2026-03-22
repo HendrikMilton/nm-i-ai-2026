@@ -189,7 +189,13 @@ that the prompt doesn't handle well (missing VAT correction maybe — Elias adde
 | 10:15 | T07 | 7/7 | 2p/0f | 46.5s | 0 | perfect |
 | 10:18 | T10 | 8/8 | 5p/0f | 30.2s | 0 | perfect |
 
+### Round 11 (10:20-10:25) -- Still pre-fix (fixes committed ~10:22, not yet picked up)
+
+| 10:20 | T20 | 8/10 | 5p/1f | 37.9s | 0 | Check 5 fails again. Consistent pattern. |
+| 10:24 | T03 | 7/7 | 5p/0f | 28.5s | 0 | perfect |
+
 **Leaderboard at this point: 76.69** (no change from T25 improvement)
+No post-fix logs yet -- waiting for autoloop to pick up the new system-prompt.ts.
 
 ---
 
