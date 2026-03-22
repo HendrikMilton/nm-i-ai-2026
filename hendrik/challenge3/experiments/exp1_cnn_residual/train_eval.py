@@ -211,83 +211,61 @@ class ResidualBlock(nn.Module):
 
 
 class ResidualCNN(nn.Module):
-    """U-Net style CNN that predicts logit corrections to GBM.
+    """CNN that predicts logit corrections to GBM predictions.
 
-    The first 6 input channels are GBM logits. The CNN outputs additive
-    corrections, so GBM predictions are the starting point.
+    First 6 input channels must be GBM log-probabilities.
+    Output = GBM_logits + learned_correction.
+    Head initialized near zero so initial output ≈ GBM.
     """
 
     def __init__(self, in_channels):
         super().__init__()
-        # Encoder
-        self.enc1 = nn.Sequential(
+        self.stem = nn.Sequential(
             nn.Conv2d(in_channels, 48, 3, padding=1),
             nn.BatchNorm2d(48),
             nn.ReLU(),
         )
-        self.enc2 = nn.Sequential(
-            nn.Conv2d(48, 64, 3, padding=1),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
-        self.res1 = ResidualBlock(64)
-        # Multi-scale context
+        self.res1 = ResidualBlock(48)
+        self.res2 = ResidualBlock(48)
+        # Dilated convs for wider receptive field
         self.dilated1 = nn.Sequential(
-            nn.Conv2d(64, 64, 3, padding=2, dilation=2),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
-        self.dilated2 = nn.Sequential(
-            nn.Conv2d(64, 64, 3, padding=4, dilation=4),
-            nn.BatchNorm2d(64),
-            nn.ReLU(),
-        )
-        # Decoder with skip connection from enc1
-        self.dec1 = nn.Sequential(
-            nn.Conv2d(64 + 48, 48, 3, padding=1),  # skip from enc1
+            nn.Conv2d(48, 48, 3, padding=2, dilation=2),
             nn.BatchNorm2d(48),
             nn.ReLU(),
         )
-        self.res2 = ResidualBlock(48)
+        self.dilated2 = nn.Sequential(
+            nn.Conv2d(48, 48, 3, padding=4, dilation=4),
+            nn.BatchNorm2d(48),
+            nn.ReLU(),
+        )
         self.dropout = nn.Dropout2d(0.1)
-        # Output: correction to GBM logits (6 channels)
         self.head = nn.Conv2d(48, N_CLASSES, 1)
-        # Initialize head near zero so initial output ≈ GBM
+        # Zero-init head so initial output = GBM predictions
         nn.init.zeros_(self.head.weight)
         nn.init.zeros_(self.head.bias)
 
     def forward(self, x):
-        # x[:, :6] are GBM logits
         gbm_logits = x[:, :6]
-
-        e1 = self.enc1(x)
-        e2 = self.enc2(e1)
-        e2 = self.res1(e2)
-        # Multi-scale fusion
-        d1 = self.dilated1(e2)
-        d2 = self.dilated2(e2)
-        e2 = e2 + d1 + d2
-        # Decode with skip
-        h = torch.cat([e2, e1], dim=1)
-        h = self.dec1(h)
+        h = self.stem(x)
+        h = self.res1(h)
         h = self.res2(h)
+        # Multi-scale fusion
+        h = h + self.dilated1(h) + self.dilated2(h)
         h = self.dropout(h)
         correction = self.head(h)
-        # Add correction to GBM logits (residual learning)
         return gbm_logits + correction
 
 
 def build_cnn_input_single(sample, gbm_models):
     """Build CNN input for one sample. Returns (C, H, W) input and (6, H, W) target.
 
-    First 6 channels are GBM logits (log-probabilities), so the CNN can learn
-    additive corrections in logit space.
+    First 6 channels are GBM log-probabilities for residual learning.
     """
     grid = sample["grid"]
     flat_feats, spatial_feats = extract_features(grid, sample["ss"], sample["st"], sample["pa"])
     gbm_pred = predict_gbm(gbm_models, flat_feats, grid)  # (40, 40, 6)
 
-    # Convert GBM predictions to logits for residual learning
+    # GBM as log-probs for residual learning
     gbm_logits = np.log(np.clip(gbm_pred, 1e-6, None)).transpose(2, 0, 1).astype(np.float32)
 
     # Terrain one-hot: 8 classes
@@ -302,12 +280,14 @@ def build_cnn_input_single(sample, gbm_models):
         np.full((GRID_SIZE, GRID_SIZE), sample["pa"], dtype=np.float32),
     ], axis=0)
 
-    # ALL spatial features from extract_features (skip terrain_code at idx 0)
-    # spatial_feats shape: (N_feat, H, W) — indices 1..27
-    spatial_all = spatial_feats[1:]  # all except raw terrain code
+    # Key spatial features (distances, densities, neighborhood)
+    # Indices: 1=n_ocean, 2=n_settle, 7=n_ruin, 8=is_coastal, 9=has_settle_nbr,
+    #          11=dist_settle, 12=dist_ocean, 13=dist_port, 14=dist_forest,
+    #          15=settle_d3, 16=settle_d5, 17=settle_d7, 18=forest_d3, 23=n_land_nbr, 24=terrain_div
+    spatial_sel = spatial_feats[[1, 2, 7, 8, 9, 11, 12, 13, 14, 15, 16, 17, 18, 23, 24]]  # 15 ch
 
-    # Concat: GBM_logits(6) + terrain(8) + hidden(3) + spatial(27) = 44 channels
-    inp = np.concatenate([gbm_logits, terrain_oh, hp, spatial_all], axis=0)
+    # Concat: GBM_logits(6) + terrain(8) + hidden(3) + spatial(15) = 32 channels
+    inp = np.concatenate([gbm_logits, terrain_oh, hp, spatial_sel], axis=0)
     target = sample["gt"].transpose(2, 0, 1).astype(np.float32)
     return inp, target
 
