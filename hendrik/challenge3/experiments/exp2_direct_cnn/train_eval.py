@@ -220,38 +220,34 @@ def train_and_predict(train_samples, test_samples):
     train_x = torch.tensor(np.stack(train_x_list), dtype=torch.float32)
     train_y = torch.tensor(np.stack(train_y_list), dtype=torch.float32)
 
-    # Train ensemble of 2 models with different seeds
-    n_epochs = 100
+    # Model
+    model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
+    n_epochs = 120
+    optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
+    scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
+
     batch_size = min(32, len(train_x))
+
     dataset = torch.utils.data.TensorDataset(train_x, train_y)
-    models = []
+    loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
+                                          pin_memory=True, num_workers=0)
 
-    for seed_i in range(2):
-        torch.manual_seed(seed_i * 42 + 7)
-        model = SmallUNet(in_channels, N_CLASSES).to(DEVICE)
-        optimizer = torch.optim.AdamW(model.parameters(), lr=1e-3, weight_decay=1e-2)
-        scheduler = torch.optim.lr_scheduler.CosineAnnealingLR(optimizer, T_max=n_epochs)
-        loader = torch.utils.data.DataLoader(dataset, batch_size=batch_size, shuffle=True,
-                                              pin_memory=True, num_workers=0)
-
-        for epoch in range(n_epochs):
-            model.train()
-            for bx, by in loader:
-                bx, by = bx.to(DEVICE), by.to(DEVICE)
-                lam = np.random.beta(0.4, 0.4)
-                idx = torch.randperm(bx.size(0), device=DEVICE)
-                bx_mix = lam * bx + (1 - lam) * bx[idx]
-                by_mix = lam * by + (1 - lam) * by[idx]
-                optimizer.zero_grad()
-                logits = model(bx_mix)
-                loss = entropy_weighted_kl_loss(logits, by_mix)
-                loss.backward()
-                torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
-                optimizer.step()
-            scheduler.step()
-
-        model.eval()
-        models.append(model)
+    for epoch in range(n_epochs):
+        model.train()
+        for bx, by in loader:
+            bx, by = bx.to(DEVICE), by.to(DEVICE)
+            # Mixup augmentation
+            lam = np.random.beta(0.4, 0.4)
+            idx = torch.randperm(bx.size(0), device=DEVICE)
+            bx_mix = lam * bx + (1 - lam) * bx[idx]
+            by_mix = lam * by + (1 - lam) * by[idx]
+            optimizer.zero_grad()
+            logits = model(bx_mix)
+            loss = entropy_weighted_kl_loss(logits, by_mix)
+            loss.backward()
+            torch.nn.utils.clip_grad_norm_(model.parameters(), 1.0)
+            optimizer.step()
+        scheduler.step()
 
     fold_elapsed = _time.time() - fold_start
     _fold_times.append(fold_elapsed)
@@ -259,28 +255,31 @@ def train_and_predict(train_samples, test_samples):
     remaining = 21 - len(_fold_times)
     print(f"    Fold done in {fold_elapsed:.0f}s (avg {avg_fold:.0f}s), ~{remaining} folds left, ETA ~{avg_fold*remaining:.0f}s")
 
-    # Predict test samples with TTA (D4 augmentation at test time) + ensemble
+    model.eval()
+
+    # Predict test samples with TTA (D4 augmentation at test time)
     predictions = []
-    n_models = len(models)
     with torch.no_grad():
         for s in test_samples:
             x = extract_input_channels(s["grid"], s["ss"], s["st"], s["pa"])
+            # TTA: average predictions over all 8 D4 transforms
             avg_pred = np.zeros((GRID_SIZE, GRID_SIZE, N_CLASSES), dtype=np.float32)
-            for model in models:
-                for k in range(4):
-                    for flip in [False, True]:
-                        xa = np.rot90(x, k, axes=(1, 2)).copy()
-                        if flip:
-                            xa = np.flip(xa, axis=2).copy()
-                        xt = torch.tensor(xa[None], dtype=torch.float32).to(DEVICE)
-                        logits = model(xt)
-                        probs = F.softmax(logits, dim=1)[0].cpu().numpy()
-                        p = probs.transpose(1, 2, 0)
-                        if flip:
-                            p = np.flip(p, axis=1).copy()
-                        p = np.rot90(p, -k, axes=(0, 1)).copy()
-                        avg_pred += p
-            pred = avg_pred / (8.0 * n_models)
+            for k in range(4):
+                for flip in [False, True]:
+                    xa = np.rot90(x, k, axes=(1, 2)).copy()
+                    if flip:
+                        xa = np.flip(xa, axis=2).copy()
+                    xt = torch.tensor(xa[None], dtype=torch.float32).to(DEVICE)
+                    logits = model(xt)
+                    probs = F.softmax(logits, dim=1)[0].cpu().numpy()  # (6, H, W)
+                    p = probs.transpose(1, 2, 0)  # (H, W, 6)
+                    # Undo flip
+                    if flip:
+                        p = np.flip(p, axis=1).copy()
+                    # Undo rotation
+                    p = np.rot90(p, -k, axes=(0, 1)).copy()
+                    avg_pred += p
+            pred = avg_pred / 8.0
 
             # Static overrides
             grid = s["grid"]
