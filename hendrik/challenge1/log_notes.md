@@ -114,7 +114,16 @@ This needs sandbox testing to figure out — we're doing everything the fix doc 
 
 We started at 66.75 yesterday. Up +9.5 points overall.
 Key gains: T11 (0→perfect), T19 (0→mostly perfect), T20 (2→7/10), T24 (new perfect scores).
-Still losing points on: T22 (0), T30 (0), T27 (2/10), slow T21 runs (0).
+Still losing points on: T22 (0), T30 (0→6.5!), T27 (2/10), slow T21 runs (0).
+
+### Round 6 (09:43-09:46)
+
+| 09:43 | T30 | 6.5/10 | 4p/2f | 66.1s | 0 | **NEW BEST!** Checks 1-4 pass, 5-6 fail |
+| 09:44 | T18 | 8/8 | 3p/0f | 48.6s | 0 | perfect |
+
+**Task 30 BREAKTHROUGH — 6.5/10!** Was always 0/10. Checks 1-4 pass (depreciation + prepaid).
+Checks 5-6 fail — likely tax calc or structural. The 1209 + remaining balance fix IS working.
+Different variant scored differently — some variants may have calculation edge cases.
 
 ### Task 27 — currency/disagio
 This is a currency exchange loss task. Agent finds invoice, calculates disagio, but 3 checks fail.
