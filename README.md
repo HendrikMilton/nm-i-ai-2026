@@ -31,14 +31,14 @@ Detect and classify 356 grocery products on store shelves. Upload a zip with mod
 - Code: `hendrik/challenge2/`
 - Approach: 3x YOLO11x trained at different scales (1600, 1280, 960), ensembled with Weighted Boxes Fusion, FP16 ONNX inference
 
-### Challenge 3 — Astar: Route Optimization
-Shortest path / routing challenge. See `arian/` and `elias/` for solutions.
+### Challenge 3 — Astar: Viking Civilization Simulator
+Predict how a stochastic Norse civilization evolves on a 40x40 map from limited observations. See `arian/`, `elias/` and `hendrik/challenge3/`.
 
 ## Repository Structure
 
 ```
 agentic-avengers-nm-ai/
-├── hendrik/              # Challenge 2 (NorgesGruppen) + shared infra
+├── hendrik/              # Challenges 1, 2 and 3 + shared infra
 │   ├── challenge2/       # Object detection solution
 │   │   ├── train.py      # YOLO training script
 │   │   ├── evaluate.py   # Local evaluation (mAP scoring)
@@ -49,7 +49,7 @@ agentic-avengers-nm-ai/
 │   └── challenge3/       # Challenge 3 attempt
 ├── arian/                # Challenge 3 (Astar)
 ├── elias/                # Challenge 3 (Astar)
-└── gabriel/              # Challenge 1 (Tripletex)
+└── gabriel/              # Challenge 1 (Tripletex) notes and scaffold
 ```
 
 ## Tech Stack
