@@ -2,21 +2,25 @@
 
 Norwegian AI Championship (NM i AI), 69-hour hackathon, March 19–22, 2026.
 
+## Result
+
+29th of 487 teams (top 6%).
+
 ## Team
 
-4 members, each tackling different challenges autonomously with Claude Code as AI pair programmer.
+4 members, each tackling different challenges with Claude Code as AI pair programmer.
 
-| Member | Focus |
-|--------|-------|
-| Hendrik | Challenge 2 — NorgesGruppen (Object Detection) |
-| Arian | Challenge 3 — Astar (Route Optimization) |
-| Elias | Challenge 3 — Astar (Route Optimization) |
-| Gabriel | Challenge 1 — Tripletex (Accounting/API) |
+| Member | Work |
+|--------|------|
+| Hendrik Milton | Challenge 1 (Tripletex accounting agent), Challenge 2 (object detection), Challenge 3 (Astar) |
+| Gabriel Grov Diesen | Challenge 1 (Tripletex accounting agent) |
+| Elias Uran | Challenge 1 (Tripletex accounting agent), Challenge 3 (Astar) |
+| Arian Beke | Challenge 3 (Astar) |
 
 ## Challenges
 
 ### Challenge 1 — Tripletex
-Accounting/API challenge. See `gabriel/` for solution.
+Accounting/API challenge. Main solution in `hendrik/challenge1/`; see also `gabriel/` and `elias/tripletex/`.
 
 ### Challenge 2 — NorgesGruppen Data: Object Detection
 Detect and classify 356 grocery products on store shelves. Upload a zip with model weights + inference script to a sandboxed GPU environment.
