@@ -4,7 +4,7 @@ Norwegian AI Championship (NM i AI), 69-hour hackathon, March 19–22, 2026.
 
 ## Result
 
-29th of 487 teams (top 6%).
+29th of 487 teams (top 6%). Write-up: [LinkedIn post](https://www.linkedin.com/feed/update/urn:li:activity:7442224007455821825/)
 
 ## Team
 
@@ -12,7 +12,7 @@ Norwegian AI Championship (NM i AI), 69-hour hackathon, March 19–22, 2026.
 
 | Member | Work |
 |--------|------|
-| Hendrik Milton | Challenge 1 (Tripletex accounting agent), Challenge 2 (object detection), Challenge 3 (Astar) |
+| Hendrik Milton | Led Challenge 1 (Tripletex accounting agent) and Challenge 2 (object detection), set up the team's Claude Code workflow, contributed to Challenge 3 (Astar) |
 | Gabriel Grov Diesen | Challenge 1 (Tripletex accounting agent) |
 | Elias Uran | Challenge 1 (Tripletex accounting agent), Challenge 3 (Astar) |
 | Arian Beke | Challenge 3 (Astar) |
